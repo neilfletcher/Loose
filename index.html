@@ -639,7 +639,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.2';
+const VERSION = '2.3';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -992,12 +992,9 @@ let mus = null;
 function musicStart(){
   if (!AC || mus || !S.music || !S.sound || document.hidden) return;
   const a = AC, g = a.createGain(); g.gain.value = .045; g.connect(a.destination);
-  const d1 = a.createOscillator(), d2 = a.createOscillator(), lp = a.createBiquadFilter(), dg = a.createGain();
-  d1.type = d2.type = 'sawtooth'; d1.frequency.value = 73.42; d2.frequency.value = 110; lp.type = 'lowpass'; lp.frequency.value = 320; dg.gain.value = .22;
-  d1.connect(lp); d2.connect(lp); lp.connect(dg); dg.connect(g); d1.start(); d2.start();
-  mus = {g, d1, d2, next:a.currentTime + .4, step:0, note:4};
+  mus = {g, next:a.currentTime + .4, step:0, note:4};
 }
-function musicStop(){ if (!mus) return; try { mus.d1.stop(); mus.d2.stop(); mus.g.disconnect(); } catch(e){} mus = null; }
+function musicStop(){ if (!mus) return; try { mus.g.disconnect(); } catch(e){} mus = null; }
 function pluck(t, f, v){ const o = AC.createOscillator(), g = AC.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v || .3, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + .9); o.connect(g); g.connect(mus.g); o.start(t); o.stop(t + 1); }
 function drum(t, v){ const o = AC.createOscillator(), g = AC.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + .2); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + .28); o.connect(g); g.connect(mus.g); o.start(t); o.stop(t + .3); }
 function musicTick(){
