@@ -641,7 +641,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.5';
+const VERSION = '2.6';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1663,7 +1663,7 @@ function resetCampaign(){
   S.bld = G('found') ? {farm:10, woodcut:10, mine:10, geese:10, store:5} : {farm:1, woodcut:1};
   const st = 1 + 5 * L('march'); S.stage = st; S.runMax = st; S.autoAdv = true; S.farmN = 0; S.writBuys = 0; S.buttsT = 0;
   S.roster.forEach(a => { a.lvl = Math.min(cap(a), 1 + 5 * L('vets')); a.woundT = 0; a.away = null; });
-  S.exped = []; S.quests = []; S.qp = {};
+  S.exped = []; S.quests = []; S.qp = {}; S.mode = 'main';
   checkUnlocks(); newBattle(); save(); tab = 'battle'; render(); closeSheet();
 }
 function prestige(){
