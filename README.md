@@ -23,10 +23,16 @@ An idle strategy game of the Hundred Years' War, from the Southampton muster to 
 - **The Codex.** Permanent bonuses for enemies killed, men recruited, zones conquered and set pieces won.
 - **Accounts.** Sign in with Google to save to the cloud and carry on from any device, or move your game with a save code.
 - **Installable.** Add it to your home screen as an app, with notifications when expeditions return, research finishes or stores fill.
+- **A guided start.** Seven short steps teach the basics and open the tabs one at a time.
+- **Twelve Legendaries.** Each has its own special, with a featured Legendary every week who makes up half of all Legendary recruits.
+- **Weekly events.** A special campaign each week with its own rules, milestone rewards and a token shop, including that week's featured Legendary.
+- **The King's League.** A weekly leaderboard for signed-in captains, ranked by furthest stage.
+- **Music.** A medieval loop that picks up pace for bosses and set pieces.
+- **Your company.** Name your captain, company and men, and choose your banner colours. Portraits gain plumes and gilt as men are promoted.
 - **Admin.** `admin.html` shows anonymous play figures: where people stop, prestige, building and research choices.
 
 Twelve zones with their own enemy mixes (swarm, armoured, cavalry, crossbows) loop with rising difficulty, and there's a boss every ten stages.
 
 ## Tech
 
-A single `index.html`: vanilla JS, canvas rendering and Web Audio, plus a service worker and web app manifest. Progress saves in localStorage and, when signed in, to Firestore (Firebase project `until-crispins-day`, collections `loose_saves` and `loose_players`). No build step.
+A single `index.html`: vanilla JS, canvas rendering and Web Audio, plus a service worker and web app manifest. Progress saves in localStorage and, when signed in, to Firestore (Firebase project `until-crispins-day`, collections `loose_saves`, `loose_players` and `loose_league`). No build step.

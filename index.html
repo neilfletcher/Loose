@@ -142,6 +142,12 @@ h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-w
 .perk .lvl{font-weight:800;color:var(--gold)}
 #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:10px;font-size:13px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
+#tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:13px;line-height:1.35}
+#tut b{color:var(--gold)}
+nav button.tutp{color:var(--gold);animation:pulse 1s infinite;border-radius:10px}
+.nmin{width:100%;padding:7px 9px;border-radius:8px;background:#0f140e;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700}
+.sw2{display:inline-block;width:30px;height:30px;border-radius:8px;border:2px solid var(--line);cursor:pointer;margin:2px}
+.sw2.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,182,76,.4)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -307,7 +313,7 @@ function save(){ if (window.__skipSave) return; S.last = Date.now(); try { local
 
 /* ================= archers ================= */
 const base = a => a.cls === 'hero' ? HEROES[a.hero] : CLS[a.cls];
-const look = a => Object.assign({rar:RAR[a.rar].c}, base(a).look);
+const look = a => Object.assign({rar:RAR[a.rar].c, st:a.stars}, base(a).look);
 function pickTrait(goodP, have){
   const keys = Object.keys(TRAITS).filter(k => !have.includes(k)), g = keys.filter(k => TRAITS[k].g), b = keys.filter(k => !TRAITS[k].g);
   return (Math.random() < goodP || !b.length) ? pick(g) : pick(b);
@@ -405,11 +411,11 @@ function stageName(N){ const z = zoneOf(N), c = cycleOf(N); return z.n + (c ? ' 
 const isBoss = N => N % 10 === 0;
 const HU = N => 20 * Math.pow(1.15, N - 1);
 const DU = N => 2 * Math.pow(1.045, N - 1);
-function genStage(N){
-  const z = zoneOf(N), sp = SP(N), rng = mulberry(N * 7919 + 13), n = Math.min(24, 6 + Math.floor(N / 3)), pool = Object.entries(sp ? sp.mix : z.mix);
+function genStage(N, ev){
+  const z = zoneOf(N), sp = ev ? null : SP(N), rng = mulberry(N * 7919 + 13 + (ev ? 5 : 0)), n = Math.min(24, 6 + Math.floor(N / 3)), pool = Object.entries(ev ? ev.mix : sp ? sp.mix : z.mix);
   const tot = pool.reduce((s, p) => s + p[1], 0), out = [];
   for (let i = 0; i < n; i++) { let r = rng() * tot, ty = pool[0][0]; for (const [k, w] of pool) { r -= w; if (r <= 0) { ty = k; break; } } out.push({t:.6 + i * .8, type:ty}); }
-  if (isBoss(N)) out.push({t:.6 + n * .4, type:'boss'});
+  if (ev ? (ev.rule === 'bosses' ? evState().stage % 5 === 0 : evState().stage % 10 === 0) : isBoss(N)) out.push({t:.6 + n * .4, type:'boss'});
   out.sort((a, b) => a.t - b.t);
   return out;
 }
@@ -502,6 +508,8 @@ function drawArcher(c, x, y, ang, L, drawAmt, o){
     c.fillStyle = skin; c.beginPath(); c.arc(12.4, 0, 1.6, 0, 7); c.fill(); c.beginPath(); c.arc(px, .3, 1.5, 0, 7); c.fill();
   }
   drawHead(c, L.head, .5);
+  if (L.st >= 3) { c.fillStyle = L.st >= 7 ? '#f2d07a' : L.st >= 5 ? '#e8e2d0' : '#c8372d'; c.beginPath(); c.ellipse(-3.5, 0, 3.2, 1.5, 0, 0, 7); c.fill(); }
+  if (L.st >= 6) { c.strokeStyle = '#e8c64a'; c.lineWidth = .9; c.beginPath(); c.arc(.5, 0, 5.4, 0, 7); c.stroke(); }
   c.restore();
 }
 function drawFoot(c, e, ang){
@@ -559,12 +567,13 @@ function drawCart(c, x, y, ang, french){
 /* ================= portraits ================= */
 const pcache = {};
 function portrait(a, size){
-  const key = a.cls + (a.hero || '') + a.rar + size;
+  const key = a.cls + (a.hero || '') + a.rar + size + '|' + (a.stars || 0);
   if (pcache[key]) return pcache[key];
   const c = document.createElement('canvas'), k = 2; c.width = c.height = size * k; const g = c.getContext('2d'); g.scale(k, k);
   const gr = g.createRadialGradient(size * .5, size * .45, 2, size * .5, size * .5, size * .7); gr.addColorStop(0, '#3b4a33'); gr.addColorStop(1, '#141a12');
   g.fillStyle = gr; g.beginPath(); g.roundRect ? g.roundRect(0, 0, size, size, size * .22) : g.rect(0, 0, size, size); g.fill();
-  g.strokeStyle = RAR[a.rar].c; g.lineWidth = 2.5; g.stroke();
+  g.strokeStyle = RAR[a.rar].c; g.lineWidth = 2.5; g.stroke(); if ((a.stars || 0) >= 5) { g.strokeStyle = '#e8c64a'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(3.5, 3.5, size - 7, size - 7, size * .18) : g.rect(3.5, 3.5, size - 7, size - 7); g.stroke(); }
+  if ((a.stars || 0) >= 7) { g.fillStyle = '#e8c64a'; g.font = `bold ${Math.round(size * .2)}px serif`; g.textAlign = 'center'; g.fillText('♛', size / 2, size * .2); }
   g.save(); g.translate(size / 2, size / 2 + 2); g.scale(size / 34, size / 34); drawArcher(g, 0, 0, -Math.PI / 2.6, look(a), .8, {}); g.restore();
   return pcache[key] = c.toDataURL();
 }
@@ -620,7 +629,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.0';
+const VERSION = '2.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -629,6 +638,7 @@ function migrate(){
   S.gear = S.gear || []; S.research = S.research || {done:{}, active:[]}; S.research.done = S.research.done || {}; S.research.active = S.research.active || [];
   S.codex = S.codex || {}; ['kills','zones','classes','heroes','setpieces'].forEach(k => S.codex[k] = S.codex[k] || {});
   S.chronicle = S.chronicle || []; S.bonds = S.bonds || {}; S.garterPerks = S.garterPerks || {}; S.gloryOrder = S.gloryOrder || 0; S.garters = S.garters || 0;
+  if (S.tut === undefined) S.tut = S.bestEver > 3 ? 99 : 1; if (S.music === undefined) S.music = true; S.mode = S.mode || 'main';
   S.res.parchment = S.res.parchment || 0; S.res.garter = S.res.garter || 0; S.pid = S.pid || uid(); S.spFirst = S.spFirst || {}; S.firstSeen = S.firstSeen || Date.now();
   S.roster.forEach(a => { a.gear = a.gear || {}; a.kt = a.kt || {}; S.codex.classes[a.cls === 'hero' ? 'hero_' + a.hero : a.cls] = 1; if (a.hero) S.codex.heroes[a.hero] = 1; });
 }
@@ -820,6 +830,10 @@ function sheetSettings(){
   <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
   <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:11px;padding:6px"></textarea>
   <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
+  <h3>YOUR COMPANY</h3><div class="card"><div class="sub">Captain's name, for the league</div><input class="nmin" id="capname" value="${esc(S.captain || '')}" maxlength="24" placeholder="${esc(captainName())}">
+  <div class="sub" style="margin-top:8px">Company name</div><input class="nmin" id="coname" value="${esc(S.company || '')}" maxlength="40" placeholder="The Northampton Company">
+  <div class="sub" style="margin-top:8px">Banner colours: ${banner()[2]}</div><div>${BANNERS.map((b, i) => `<span class="sw2 ${(S.banner || 0) === i ? 'on' : ''}" data-act="banner" data-i="${i}" style="background:linear-gradient(135deg,${b[0]} 55%,${b[1]} 55%)"></span>`).join('')}</div></div>
+  <h3>SOUND</h3><div class="card"><label class="tog" data-act="music"><span class="sw ${S.music ? 'on' : ''}"></span>Music</label><div class="sub" style="margin-top:4px">The speaker button at the top turns all sound on or off.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:14px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
@@ -827,9 +841,150 @@ function sheetSettings(){
   <div class="sub" style="text-align:center;margin-top:12px">Loose! version ${VERSION}</div>`);
 }
 
+/* ================= 2.1: more legendaries ================= */
+Object.assign(HEROES, {
+  erpingham:{n:'Sir Thomas Erpingham', title:'Old knight of Norfolk', dmg:9, int:1.1, hp:95, range:190, ab:'inspire', abN:'Now strike!', abD:'Throws his baton in the air: the whole line hits 50% harder for six seconds.', bio:'Threw his baton in the air to start Agincourt. Has been looking for it ever since.', look:{tunic:'#1d3a6b', trim:'#e8c64a', head:'kettle', cape:'#7a1a1a', studs:1}},
+  nell:     {n:'Nell Fletcher', title:"The fletcher's daughter", dmg:18, int:1.5, hp:60, range:220, pierce:.5, ab:'snipe', abN:'One shot', abD:'One arrow through the toughest man on the field, for ten times her damage.', bio:"Learnt to shoot on rats in her father's workshop. Graduated to Frenchmen.", look:{tunic:'#7a5a3a', trim:'#e9e4d6', head:'hood', cape:'#3a2a1a'}},
+  ifan:     {n:'Ifan Llwyd', title:'Hill-bowman of Gwynedd', dmg:8, int:.7, hp:62, range:200, ab:'rain', abN:'Three in the air', abD:'Three volleys of his own, one a second.', bio:'Can put three arrows in the air before the first one lands. Will tell you so.', look:{tunic:'#2e5a2a', trim:'#e9e4d6', half:1, head:'bare', cape:'#1e3a1a'}},
+  hugh:     {n:'Hugh Stafford', title:'Stake-master', dmg:9, int:1.1, hp:110, range:170, ab:'stakes', abN:'Stakes!', abD:'Everything near him is caught on the stakes: stopped for four seconds and badly hurt.', bio:'Carries his own stakes. Nobody knows why they are always so sharp.', look:{tunic:'#e6e0cf', trim:'#c8372d', cross:1, head:'kettle', cape:'#5a3a1e'}},
+  agnes:    {n:'Mother Agnes', title:'Abbess of the baggage', dmg:6, int:1.0, hp:80, range:175, ab:'shield', abN:'Under my protection', abD:'For four seconds, nothing can hurt the line.', bio:'Runs the baggage train, the surgeons and, increasingly, you.', look:{tunic:'#2a2a2e', trim:'#e9e4d6', head:'hood', cape:'#e9e4d6'}},
+  rook:     {n:'Rook', title:'The silent poacher', dmg:12, int:1.2, hp:65, range:210, pierce:.3, ab:'mark', abN:'Marked', abD:'Marks the toughest enemy: everyone does double damage to him for eight seconds.', bio:'Nobody knows his real name. The King\'s deer certainly never did.', look:{tunic:'#2f3a2c', trim:'#1a1a1a', head:'hood', cape:'#1a2418'}},
+  hal:      {n:'Hal of the Long Arms', title:'Twice-pressed man', dmg:10, int:.9, hp:75, range:200, ab:'quickdraw', abN:'Quick, lads!', abD:'The whole line looses three times as fast for four seconds.', bio:'Pressed into service twice. Escaped once. Has come round to it.', look:{tunic:'#b39b70', trim:'#7a1a1a', head:'cap', cape:'#7a1a1a'}},
+  joan:     {n:'Joan Ashdown', title:'Fire-keeper', dmg:9, int:1.0, hp:70, range:185, ab:'wildfire', abN:'Light them', abD:'Every archer in the line shoots fire arrows for five seconds.', bio:'Keeps the braziers lit for the fire arrows. Sometimes too lit.', look:{tunic:'#5a2a12', trim:'#ff9a3a', head:'bare', cape:'#3a1a0a'}}
+});
+
+/* ================= weekly events ================= */
+const EVENTS = [
+  {id:'rouen', n:'The Siege of Rouen', d:'Crossbows on every wall. Your Genoese hit twice as hard this week.', mix:{xbow:6, maa:1}, rule:'xbow'},
+  {id:'marches', n:'Raid on the Marches', d:'Raiders by the hundred. Double tokens all week.', mix:{levy:8, spear:2}, rule:'tokens'},
+  {id:'calais', n:'The Calais Road', d:'Horse on the road. Your billmen are twice as tough.', mix:{knight:5, spear:2}, rule:'bill'},
+  {id:'mines', n:'The Harfleur Mines', d:'Armoured sappers underground. Every arrow pierces an extra 30%.', mix:{maa:6, spear:1}, rule:'pierce'},
+  {id:'tourney', n:'The Smithfield Tournament', d:'A champion waits at every fifth stage.', mix:{maa:3, knight:3}, rule:'bosses'},
+  {id:'crispin', n:"St Crispin's Eve", d:'Every win gives each man in the line a free level.', mix:{maa:3, knight:2, xbow:2, levy:2}, rule:'levels'}
+];
+function weekNo(d){ d = d || new Date(); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return t.getUTCFullYear() * 100 + Math.ceil(((t - y0) / 864e5 + 1) / 7); }
+const curEvent = () => EVENTS[weekNo() % EVENTS.length];
+const featuredHero = () => { const k = Object.keys(HEROES); return k[weekNo() % k.length]; };
+function weekEnds(){ const d = new Date(), day = d.getDay() || 7, end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (8 - day)); return (end - d) / 1000; }
+function evState(){ const w = weekNo(); if (!S.ev || S.ev.wk !== w) S.ev = {wk:w, stage:1, best:0, ms:{}, tokens:(S.ev && S.ev.tokens) || 0}; return S.ev; }
+const evOpen = () => S.bestEver >= 20;
+const evN = k => Math.max(5, Math.floor(S.bestEver * .55)) + k * 2;
+const EV_MS = [[5, {writs:2}], [10, {medals:10}], [15, {gear:3}], [20, {writs:5}], [25, {gear:4}], [30, {hero:1}]];
+function grantHero(k){
+  const have = S.roster.find(a => a.hero === k);
+  if (have) { if (have.stars < MAXSTARS) have.stars++; else S.res.medals += 30; toast(`${HEROES[k].n} gains a star.`, true); return; }
+  if (S.roster.length >= rosterCap()) { S.res.writs += 10; toast('No room on the roll, so you get 10 writs instead.'); return; }
+  const a = newArcher(4, 'hero', k); S.roster.push(a); S.codex.classes['hero_' + k] = 1; S.codex.heroes[k] = 1; chron(`${a.name} joined the company.`); toast(`${a.name} joins the company!`, true);
+}
+function giveEvReward(r){ for (const k in r) { if (k === 'gear') dropItem(Math.max(10, S.bestEver), r[k]); else if (k === 'hero') grantHero(featuredHero()); else addRes(k, r[k]); } }
+const EV_SHOP = [
+  {id:'writ', n:'Writ of indenture', c:6, f:() => { S.res.writs++; }},
+  {id:'medals', n:'Ten medals', c:8, f:() => { S.res.medals += 10; }},
+  {id:'epic', n:'A piece of Epic gear', c:15, f:() => { dropItem(Math.max(10, S.bestEver), 3); }},
+  {id:'leg', n:'A piece of Legendary gear', c:35, f:() => { dropItem(Math.max(10, S.bestEver), 4); }},
+  {id:'hero', n:"This week's featured Legendary", c:80, f:() => grantHero(featuredHero())}
+];
+function evAfter(b){
+  const E = evState(), ev = curEvent();
+  if (b.won) {
+    const tk = (1 + Math.floor(E.stage / 5)) * (ev.rule === 'tokens' ? 2 : 1); E.tokens += tk;
+    if (ev.rule === 'levels') b.units.forEach(u => { if (u.a.lvl < cap(u.a)) u.a.lvl++; });
+    E.best = Math.max(E.best, E.stage);
+    EV_MS.forEach(([s, r]) => { if (E.best >= s && !E.ms[s]) { E.ms[s] = 1; giveEvReward(r); toast(`Event milestone ${s}: ${Object.keys(r).map(k => k === 'hero' ? HEROES[featuredHero()].n : k === 'gear' ? 'gear' : `${r[k]} ${k}`).join(', ')}`, true); } });
+    E.stage++;
+  } else E.stage = Math.max(1, E.stage - 1);
+}
+function eventHtml(){
+  if (!evOpen()) return `<h3>WEEKLY EVENT</h3><div class="card sub">Weekly events unlock at stage 20. Each week brings a special campaign with its own rules, rewards and shop.</div>`;
+  const E = evState(), ev = curEvent(), on = S.mode === 'event';
+  return `<h3>WEEKLY EVENT · ENDS IN ${fmtT(weekEnds()).toUpperCase()}</h3><div class="tav" style="margin-top:0"><div class="fell" style="font-size:22px">${ev.n}</div><div class="sub" style="color:#c9b08a">${ev.d}</div>
+  <div class="sub" style="color:#e8dcc0;margin-top:6px">Event stage <b>${E.stage}</b> · best <b>${E.best}</b> · 🪙 tokens <b>${E.tokens}</b>. Event battles only run while you watch; your campaign carries on while you're away.</div>
+  <div style="margin-top:6px">${EV_MS.map(([s, r]) => `<span class="pill ${E.ms[s] ? 'g' : ''}">Stage ${s}: ${Object.keys(r).map(k => k === 'hero' ? HEROES[featuredHero()].n : k === 'gear' ? 'gear' : `${r[k]} ${k}`).join(', ')}</span>`).join('')}</div>
+  <button class="btn ${on ? '' : 'gold'} big" style="margin-top:10px" data-act="evmode">${on ? 'Back to the campaign' : 'Fight in the event'}</button>
+  <div class="sub" style="color:#c9b08a;margin-top:10px">Token shop</div>
+  ${EV_SHOP.map(s => `<div class="row" style="padding:4px 0"><span class="grow">${s.id === 'hero' ? `${s.n}: <b class="r4">${HEROES[featuredHero()].n}</b>` : s.n}</span><button class="btn" data-act="evbuy" data-id="${s.id}" ${E.tokens >= s.c ? '' : 'disabled'}>${s.c} tokens</button></div>`).join('')}</div>`;
+}
+
+/* ================= league ================= */
+let league = {t:0, rows:[], err:'', loading:false};
+const captainName = () => (S.captain || (fbUser && (fbUser.displayName || '').split(' ')[0]) || 'A captain').slice(0, 24);
+function lgBest(){ const w = weekNo(); if (!S.lg || S.lg.wk !== w) S.lg = {wk:w, best:0}; S.lg.best = Math.max(S.lg.best, S.runMax); return S.lg.best; }
+async function leaguePush(){ if (!fbUser || !fbDb) return; const w = weekNo(); await fbDb.collection('loose_league').doc(w + '_' + fbUser.uid).set({wk:w, uid:fbUser.uid, name:captainName(), company:(S.company || '').slice(0, 40), best:lgBest(), ev:evOpen() ? evState().best : 0, camp:S.prestiges, bestEver:S.bestEver, t:Date.now()}); }
+async function loadLeague(){
+  if (league.loading) return; league.loading = true; league.t = Date.now();
+  try { await leaguePush(); const snap = await fbDb.collection('loose_league').where('wk', '==', weekNo()).get(); league.rows = snap.docs.map(d => d.data()).sort((a, b) => b.best - a.best || b.ev - a.ev).slice(0, 50); league.err = ''; }
+  catch(e) { league.err = e.code === 'permission-denied' ? 'The league opens once the database rules are in place.' : 'Could not load the league just now.'; }
+  league.loading = false; if (tab === 'orders') { const v = $('#view'), sc = v.scrollTop; render(); v.scrollTop = sc; }
+}
+setInterval(() => { if (fbUser) leaguePush().catch(() => {}); }, 300000);
+function leagueHtml(){
+  if (cloudState === 'unavailable') return '';
+  if (!fbUser) return `<h3>THE KING'S LEAGUE</h3><div class="card sub">Every week, captains race to the furthest stage. Sign in from Settings ⚙️ to join.</div>`;
+  if (Date.now() - league.t > 120000) setTimeout(loadLeague, 0);
+  const me = fbUser.uid;
+  return `<h3>THE KING'S LEAGUE · THIS WEEK</h3><div class="card">${league.err ? `<div class="sub">${league.err}</div>` : !league.rows.length ? '<div class="sub">Loading...</div>' :
+  `<div class="row sub" style="font-weight:700"><span style="width:26px">#</span><span class="grow">Captain</span><span style="width:54px;text-align:right">Stage</span><span style="width:54px;text-align:right">Event</span></div>` +
+  league.rows.map((r, i) => `<div class="row" style="padding:4px 0;${r.uid === me ? 'color:var(--gold);font-weight:700' : ''}"><span style="width:26px">${i + 1}</span><span class="grow">${esc(r.name)}${r.company ? ` <span class="sub">${esc(r.company)}</span>` : ''}</span><span style="width:54px;text-align:right">${r.best}</span><span style="width:54px;text-align:right">${r.ev || '-'}</span></div>`).join('')}
+  <div class="sub" style="margin-top:6px">Your best this week: stage ${lgBest()}. Set your captain's name in Settings.</div></div>`;
+}
+
+/* ================= tutorial ================= */
+const TUT = [null,
+  {t:'battle', x:'Your archers fight on their own. Watch them clear a stage.', ok:() => S.stats.clears >= 1},
+  {t:'company', x:'Open the Company tab and press Train on one of your archers.', ok:() => (S.qp.levels || 0) >= 1},
+  {t:'camp', x:'Now open Camp and upgrade your Farms. Food and silver pay for training.', ok:() => (S.qp.builds || 0) >= 1},
+  {t:'battle', x:'On the battlefield, drag an archer onto another place to swap them. The front rank hits harder but takes the charges.', ok:() => S.tutSwap},
+  {t:'battle', x:'Push on. Reach stage 3 to open the Tavern.', ok:() => S.bestEver >= 3},
+  {t:'tavern', x:'Spend a writ at the Tavern to recruit a new man.', ok:() => S.stats.recruits >= 1},
+  {t:'company', x:'In Company, press "Best men forward" to put your strongest men in the line.', ok:() => S.tutFill}
+];
+function tutTick(){
+  if (!(S.tut >= 1 && S.tut < TUT.length)) { if ($('#tut')) tutBar(); return; }
+  const st = TUT[S.tut]; if (st.ok()) { S.tut++; if (S.tut >= TUT.length) { S.tut = 99; toast("That's the basics. Everything else opens up as you push on.", true); } sfx('coin'); render(); }
+  tutBar();
+}
+function tutBar(){
+  let el = $('#tut'); const on = S.tut >= 1 && S.tut < TUT.length;
+  if (!on) { if (el) el.remove(); document.querySelectorAll('nav .tutp').forEach(b => b.classList.remove('tutp')); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'tut'; $('#app').insertBefore(el, $('#nav')); }
+  const st = TUT[S.tut], html = `<span class="grow"><b>${S.tut}/${TUT.length - 1}</b> ${st.x}</span><button class="btn" data-act="tutskip" style="min-height:30px;padding:4px 9px">Skip</button>`;
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('tutp', b.dataset.tab === st.t && tab !== st.t));
+}
+
+/* ================= music ================= */
+let mus = null;
+function musicStart(){
+  if (!AC || mus || !S.music || !S.sound || document.hidden) return;
+  const a = AC, g = a.createGain(); g.gain.value = .045; g.connect(a.destination);
+  const d1 = a.createOscillator(), d2 = a.createOscillator(), lp = a.createBiquadFilter(), dg = a.createGain();
+  d1.type = d2.type = 'sawtooth'; d1.frequency.value = 73.42; d2.frequency.value = 110; lp.type = 'lowpass'; lp.frequency.value = 320; dg.gain.value = .22;
+  d1.connect(lp); d2.connect(lp); lp.connect(dg); dg.connect(g); d1.start(); d2.start();
+  mus = {g, d1, d2, next:a.currentTime + .4, step:0, note:4};
+}
+function musicStop(){ if (!mus) return; try { mus.d1.stop(); mus.d2.stop(); mus.g.disconnect(); } catch(e){} mus = null; }
+function pluck(t, f, v){ const o = AC.createOscillator(), g = AC.createGain(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v || .3, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + .9); o.connect(g); g.connect(mus.g); o.start(t); o.stop(t + 1); }
+function drum(t, v){ const o = AC.createOscillator(), g = AC.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + .2); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + .28); o.connect(g); g.connect(mus.g); o.start(t); o.stop(t + .3); }
+function musicTick(){
+  if (!S.music || !S.sound || document.hidden) { musicStop(); return; }
+  if (!mus) musicStart(); if (!mus) return;
+  const intense = tab === 'battle' && BT && BT.phase === 'fight' && (isBoss(BT.N) || BT.sp || BT.en.some(e => e.d.boss)), beat = intense ? .3 : .52, scale = [0, 2, 3, 5, 7, 9, 10, 12, 14, 15];
+  while (mus.next < AC.currentTime + .35) {
+    const t = mus.next;
+    if (mus.step % (intense ? 2 : 4) === 0) drum(t, intense ? .55 : .32);
+    if (intense && mus.step % 4 === 3) drum(t, .25);
+    if (mus.step % 2 === 0 && Math.random() < .72) { mus.note = clamp(mus.note + pick([-2, -1, -1, 1, 1, 2, 0]), 0, scale.length - 1); pluck(t, 293.66 * Math.pow(2, scale[mus.note] / 12), .26); if (Math.random() < .25) pluck(t, 146.83 * Math.pow(2, scale[clamp(mus.note - 2, 0, 9)] / 12), .14); }
+    mus.step++; mus.next += beat;
+  }
+}
+
+/* ================= customisation ================= */
+const BANNERS = [['#c8372d', '#f2efe6', 'St George'], ['#1d3a6b', '#e8c64a', 'Azure and gold'], ['#2f6b2a', '#f2efe6', 'Vert and argent'], ['#5a2a6b', '#e8c64a', 'Purpure and gold'], ['#111111', '#e8c64a', 'Sable and gold'], ['#c87a2d', '#1d1d1d', 'Or and sable']];
+const banner = () => BANNERS[S.banner || 0];
+
 /* ================= sound ================= */
 let AC = null;
-function ac(){ if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
+function ac(){ if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (AC && AC.state === 'suspended') AC.resume(); if (AC && typeof musicStart === 'function') musicStart(); return AC; }
 function tone(type, f0, f1, dur, vol, delay){ if (!AC || !S.sound || document.hidden) return; const t = AC.currentTime + (delay || 0); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + .02); }
 function noise(dur, vol, f, delay){ if (!AC || !S.sound || document.hidden) return; const n = Math.floor(AC.sampleRate * dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n); const s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = b; fl.type = 'bandpass'; fl.frequency.value = f; g.gain.value = vol; s.connect(fl); fl.connect(g); g.connect(AC.destination); s.start(AC.currentTime + (delay || 0)); }
 const lastS = {};
@@ -878,15 +1033,15 @@ const SLOTS = PATHS.map(p => {
   return out;
 });
 function newBattle(){
-  const N = S.stage, zi = Math.floor((N - 1) / 10), li = zi % LAYOUTS.length, sp = SP(N);
+  const evOn = S.mode === 'event' && evOpen(), ev = evOn ? curEvent() : null, N = evOn ? evN(evState().stage) : S.stage, zi = Math.floor((N - 1) / 10), li = (zi + (evOn ? 2 : 0)) % LAYOUTS.length, sp = evOn ? null : SP(N);
   const ln = lineUp();
   BT = {N, z:zoneOf(N), sp, li, path:PATHS[li], slots:SLOTS[li], t:0, phase:'fight', units:[], en:[], arrows:[], fx:[], decals:BT && BT.li === li ? BT.decals.filter(d => !d.arrow).slice(-40) : [],
-    spawns:genStage(N), spawnI:0, camp:100, volleyCD:6, volleys:[], streaks:[], stones:[], kills:0, endT:0, shake:0, noArrows:false, silver:0};
+    ev, spawns:genStage(N, ev), spawnI:0, camp:100, volleyCD:6, volleys:[], streaks:[], stones:[], kills:0, endT:0, shake:0, noArrows:false, silver:0};
   const pav = B_('pavise') * supMult();
   ln.forEach((a, i) => { if (!a) return; const s = stats(a); const [x, y] = BT.slots[i], front = i < 5, max = s.hp * (1 + .05 * pav) * (front && R('c3a') ? 1.4 : 1);
     BT.units.push({a, s, x, y, i, front, rm:rankMult(i) * bondMult(i, ln), hp:max * (sp && sp.id === 'flux' ? .5 : 1), max, cd:rnd(.1, 1), face:-Math.PI / 2, drawAmt:0, down:false, charge:rnd(0, 6), chargeMax:R('c2') ? 10.5 : 14, rapidT:0, fireT:0, bodkinT:0, rally:0, hurtT:0}); });
   const hu = HU(N) * supMult();
-  if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')), max:hu * (3 + 1.2 * B_('bill')), dps:hu * (.08 + .03 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
+  if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), max:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), dps:hu * (.08 + .03 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
   if (B_('treb')) { const end = BT.path.pts[BT.path.pts.length - 1]; BT.treb = {x:end[0] < W / 2 ? end[0] + 64 : end[0] - 64, y:Math.min(end[1], H - 26) - 4, cd:4, arm:0}; }
   if (!BT.units.length) { BT.phase = 'empty'; BT.endT = 2; }
   if (sp && tab === 'battle') setTimeout(() => bmsg(sp.n, sp.d), 250);
@@ -909,13 +1064,13 @@ function shoot(u, e, o){
   const dd = dist(e.x, e.y, u.x, u.y), hit = o.sure || Math.random() < clamp(u.s.acc - .2 * dd / u.s.range, .4, .98);
   const T = (u.s.xbow ? .18 : .25) + dd / (u.s.xbow ? 520 : 330);
   let tx = e.x, ty = e.y; if (!hit) { const a = Math.random() * 7, m = rnd(7, 16); tx += Math.cos(a) * m; ty += Math.sin(a) * m; }
-  let dmg = u.s.dmg * (o.mult || 1) * (u.bodkinT > 0 ? 1.3 : 1) * u.rm * (good ? 1.5 : 1); if (u.s.brawler && dd < 34) dmg *= 2;
-  BT.arrows.push({x0:u.x + Math.cos(u.face) * 10, y0:u.y + Math.sin(u.face) * 10, tx, ty, e:hit ? e : null, T, t:0, h:u.s.xbow ? dd * .05 : dd * .16, dmg, pierce:u.bodkinT > 0 ? 1 : u.s.pierce, fire:u.fireT > 0, src:u, gold:o.gold, bolt:u.s.xbow});
+  let dmg = u.s.dmg * (o.mult || 1) * (u.bodkinT > 0 ? 1.3 : 1) * u.rm * (good ? 1.5 : 1) * (BT.inspireT > 0 ? 1.5 : 1) * (BT.ev && BT.ev.rule === 'xbow' && u.s.xbow ? 2 : 1); if (u.s.brawler && dd < 34) dmg *= 2;
+  BT.arrows.push({x0:u.x + Math.cos(u.face) * 10, y0:u.y + Math.sin(u.face) * 10, tx, ty, e:hit ? e : null, T, t:0, h:u.s.xbow ? dd * .05 : dd * .16, dmg, pierce:u.bodkinT > 0 ? 1 : u.s.pierce + (BT.ev && BT.ev.rule === 'pierce' ? .3 : 0), fire:u.fireT > 0, src:u, gold:o.gold, bolt:u.s.xbow});
   u.drawAmt = 0; u.face = Math.atan2(e.y - u.y, e.x - u.x); sfx('twang');
 }
 function hurt(e, dmg, pierce, src, fire){
   if (e.dead) return;
-  e.hp -= dmg * (1 - e.d.arm * (1 - Math.min(1, pierce || 0))); e.flash = .12; sfx('hit');
+  e.hp -= dmg * (1 - e.d.arm * (1 - Math.min(1, pierce || 0))) * (e.markT > 0 ? 2 : 1); e.flash = .12; sfx('hit');
   for (let i = 0; i < 2; i++) BT.fx.push({t:0, x:e.x, y:e.y, vx:rnd(-30, 30), vy:rnd(-30, 30), blood:1});
   if (fire) BT.fx.push({t:0, x:e.x, y:e.y, burn:1});
   if (e.hp <= 0) kill(e, src);
@@ -945,6 +1100,14 @@ function useAbility(u){
   else if (ab === 'aimed') { if (inR[0]) shoot(u, inR[0], {mult:5, sure:1, gold:1, free:1}); }
   else if (ab === 'heavy' || ab === 'through') { if (inR[0]) lineShot(u, inR[0], ab === 'heavy' ? 2.5 : 4); }
   else if (ab === 'hail') { const t = densest(); if (t) { BT.volleys.push({x:t.x, y:t.y, t:.2, n:20, r:34, src:[u], dmg:u.s.dmg * .6}); sfx('volley'); } }
+  else if (ab === 'inspire') BT.inspireT = 6;
+  else if (ab === 'snipe') { const t = BT.en.filter(e => !e.dead).sort((p, q) => q.hp - p.hp)[0]; if (t) shoot(u, t, {mult:10, sure:1, gold:1, free:1}); }
+  else if (ab === 'rain') { for (let k = 0; k < 3; k++) { const t = densest(); if (t) BT.volleys.push({x:t.x, y:t.y, t:.2 - k, n:14, r:32, src:[u], dmg:u.s.dmg * .5}); } sfx('volley'); }
+  else if (ab === 'stakes') BT.en.forEach(e => { if (!e.dead && dist(e.x, e.y, u.x, u.y) < 85) { e.stunT = 4; hurt(e, u.s.dmg * 2, .5, u); } });
+  else if (ab === 'shield') { BT.shieldT = 4; BT.units.forEach(o => BT.fx.push({t:0, x:o.x, y:o.y, ring:1, col:'#9cc8f0'})); }
+  else if (ab === 'mark') { const t = BT.en.filter(e => !e.dead).sort((p, q) => q.hp - p.hp)[0]; if (t) { t.markT = 8; BT.fx.push({t:0, x:t.x, y:t.y - 20, txt:'Marked', col:'#ff9a8a', big:1}); } }
+  else if (ab === 'quickdraw') BT.units.forEach(o => { if (!o.down) o.rapidT = Math.max(o.rapidT, 4); });
+  else if (ab === 'wildfire') BT.units.forEach(o => { if (!o.down) o.fireT = Math.max(o.fireT, 5); });
   else if (ab === 'absolve') BT.units.forEach(o => { if (o.down) { o.down = false; o.hp = o.max * .35; } else o.hp = Math.min(o.max, o.hp + o.max * .5); BT.fx.push({t:0, x:o.x, y:o.y, ring:1, col:'#f2d07a'}); });
 }
 function downUnit(u){ if (u.down) return; u.down = true; u.hp = 0; BT.shake = 4; BT.fx.push({t:0, x:u.x, y:u.y - 14, txt:u.a.name.split(' ')[0] + ' is down', col:'#ff9a8a', big:1}); BT.en.forEach(e => { if (e.tg === u) e.tg = null; }); }
@@ -968,7 +1131,7 @@ function bstep(dt){
     if (u.cd <= 0) { if (t) { shoot(u, t); u.cd = u.rally > 0 ? .18 : u.s.int * rnd(.9, 1.1) * (b.sp && b.sp.id === 'rain' ? 1.3 : 1); if (u.rally > 0) { u.rally--; u.drawAmt = 1; } } else u.cd = .15; }
   }
   for (const a of b.arrows) {
-    if (a.enemy) { a.t += dt; if (a.t >= a.T && !a.done) { a.done = 1; if (!a.u.down && Math.random() < .7) { a.u.hp -= a.dmg; a.u.hurtT = .15; if (a.u.hp <= 0) downUnit(a.u); } } continue; }
+    if (a.enemy) { a.t += dt; if (a.t >= a.T && !a.done) { a.done = 1; if (!a.u.down && Math.random() < .7 && !(b.shieldT > 0)) { a.u.hp -= a.dmg; a.u.hurtT = .15; if (a.u.hp <= 0) downUnit(a.u); } } continue; }
     a.t += dt;
     if (a.t >= a.T && !a.done) {
       a.done = 1;
@@ -992,7 +1155,7 @@ function bstep(dt){
   let nBlock = 0; if (b.bill && !b.bill.down) b.en.forEach(e => { if (!e.dead && !e.tg && !e.d.ranged && e.s >= b.bill.s - 16 && e.s <= b.bill.s + 2) nBlock++; });
   for (const e of b.en) {
     if (e.dead) continue;
-    e.flash -= dt; e.acd -= dt; e.scan -= dt;
+    e.flash -= dt; e.acd -= dt; e.scan -= dt; e.markT = (e.markT || 0) - dt; if (e.stunT > 0) { e.stunT -= dt; continue; }
     let spd = e.d.spd * mud, moving = true;
     if (e.scan <= 0) { e.scan = .3;
       if (e.d.ranged) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.range).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null;
@@ -1005,8 +1168,8 @@ function bstep(dt){
       e.shooting = false; const u = e.tg, dd = dist(u.x, u.y, e.x, e.y); e.ang = Math.atan2(u.y - e.y, u.x - e.x);
       if (dd > e.d.r + 9) { const sp = spd * (e.d.cav && !e.charged ? 1.35 : 1); e.x += Math.cos(e.ang) * sp * dt; e.y += Math.sin(e.ang) * sp * dt; }
       else { moving = false;
-        if (e.d.charge && !e.charged) { e.charged = true; u.hp -= e.d.charge * du; b.shake = 5; sfx('clash'); b.fx.push({t:0, x:u.x, y:u.y, ring:1, col:'#ff6a5a'}); }
-        u.hp -= e.d.dps * du * dt; u.hurtT = .15; if (Math.random() < dt * 2) sfx('clash');
+        if (e.d.charge && !e.charged) { e.charged = true; if (!(b.shieldT > 0)) u.hp -= e.d.charge * du; b.shake = 5; sfx('clash'); b.fx.push({t:0, x:u.x, y:u.y, ring:1, col:'#ff6a5a'}); }
+        if (!(b.shieldT > 0)) u.hp -= e.d.dps * du * dt; u.hurtT = .15; if (Math.random() < dt * 2) sfx('clash');
         if (u.hp <= 0) downUnit(u); }
     } else {
       e.shooting = false;
@@ -1032,7 +1195,7 @@ function bstep(dt){
   b.fx = b.fx.filter(f => f.t < (f.burn ? 1.2 : f.blood ? .5 : f.ring ? .6 : 1.3));
   b.streaks.forEach(s => s.t += dt); b.streaks = b.streaks.filter(s => s.t < .35);
   b.decals.forEach(d => d.t += dt);
-  b.shake = Math.max(0, b.shake - dt * 20);
+  b.shake = Math.max(0, b.shake - dt * 20); b.inspireT = (b.inspireT || 0) - dt; b.shieldT = (b.shieldT || 0) - dt;
   if (!b.units.some(u => !u.down) || b.camp <= 0) return endBattle(false);
   if (b.spawnI >= b.spawns.length && !b.en.length) return endBattle(true);
   if (b.t > 120) return endBattle(false);
@@ -1050,7 +1213,7 @@ function endBattle(win){
     let sub = '+' + fmt(b.silver + cb) + ' silver';
     if (isBoss(N)) {
       S.stats.bosses++; bump('bosses'); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`; S.codex.zones[Math.floor((N - 1) / 10)] = 1;
-      if (!S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; if (N % 50 === 0) chron(`Beat ${zoneOf(N).boss} at stage ${N}.`); }
+      if (!b.ev && !S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; if (N % 50 === 0) chron(`Beat ${zoneOf(N).boss} at stage ${N}.`); }
       const it = dropItem(N, N >= 50 ? 1 : 0); if (it) sub += ` · ${itemName(it)}`;
     }
     if (b.sp) { S.codex.setpieces[b.sp.id] = 1; if (!S.spFirst[N]) { S.spFirst[N] = 1; const it = dropItem(N, 2); if (it) sub += ` · ${itemName(it)}`; chron(`Won ${b.sp.n} at stage ${N}.`); gtag('event', 'set_piece', {id:b.sp.id, stage:N}); } }
@@ -1063,11 +1226,12 @@ function woundTime(){ return 90 * (1 - .09 * B_('surgeon')); }
 function afterBattle(){
   const b = BT;
   if (b.phase === 'empty') { newBattle(); return; }
+  if (b.ev) { evAfter(b); save(); newBattle(); if (tab === 'battle') battleHud(true); return; }
   if (b.won) {
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
     else { S.farmN++; if (S.farmN >= 10 && S.stage < S.runMax) { S.autoAdv = true; S.farmN = 0; } }
-    S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax);
+    S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
     if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
   checkUnlocks(); newBattle(); if (tab === 'battle') battleHud(true);
@@ -1112,10 +1276,11 @@ function renderRes(){
   const show = ['silver','food','wood']; if (S.seen.mine) show.push('iron', 'feathers'); if (S.seen.fletcher) show.push('arrows'); if (S.seen.tavern) show.push('writs'); if (S.res.medals > 0 || S.seen.medals) show.push('medals'); if (S.res.glory > 0 || S.prestiges) show.push('glory');
   const rates = {food:rate('farm'), wood:rate('woodcut'), iron:rate('mine'), feathers:rate('geese'), silver:marketRate(), arrows:B_('fletcher') ? fletchRate() : 0};
   $('#res').innerHTML = show.map(r => { const full = CAPPED.includes(r) && S.res[r] >= storeCap(r) - .5; return `<div class="rc ${full ? 'full' : ''}"><b>${RES[r].i} ${fmt(S.res[r])}</b><span>${CAPPED.includes(r) ? (full ? 'full ' : '') + '/' + fmt(storeCap(r)) : rates[r] ? '+' + fmt(rates[r]) + '/s' : RES[r].n}</span></div>`; }).join('');
-  $('#rank').textContent = rankName() + (S.prestiges ? ` · campaign ${S.prestiges + 1}` : '');
+  $('#rank').textContent = (S.company ? S.company + ' · ' : '') + rankName() + (S.prestiges ? ` · campaign ${S.prestiges + 1}` : '');
 }
 function navBadges(){
-  const show = {battle:1, camp:1, company:1, tavern:S.seen.tavern, orders:S.seen.orders, study:S.bestEver >= 18 || Object.keys(S.research.done).length, legacy:S.seen.legacy};
+  const tu = S.tut >= 1 && S.tut < 99 ? S.tut : 99;
+  const show = {battle:1, camp:tu >= 3, company:tu >= 2, tavern:S.seen.tavern, orders:S.seen.orders, study:S.bestEver >= 18 || Object.keys(S.research.done).length, legacy:S.seen.legacy};
   document.querySelectorAll('nav button').forEach(b => {
     b.classList.toggle('on', b.dataset.tab === tab); b.classList.toggle('hide', !show[b.dataset.tab]);
     let bd = false;
@@ -1136,7 +1301,7 @@ function render(){
   v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
 }
 function viewBattle(){
-  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">Camp news</button><button class="btn" id="spd">1×</button></div>
+  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">Camp news</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="spd">1×</button></div>
   <div id="stage"><canvas id="cv"></canvas><div id="bMsg"></div></div>
   <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
@@ -1147,6 +1312,7 @@ function bindBattleView(){
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
   $('#spd').addEventListener('click', () => { const max = L('swift') ? 3 : 2; S.speed = S.speed >= max ? 1 : S.speed + 1; battleHud(true); });
   $('#newsBtn').addEventListener('click', () => campEvent());
+  $('#modeBtn').addEventListener('click', () => { S.mode = S.mode === 'event' ? 'main' : 'event'; newBattle(); battleHud(true); save(); });
   const toL = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H]; };
   cv.style.touchAction = 'none';
   cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); const [x, y] = toL(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24); if (u) { dragU = {u, ox:u.x, oy:u.y}; cv.setPointerCapture(ev.pointerId); } });
@@ -1158,7 +1324,7 @@ function bindBattleView(){
     const oi = u.i; u.i = j; u.front = j < 5; [u.x, u.y] = BT.slots[j];
     if (other) { other.i = oi; other.front = oi < 5; [other.x, other.y] = BT.slots[oi]; }
     const ln = BT.units.reduce((m, o) => (m[o.i] = o.a, m), []); BT.units.forEach(o => o.rm = rankMult(o.i) * bondMult(o.i, ln));
-    BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; save(); };
+    BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerup', drop); cv.addEventListener('pointercancel', drop);
   layoutStage();
 }
@@ -1172,8 +1338,9 @@ function battleHud(full){
   if (tab !== 'battle' || !BT || !$('#bT')) return;
   const b = BT, N = b.N;
   if (full) {
-    $('#bT').textContent = `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
-    $('#bS').textContent = b.sp ? `Set piece: ${b.sp.n} · best ${S.runMax}` : `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
+    $('#bT').textContent = b.ev ? `Event stage ${evState().stage}${b.spawns.some(s => s.type === 'boss') ? ' · Champion' : ''}` : `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
+    $('#modeBtn').style.display = evOpen() ? '' : 'none'; $('#modeBtn').textContent = S.mode === 'event' ? 'Campaign' : 'Event';
+    $('#bS').textContent = b.ev ? `${b.ev.n} · ${evState().tokens} tokens · best ${evState().best}` : b.sp ? `Set piece: ${b.sp.n} · best ${S.runMax}` : `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
     $('#adv').classList.toggle('on', S.autoAdv); $('#spd').textContent = S.speed + '×';
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
@@ -1181,7 +1348,7 @@ function battleHud(full){
   $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} enemies left · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · out of arrows, no bonus' : arrowsOn() ? ' · good arrows +50%' : '');
   $('#bD').textContent = `Line DPS ${fmt(squadDps(N))}`;
   $('#bBar').style.width = (100 * (1 - left / Math.max(1, b.spawns.length))) + '%';
-  $('#bA').textContent = S.autoAdv ? 'Drag archers to swap places' : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
+  $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? 'Drag archers to swap places' : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
 }
 function viewCamp(){
   let h = `<h2>The Camp</h2><div class="sub">Every building runs while you are away. Storage caps stop production, so build the Storehouse up as you grow.</div>`;
@@ -1247,6 +1414,7 @@ function slotHtml(i, ln){
 function viewTavern(){
   const w = weights(), tot = w.reduce((a, b) => a + b, 0), wp = writPrice();
   return `<h2>The Tavern</h2><div class="sub">Buy a round and see who signs. Every recruit is a real person with a past, some useful habits and some that will get him killed.</div>
+  <div class="card row" style="border-color:#6a5424;background:#2a2614"><img class="pt" src="${portrait({cls:'hero', hero:featuredHero(), rar:4, stars:4}, 50)}" alt=""><div class="grow"><div class="sub" style="color:var(--gold);font-weight:700;letter-spacing:.08em">FEATURED THIS WEEK</div><div class="nm r4">${HEROES[featuredHero()].n}</div><div class="sub">${HEROES[featuredHero()].abN}: ${HEROES[featuredHero()].abD} Half of all Legendary recruits this week are this man or woman.</div></div></div>
   <div class="tav"><div class="fell" style="font-size:22px">The Bell &amp; Bodkin</div><div class="sub" style="color:#c9b08a">Smells of tar, ale and desperation.</div>
   <div class="odds">${RAR.map((r, i) => `<span style="color:${r.c}">${r.n} ${(100 * w[i] / tot).toFixed(1)}%</span>`).join('')}</div>
   <div class="sub" style="color:#c9b08a">A Legendary is guaranteed within <b>${50 - S.pity}</b> recruits. Ten at once guarantees a Rare or better. Legendary duplicates gain a star.</div>
@@ -1257,7 +1425,7 @@ function viewTavern(){
   <h3>LEGENDARY ARCHERS</h3>${Object.keys(HEROES).map(k => { const Hh = HEROES[k], own = S.roster.find(a => a.hero === k), fake = {cls:'hero', hero:k, rar:4}; return `<div class="card row" ${own ? '' : 'style="opacity:.55"'}><img class="pt" src="${portrait(fake, 50)}" alt=""><div class="grow"><div class="nm r4">${Hh.n} ${own ? `<span class="stars">${'★'.repeat(own.stars)}</span>` : ''}</div><div class="sub">${Hh.title} · ${Hh.abN}: ${Hh.abD}</div></div><span class="sub">${own ? 'Serving' : 'Not met'}</span></div>`; }).join('')}`;
 }
 function viewOrders(){
-  let h = `<h2>Orders</h2>`;
+  let h = `<h2>Orders</h2>` + eventHtml() + leagueHtml();
   const ready = dailyReady(), streak = S.daily.streak % 7;
   h += `<h3>DAILY RATIONS</h3><div class="card"><div class="days">${DAILY.map((d, i) => `<div class="${i < streak || (!ready && i === streak - 1) ? 'got' : ''} ${ready && i === streak ? 'now' : ''}">Day ${i + 1}<br>${Object.keys(d).map(r => RES[r].i).join('')}</div>`).join('')}</div>
   ${ready ? `<button class="btn gold big" data-act="daily">Claim day ${streak + 1}: ${Object.entries(dailyReward(streak)).map(([r, v]) => RES[r].i + fmt(v)).join(' ')}</button>` : '<div class="sub">Claimed today. Back tomorrow for more.</div>'}</div>`;
@@ -1288,7 +1456,7 @@ function sheetArcher(id){
   const a = S.roster.find(x => x.id === id); if (!a) return closeSheet();
   sheetFn = () => sheetArcher(id);
   const b = base(a), st = stats(a), dm = [1, 2, 4, 8, 20][a.rar] * a.stars;
-  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><div class="nm r${a.rar}" style="font-size:18px">${esc(dispName(a))}</div><div class="stars" style="font-size:15px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
+  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><input class="nmin r${a.rar}" id="aname" data-id="${a.id}" value="${esc(a.name)}" maxlength="30" aria-label="Name">${a.nick ? `<div class="sub">Known as "${esc(a.nick)}"</div>` : ''}<div class="stars" style="font-size:15px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
   <p class="bio">${esc(a.bio)}</p>
   <div class="stat4"><div><b>${fmt(st.dps)}</b><span>DPS</span></div><div><b>${fmt(st.hp)}</b><span>HEALTH</span></div><div><b>${(60 / st.int).toFixed(0)}</b><span>PER MIN</span></div><div><b>${st.range.toFixed(0)}</b><span>RANGE</span></div></div>
   <div class="card"><b>${b.abN}</b><div class="sub">${b.abD} Fires on its own when charged.</div></div>
@@ -1337,7 +1505,7 @@ function pull(n){
   for (let i = 0; i < n; i++) {
     let r = rollRar(); if (n === 10 && i === 9 && !out.some(o => o.a.rar >= 2) && r < 2) r = 2;
     let a, dupe = false;
-    if (r === 4) { const keys = Object.keys(HEROES), un = keys.filter(k => !S.roster.some(x => x.hero === k)), k = un.length && Math.random() < .75 ? pick(un) : pick(keys), have = S.roster.find(x => x.hero === k);
+    if (r === 4) { const keys = Object.keys(HEROES), un = keys.filter(k => !S.roster.some(x => x.hero === k)), k = Math.random() < .5 ? featuredHero() : un.length && Math.random() < .75 ? pick(un) : pick(keys), have = S.roster.find(x => x.hero === k);
       if (have) { if (have.stars < MAXSTARS) have.stars++; else S.res.medals += 30; a = have; dupe = true; } else a = newArcher(4, 'hero', k); }
     else a = newArcher(r, r === 0 ? 'levy' : r === 1 ? 'yeoman' : r === 2 ? (Math.random() < .55 ? 'welsh' : 'genoese') : 'veteran');
     if (!dupe) { a.gear = {}; a.kt = {}; S.roster.push(a); } out.push({a, dupe});
@@ -1458,7 +1626,7 @@ document.addEventListener('click', e => {
     case 'dismiss': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure?'; return; } if (S.roster.length <= 1) return toast('You cannot pay off your last man.'); const m = [1, 2, 4, 8, 20][ar.rar] * ar.stars; S.res.medals += m; S.roster = S.roster.filter(x => x !== ar); S.form = S.form.map(f => f === ar.id ? null : f); closeSheet(); toast(`${ar.name} takes his pay and heads for the alehouse. +${m} medals.`, true); refreshLineStats(); break; }
     case 'slot': if (!slotOpen(+el.dataset.i)) return; sheetSlot(+el.dataset.i); return;
     case 'setslot': { const i = +el.dataset.i; if (id) { const j = S.form.indexOf(id); if (j >= 0) S.form[j] = S.form[i]; } S.form[i] = id || null; closeSheet(); refreshLineStats(); break; }
-    case 'autofill': autofill(); refreshLineStats(); toast('Best men forward.', true); break;
+    case 'autofill': autofill(); S.tutFill = 1; refreshLineStats(); toast('Best men forward.', true); break;
     case 'autores': S.autoRes = !S.autoRes; refreshLineStats(); break;
     case 'pull': pull(+el.dataset.n); return;
     case 'buywrit': { const p = writPrice(); if (S.res.silver < p) return; S.res.silver -= p; S.res.writs++; S.writBuys++; sfx('coin'); break; }
@@ -1473,6 +1641,11 @@ document.addEventListener('click', e => {
     case 'evc': { const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
     case 'armoury': sheetArmoury(); return;
+    case 'tutskip': S.tut = 99; tutBar(); break;
+    case 'evmode': S.mode = S.mode === 'event' ? 'main' : 'event'; newBattle(); tab = 'battle'; break;
+    case 'evbuy': { const it = EV_SHOP.find(s => s.id === id), E = evState(); if (!it || E.tokens < it.c) return; E.tokens -= it.c; it.f(); sfx('coin'); break; }
+    case 'banner': S.banner = +el.dataset.i; bgKey = ''; save(); refreshSheet(); return;
+    case 'music': S.music = !S.music; if (!S.music) musicStop(); else { ac(); musicStart(); } save(); refreshSheet(); return;
     case 'gearslot': sheetGear(id, el.dataset.s); return;
     case 'equip': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || !ar) return; const o = gearOwner(it.id); if (o) delete o.gear[it.s]; ar.gear[it.s] = it.id; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
     case 'unequip': { if (!ar) return; delete ar.gear[el.dataset.s]; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
@@ -1510,12 +1683,17 @@ function collectExped(i){
 }
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => { ac(); tab = b.dataset.tab; pickSlot = null; render(); $('#view').scrollTop = 0; }));
 $('#setBtn').addEventListener('click', () => { ac(); sheetSettings(); });
+document.addEventListener('change', e => {
+  if (e.target.id === 'aname') { const a = S.roster.find(x => x.id === e.target.dataset.id), v = e.target.value.trim().slice(0, 30); if (a && v) { a.name = v; if (BT) BT.units.forEach(u => u.L = null); save(); render(); } }
+  if (e.target.id === 'capname') { S.captain = e.target.value.trim().slice(0, 24); save(); if (fbUser) leaguePush().catch(() => {}); }
+  if (e.target.id === 'coname') { S.company = e.target.value.trim().slice(0, 40); save(); renderRes(); }
+});
 window.addEventListener('load', () => { initCloud(); initPwa(); setTimeout(pushStats, 4000); });
 $('#snd').addEventListener('click', () => { S.sound = !S.sound; $('#snd').textContent = S.sound ? '🔊' : '🔈'; save(); });
 
 /* ================= render battle ================= */
 function renderBG(){
-  const key = BT.li + '|' + Math.floor((BT.N - 1) / 10) + '|' + cv.width; if (key === bgKey) return; bgKey = key;
+  const key = BT.li + '|' + Math.floor((BT.N - 1) / 10) + '|' + cv.width + '|' + (S.banner || 0); if (key === bgKey) return; bgKey = key;
   bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height; const g = bg.getContext('2d'), k = cv.width / W; g.setTransform(k, 0, 0, k, 0, 0);
   const rng = mulberry(BT.li * 31 + Math.floor((BT.N - 1) / 10) * 7), [g0, g1] = BT.z.g, p = BT.path;
   g.fillStyle = g0; g.fillRect(0, 0, W, H);
@@ -1545,7 +1723,7 @@ function renderBG(){
   g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(ox + 2, oy + 4, 40, 18, 0, 0, 7); g.fill(); g.fillStyle = '#6f6040'; g.beginPath(); g.ellipse(ox, oy, 38, 16, 0, 0, 7); g.fill();
   [[-24, 2, .2], [22, 4, -.3]].forEach(([dx, dy, a]) => drawCart(g, ox + dx, oy + dy, a, false));
   g.fillStyle = '#e8e0cc'; g.fillRect(ox - 9, oy - 12, 18, 18); g.strokeStyle = '#a89c80'; g.lineWidth = 1; g.beginPath(); g.moveTo(ox - 9, oy - 3); g.lineTo(ox + 9, oy - 3); g.stroke();
-  g.strokeStyle = '#4a3420'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(ox, oy - 3); g.lineTo(ox, oy - 26); g.stroke(); g.fillStyle = '#f2efe6'; g.fillRect(ox, oy - 26, 13, 8); g.fillStyle = '#c8372d'; g.fillRect(ox + 5, oy - 26, 2.2, 8); g.fillRect(ox, oy - 23.1, 13, 2.2);
+  g.strokeStyle = '#4a3420'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(ox, oy - 3); g.lineTo(ox, oy - 26); g.stroke(); const bn = banner(); g.fillStyle = bn[0] === '#c8372d' ? '#f2efe6' : bn[0]; g.fillRect(ox, oy - 26, 13, 8); g.fillStyle = bn[0] === '#c8372d' ? '#c8372d' : bn[1]; g.fillRect(ox + 5, oy - 26, 2.2, 8); g.fillRect(ox, oy - 23.1, 13, 2.2);
   const v = g.createRadialGradient(W / 2, H / 2, H * .3, W / 2, H / 2, H * .75); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.35)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
   function distToPath(x, y){ let m = 1e9; for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy || 1, t = clamp(((x - a[0]) * vx + (y - a[1]) * vy) / l2, 0, 1); m = Math.min(m, dist(x, y, a[0] + vx * t, a[1] + vy * t)); } return m; }
 }
@@ -1641,7 +1819,7 @@ function frame(dtReal){
   while (dt > 0) { const s = Math.min(.025, dt); bstep(s); dt -= s; }
   if (BT && BT.pendingRebuild && BT.phase !== 'fight') BT.pendingRebuild = false;
   uiT += dtReal; saveT += dtReal;
-  if (uiT > .5) { uiT = 0; renderRes(); battleHud(false); navBadges(); liveRefresh(); }
+  if (uiT > .5) { uiT = 0; renderRes(); battleHud(false); navBadges(); liveRefresh(); tutTick(); musicTick(); }
   if (saveT > 5) { saveT = 0; save(); }
 }
 let lastRefresh = 0;
@@ -1675,7 +1853,7 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:13px">Sign in from Settings ⚙️ to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 </body>
