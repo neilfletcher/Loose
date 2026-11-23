@@ -2,7 +2,7 @@
 
 A quick-fire mobile strategy game of the 1415 campaign, from the siege of Harfleur to Agincourt.
 
-**Play it:** https://neilfletcher.github.io/loose/
+**Play it:** https://neilfletcher.github.io/Loose/
 
 ## How it plays
 
