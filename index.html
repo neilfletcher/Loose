@@ -4,9 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#10140f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Loose! A Company of Archers</title>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-JF54HQGVLT"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JF54HQGVLT');</script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -142,7 +148,7 @@ h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-w
 <body>
 <div id="app">
   <header>
-    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="ib" id="snd" aria-label="Sound">🔊</button></div>
+    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="ib" id="snd" aria-label="Sound">🔊</button><button class="ib" id="setBtn" aria-label="Settings">⚙️</button></div>
     <div class="res" id="res"></div>
   </header>
   <main id="view"></main>
@@ -152,6 +158,7 @@ h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-w
     <button data-tab="company"><svg viewBox="0 0 24 24"><path d="M7 3c9 4 9 14 0 18M7 3v18M4 12h16"/></svg>Company</button>
     <button data-tab="tavern"><svg viewBox="0 0 24 24"><path d="M5 8h10v12H5zM15 11h3v6h-3M5 8c0-4 10-4 10 0"/></svg>Tavern</button>
     <button data-tab="orders"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7"/></svg>Orders</button>
+    <button data-tab="study"><svg viewBox="0 0 24 24"><path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z"/></svg>Study</button>
     <button data-tab="legacy"><svg viewBox="0 0 24 24"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2l.9-5.5-4-3.9 5.5-.8z"/></svg>Legacy</button>
   </nav>
 </div>
@@ -228,8 +235,8 @@ const LAYOUTS = [
   [[.86,-.04],[.8,.3],[.28,.5],[.42,.94]],
   [[.14,-.04],[.2,.3],[.72,.5],[.58,.94]]
 ];
-const RES = {silver:{i:'🪙',n:'Silver'}, food:{i:'🌾',n:'Food'}, wood:{i:'🪵',n:'Wood'}, iron:{i:'⛏️',n:'Iron'}, feathers:{i:'🪶',n:'Feathers'}, arrows:{i:'🏹',n:'Arrows'}, writs:{i:'📜',n:'Writs'}, medals:{i:'🎖️',n:'Medals'}, glory:{i:'⚜️',n:'Glory'}};
-const CAPPED = ['food','wood','iron','feathers','arrows'];
+const RES = {silver:{i:'🪙',n:'Silver'}, food:{i:'🌾',n:'Food'}, wood:{i:'🪵',n:'Wood'}, iron:{i:'⛏️',n:'Iron'}, feathers:{i:'🪶',n:'Feathers'}, arrows:{i:'🏹',n:'Arrows'}, writs:{i:'📜',n:'Writs'}, medals:{i:'🎖️',n:'Medals'}, glory:{i:'⚜️',n:'Glory'}, parchment:{i:'📖',n:'Parchment'}, garter:{i:'🎗️',n:'Garter stars'}};
+const CAPPED = ['food','wood','iron','feathers','arrows','parchment'];
 const BLD = {
   farm:      {n:'Farms', i:'🌾', un:1, cost:{silver:20, wood:15}, g:1.14, d:'Food for training archers.', prod:'food', rate:1.5},
   woodcut:   {n:'Woodcutters', i:'🪵', un:1, cost:{silver:20, food:15}, g:1.14, d:'Wood for every building.', prod:'wood', rate:1.2},
@@ -243,7 +250,11 @@ const BLD = {
   bowyer:    {n:'Bowyer', i:'🌲', un:15, cost:{silver:600, wood:400, iron:150}, g:1.24, d:'Better bows for everyone. Damage doubles every ten levels.'},
   surgeon:   {n:'Barber-surgeon', i:'🩸', un:20, cost:{silver:800, food:500, wood:300}, g:1.25, max:9, d:'Wounded men recover faster, and everyone is a bit tougher.'},
   butts:     {n:'Practice butts', i:'🎯', un:25, cost:{silver:1000, food:800, wood:600}, g:1.25, d:'Men in the line train on their own: a free level every so often.'},
-  tavern:    {n:'Tavern', i:'🍺', un:30, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'}
+  tavern:    {n:'Tavern', i:'🍺', un:30, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'},
+  scriptorium:{n:'Scriptorium', i:'📖', un:18, cost:{silver:700, wood:500, food:300}, g:1.25, d:'Clerks copying texts. Parchment for research in the Study.', prod:'parchment', rate:.05},
+  bill:      {n:'Billmen', i:'🪓', un:15, cost:{silver:500, food:400, iron:150}, g:1.22, d:'A knot of billmen who hold the road and stop whatever comes down it.'},
+  pavise:    {n:'Pavise-bearers', i:'🛡️', un:25, cost:{silver:900, wood:600, iron:200}, g:1.22, d:'Big wooden shields: crossbow bolts do half damage, and the line is tougher.'},
+  treb:      {n:'Trebuchet', i:'🪨', un:45, cost:{silver:3000, wood:2000, iron:800}, g:1.24, d:'Lobs a stone into the thickest crowd every few seconds.'}
 };
 const LEGACY = {
   drill:   {n:"Drillmaster's Book", d:'Archer damage ×1.25 per level', c:3, g:1.45},
@@ -292,7 +303,7 @@ function load(){
   S.roster.push(a, b, c); S.form[0] = a.id; S.form[1] = b.id; S.form[5] = c.id;
   return false;
 }
-function save(){ S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function save(){ if (window.__skipSave) return; S.last = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
 /* ================= archers ================= */
 const base = a => a.cls === 'hero' ? HEROES[a.hero] : CLS[a.cls];
@@ -312,7 +323,7 @@ function genBio(cls){
   return pick(ORIGIN) + '. ' + pick(QUIRK);
 }
 function newArcher(rar, cls, hero){
-  const a = {id:uid(), rar, cls, lvl:1, stars:RAR[rar].st, traits:[], kills:0, woundT:0, away:null};
+  const a = {id:uid(), rar, cls, lvl:1, stars:RAR[rar].st, traits:[], kills:0, woundT:0, away:null, gear:{}, kt:{}};
   if (cls === 'hero') { a.hero = hero; a.name = HEROES[hero].n; a.bio = HEROES[hero].bio; a.traits = [pickTrait(1, [])]; a.traits.push(pickTrait(1, a.traits)); }
   else { a.name = genName(cls); a.bio = genBio(cls); const n = rar >= 2 ? 2 : 1; for (let i = 0; i < n; i++) a.traits.push(pickTrait(.45 + rar * .14, a.traits)); }
   return a;
@@ -321,13 +332,13 @@ const lvMul = l => l * Math.pow(2, Math.floor(l / 25));
 const cap = a => 25 + 25 * a.stars;
 const L = k => S.legacy[k] || 0;
 const B_ = k => S.bld[k] || 0;
-function dmgMult(){ return Math.pow(1.25, L('drill')) * (1 + .1 * B_('bowyer')) * Math.pow(2, Math.floor(B_('bowyer') / 10)); }
+function dmgMult(){ return Math.pow(1.25, L('drill')) * (1 + .1 * B_('bowyer')) * Math.pow(2, Math.floor(B_('bowyer') / 10)) * codexDmg() * (R('a1') ? 1.15 : 1) * (R('a4') ? 1.3 : 1) * (R('a6') ? 1.6 : 1) * Math.pow(2, G('twin')); }
 function stats(a){
-  const b = base(a), t = a.traits, sm = Math.pow(1.4, a.stars - 1);
-  const dmg = b.dmg * lvMul(a.lvl) * sm * (t.includes('strong') ? 1.15 : 1) * (t.includes('steady') ? 1.08 : 1) * (t.includes('drunk') ? .9 : 1) * dmgMult();
-  const int = b.int / ((t.includes('quick') ? 1.12 : 1) * (t.includes('nervous') ? .9 : 1));
-  const hp = b.hp * (1 + .25 * (a.lvl - 1)) * Math.pow(2, Math.floor(a.lvl / 25)) * Math.pow(1.3, a.stars - 1) * (t.includes('tough') ? 1.3 : 1) * (t.includes('drunk') ? 1.1 : 1) * Math.pow(1.3, L('iron')) * (1 + .04 * B_('surgeon'));
-  return {dmg, int, dps:dmg / int, hp, range:b.range * (t.includes('keen') ? 1.12 : 1), pierce:b.pierce || 0, ab:b.ab, xbow:!!b.xbow, brawler:t.includes('brawler'), pious:t.includes('pious'), acc:t.includes('steady') ? .97 : .9};
+  const b = base(a), t = a.traits, sm = Math.pow(1.4, a.stars - 1), g = gearOf(a);
+  const dmg = b.dmg * lvMul(a.lvl) * sm * (t.includes('strong') ? 1.15 : 1) * (t.includes('steady') ? 1.08 : 1) * (t.includes('drunk') ? .9 : 1) * dmgMult() * (1 + (g.bow ? g.bow.v : 0) / 100) * (1 + (g.head ? g.head.v / 2 : 0) / 100) * (a.nick ? 1.05 : 1);
+  const int = b.int / ((t.includes('quick') ? 1.12 : 1) * (t.includes('nervous') ? .9 : 1) * (1 + (g.charm ? g.charm.v / 2 : 0) / 100) * (R('a3b') ? 1.15 : 1));
+  const hp = b.hp * (1 + .25 * (a.lvl - 1)) * Math.pow(2, Math.floor(a.lvl / 25)) * Math.pow(1.3, a.stars - 1) * (t.includes('tough') ? 1.3 : 1) * (t.includes('drunk') ? 1.1 : 1) * Math.pow(1.3, L('iron')) * (1 + .04 * B_('surgeon')) * (1 + (g.armour ? g.armour.v : 0) / 100) * codexHp() * (R('c1') ? 1.15 : 1) * (R('c3b') ? 1.1 : 1);
+  return {dmg, int, dps:dmg / int, hp, range:b.range * (t.includes('keen') ? 1.12 : 1), pierce:Math.min(1, (b.pierce || 0) + (g.head ? .04 + .03 * g.head.r : 0) + (R('a2') ? .15 : 0)), ab:b.ab, xbow:!!b.xbow, brawler:t.includes('brawler'), pious:t.includes('pious'), acc:t.includes('steady') ? .97 : .9};
 }
 function lvlCost(a, n){
   let s = 0, f = 0; const fr = a.traits.includes('frugal') ? .9 : 1, gl = a.traits.includes('glutton') ? 1.15 : 1;
@@ -360,12 +371,12 @@ function bCost(k){ const b = BLD[k], l = B_(k), o = {}; for (const r in b.cost) 
 function canPay(c){ for (const r in c) if ((S.res[r] || 0) < c[r] - 1e-9) return false; return true; }
 function pay(c){ for (const r in c) S.res[r] -= c[r]; }
 function costHtml(c){ return Object.keys(c).map(r => `<span class="${(S.res[r] || 0) < c[r] ? 'no' : ''}">${RES[r].i}${fmt(c[r])}</span>`).join(' '); }
-function storeCap(r){ const c = 1000 * Math.pow(1.4, B_('store')); return r === 'arrows' ? c * 2 : c; }
-const prodMult = () => Math.pow(1.3, L('charter'));
-function rate(k){ const b = BLD[k], l = B_(k); return l ? b.rate * l * Math.pow(2, Math.floor(l / 25)) * prodMult() : 0; }
+function storeCap(r){ const c = 1000 * Math.pow(1.4, B_('store')) * (R('l3a') ? 2 : 1); return r === 'arrows' ? c * 2 : c; }
+const prodMult = () => Math.pow(1.3, L('charter')) * codexProd() * (R('l6') ? 2 : 1);
+function rate(k){ const b = BLD[k], l = B_(k); return l ? b.rate * l * Math.pow(2, Math.floor(l / 25)) * prodMult() * resMult(b.prod) : 0; }
 const clearBonus = N => 4 * Math.pow(1.095, N - 1);
 function marketRate(){ return B_('market') ? .01 * B_('market') * clearBonus(S.runMax) * prodMult() : 0; }
-function fletchRate(){ return B_('fletcher') * 1.0 * prodMult(); }
+function fletchRate(){ return B_('fletcher') * 1.0 * prodMult() * (R('l4') ? 1.5 : 1); }
 const ARROW_IN = {wood:.6, feathers:.4, iron:.15};
 const arrowsOn = () => B_('fletcher') > 0;
 const arrowBonus = () => arrowsOn() && S.res.arrows >= 1 ? 1.5 : 1;
@@ -375,7 +386,7 @@ function addRes(r, v){
   if (v <= room) S.res[r] += v; else { S.res[r] = Math.max(S.res[r], c); if (B_('market') && v > room) S.res.silver += (v - Math.max(0, room)) * .02 * B_('market') * Math.pow(1.06, S.runMax); }
 }
 function econTick(dt){
-  for (const k of ['farm','woodcut','mine','geese']) { const b = BLD[k]; if (B_(k)) addRes(b.prod, rate(k) * dt); }
+  for (const k of ['farm','woodcut','mine','geese','scriptorium']) { const b = BLD[k]; if (B_(k)) addRes(b.prod, rate(k) * dt); }
   S.res.silver += marketRate() * dt;
   if (B_('fletcher')) {
     let n = fletchRate() * dt; for (const r in ARROW_IN) n = Math.min(n, S.res[r] / ARROW_IN[r]);
@@ -383,6 +394,7 @@ function econTick(dt){
   }
   S.roster.forEach(a => { if (a.woundT) a.woundT = Math.max(0, a.woundT - dt); });
   if (B_('butts')) { S.buttsT += dt; const per = 240 / B_('butts'); while (S.buttsT >= per) { S.buttsT -= per; const ln = lineUp().filter(a => a && a.lvl < cap(a)); if (ln.length) { const a = pick(ln); a.lvl++; } } }
+  extraTick(dt);
 }
 function writPrice(){ return Math.round(80 * Math.pow(1.095, S.runMax - 1) * (1 - .05 * B_('tavern')) * Math.pow(1.05, S.writBuys)); }
 
@@ -394,20 +406,20 @@ const isBoss = N => N % 10 === 0;
 const HU = N => 20 * Math.pow(1.15, N - 1);
 const DU = N => 2 * Math.pow(1.045, N - 1);
 function genStage(N){
-  const z = zoneOf(N), rng = mulberry(N * 7919 + 13), n = Math.min(24, 6 + Math.floor(N / 3)), pool = Object.entries(z.mix);
+  const z = zoneOf(N), sp = SP(N), rng = mulberry(N * 7919 + 13), n = Math.min(24, 6 + Math.floor(N / 3)), pool = Object.entries(sp ? sp.mix : z.mix);
   const tot = pool.reduce((s, p) => s + p[1], 0), out = [];
   for (let i = 0; i < n; i++) { let r = rng() * tot, ty = pool[0][0]; for (const [k, w] of pool) { r -= w; if (r <= 0) { ty = k; break; } } out.push({t:.6 + i * .8, type:ty}); }
   if (isBoss(N)) out.push({t:.6 + n * .4, type:'boss'});
   out.sort((a, b) => a.t - b.t);
   return out;
 }
-function stageHp(N){ return genStage(N).reduce((s, e) => s + EN[e.type].hp * HU(N), 0); }
+function stageHp(N){ return genStage(N).reduce((s, e) => s + EN[e.type].hp * HU(N), 0) * (SP(N) && SP(N).id === 'rain' ? .7 : 1); }
 function stageArm(N){ const g = genStage(N); return g.reduce((s, e) => s + EN[e.type].arm * EN[e.type].hp, 0) / g.reduce((s, e) => s + EN[e.type].hp, 0); }
-function stageReward(N){ const g = genStage(N); const kills = g.reduce((s, e) => s + EN[e.type].pay, 0) * .6 * Math.pow(1.095, N - 1); return (kills + clearBonus(N) * (isBoss(N) ? 4 : 1)) * silverMult(); }
-function silverMult(){ const greedy = lineUp().filter(a => a && a.traits.includes('greedy')).length; return Math.pow(1.3, L('tax')) * (1 + .05 * greedy); }
+function stageReward(N){ const g = genStage(N); const kills = g.reduce((s, e) => s + EN[e.type].pay, 0) * .6 * Math.pow(1.095, N - 1); return (kills + clearBonus(N) * (isBoss(N) ? 4 : 1) * (SP(N) ? 3 : 1)) * silverMult(); }
+function silverMult(){ const greedy = lineUp().filter(a => a && a.traits.includes('greedy')).length; return Math.pow(1.3, L('tax')) * (1 + .05 * greedy) * codexSilver() * (R('c6') ? 2 : 1); }
 function squadDps(N){
   const arm = stageArm(N), ln = lineUp();
-  let d = 0; ln.forEach((a, i) => { if (!a) return; const s = stats(a); d += s.dps * (i < 5 ? 1.2 : 1) * (1 - arm * (1 - s.pierce)); });
+  let d = 0; ln.forEach((a, i) => { if (!a) return; const s = stats(a); d += s.dps * rankMult(i) * (1 - arm * (1 - s.pierce)); });
   d *= arrowBonus();
   return d * (1 + .03 * B_('drill'));
 }
@@ -557,6 +569,264 @@ function portrait(a, size){
   return pcache[key] = c.toDataURL();
 }
 
+/* ================= expansion data ================= */
+const GSLOT = {
+  bow:{n:'Bow', st:'damage', names:['Elm self bow','Ash war bow','Yew war bow','Spanish yew bow','The Crécy bow']},
+  head:{n:'Arrowheads', st:'damage and pierce', names:['Broadheads','Swallowtails','Bodkins','Needle bodkins','Tempered bodkins']},
+  armour:{n:'Armour', st:'health', names:['Padded jack','Mail shirt','Brigandine','Jack of plates','Milanese breastplate']},
+  charm:{n:'Charm', st:'loose rate', names:['Lock of hair',"Rabbit's foot",'Pilgrim badge','St George medal','Relic of St Crispin']}
+};
+const SETPIECES = [
+  {id:'mud', n:'The Mud', d:'Freshly ploughed and soaking. Everything they send wades at half speed, and they send horse.', mix:{knight:4, maa:3}},
+  {id:'night', n:'Night Raid on the Baggage', d:'They come in the dark, and they come for the back rank first.', mix:{spear:3, levy:3, maa:1}},
+  {id:'flux', n:'The Flux', d:'Half the company is sick. Your men start the fight at half health.', mix:{levy:4, spear:3, xbow:2}},
+  {id:'rain', n:'Rain on the Strings', d:'Wet bowstrings loose slower, but the French are soaked too: a third less health.', mix:{maa:3, xbow:3, spear:2}},
+  {id:'charge', n:'The Great Charge', d:'Nothing but horse, and it is coming fast.', mix:{knight:1}},
+  {id:'walls', n:'Under the Walls', d:'Crossbows on every rampart. Your trebuchet hits three times as hard here.', mix:{xbow:6, maa:2}}
+];
+const SP = N => N % 25 === 15 ? SETPIECES[Math.floor(N / 25) % SETPIECES.length] : null;
+const RTIME = [600, 1800, 3600, 10800, 21600, 43200], RCOST = [60, 180, 500, 1400, 4000, 11000];
+const RESEARCH = [
+  {id:'a1', br:'Archery', t:1, n:'Fletching drills', d:'Archer damage +15%'},
+  {id:'a2', br:'Archery', t:2, n:'Bodkin points', d:'Every arrow pierces 15% more armour'},
+  {id:'a3a', br:'Archery', t:3, x:'a3', n:'Longbow mastery', d:'Back rank damage +30%'},
+  {id:'a3b', br:'Archery', t:3, x:'a3', n:'Rapid drill', d:'Loose rate +15% for everyone'},
+  {id:'a4', br:'Archery', t:4, n:'Clothyard shafts', d:'Archer damage +30%'},
+  {id:'a5', br:'Archery', t:5, n:'Hail of arrows', d:"The Captain's volley fires twice as many arrows"},
+  {id:'a6', br:'Archery', t:6, n:'Agincourt veterans', d:'Archer damage ×1.6'},
+  {id:'l1', br:'Logistics', t:1, n:'Crop rotation', d:'Food ×1.5'},
+  {id:'l2', br:'Logistics', t:2, n:'Charcoal burning', d:'Iron ×1.5'},
+  {id:'l3a', br:'Logistics', t:3, x:'l3', n:'Granary carts', d:'Storage caps ×2'},
+  {id:'l3b', br:'Logistics', t:3, x:'l3', n:"Quartermaster's tally", d:'Offline time counts for 2 hours longer'},
+  {id:'l4', br:'Logistics', t:4, n:'Goose husbandry', d:'Feathers ×2, Fletcher ×1.5'},
+  {id:'l5', br:'Logistics', t:5, n:'Scribes', d:'Study two things at once'},
+  {id:'l6', br:'Logistics', t:6, n:'Royal purveyance', d:'All production ×2'},
+  {id:'c1', br:'Command', t:1, n:'Company banners', d:'Archer health +15%'},
+  {id:'c2', br:'Command', t:2, n:'Captains of twenty', d:'Specials charge 25% faster'},
+  {id:'c3a', br:'Command', t:3, x:'c3', n:'Stand fast', d:'Front rank health +40%'},
+  {id:'c3b', br:'Command', t:3, x:'c3', n:'Loose order', d:'Whole line +10% damage and +10% health'},
+  {id:'c4', br:'Command', t:4, n:"Surgeons' guild", d:'Deaths in battle halved, wounds heal twice as fast'},
+  {id:'c5', br:'Command', t:5, n:'Sergeants', d:'Billmen, pavises and trebuchet +60%'},
+  {id:'c6', br:'Command', t:6, n:'Royal household', d:'Silver from battles ×2'}
+];
+const GARTER = {
+  twin:   {n:'A Second Company', d:'All archer damage ×2 per level', c:1, g:2},
+  glory:  {n:'Royal Favour', d:'Glory ×1.5 per level', c:1, g:2},
+  auto:   {n:'Standing Orders', d:'Archers at their level cap are promoted automatically when you can pay', c:2, g:1, max:1},
+  away:   {n:'Trusted Lieutenants', d:'Offline time counts double', c:2, g:1, max:1},
+  found:  {n:'Royal Grant', d:'Each new campaign starts with gathering buildings at level 10', c:3, g:1, max:1},
+  scholar:{n:'Oxford Clerks', d:'Research takes half the time', c:2, g:1, max:1}
+};
+const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
+const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
+const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
+const VERSION = '2.0';
+
+/* ================= expansion helpers ================= */
+const R = id => !!(S.research && S.research.done[id]);
+const G = k => (S.garterPerks && S.garterPerks[k]) || 0;
+function migrate(){
+  S.gear = S.gear || []; S.research = S.research || {done:{}, active:[]}; S.research.done = S.research.done || {}; S.research.active = S.research.active || [];
+  S.codex = S.codex || {}; ['kills','zones','classes','heroes','setpieces'].forEach(k => S.codex[k] = S.codex[k] || {});
+  S.chronicle = S.chronicle || []; S.bonds = S.bonds || {}; S.garterPerks = S.garterPerks || {}; S.gloryOrder = S.gloryOrder || 0; S.garters = S.garters || 0;
+  S.res.parchment = S.res.parchment || 0; S.res.garter = S.res.garter || 0; S.pid = S.pid || uid(); S.spFirst = S.spFirst || {}; S.firstSeen = S.firstSeen || Date.now();
+  S.roster.forEach(a => { a.gear = a.gear || {}; a.kt = a.kt || {}; S.codex.classes[a.cls === 'hero' ? 'hero_' + a.hero : a.cls] = 1; if (a.hero) S.codex.heroes[a.hero] = 1; });
+}
+function chron(txt){ S.chronicle.push({t:Date.now(), txt}); if (S.chronicle.length > 80) S.chronicle.splice(0, S.chronicle.length - 80); }
+const dispName = a => a.nick ? `${a.name} "${a.nick}"` : a.name;
+function codexDmg(){ let n = 0; for (const k in S.codex.kills) n += [100, 1000, 10000, 100000].filter(x => S.codex.kills[k] >= x).length; return 1 + .02 * n + .05 * Object.keys(S.codex.heroes).length; }
+const codexHp = () => 1 + .03 * Object.keys(S.codex.classes).length;
+const codexProd = () => 1 + .02 * Object.keys(S.codex.zones).length;
+const codexSilver = () => 1 + .05 * Object.keys(S.codex.setpieces).length;
+function resMult(r){ return r === 'food' && R('l1') ? 1.5 : r === 'iron' && R('l2') ? 1.5 : r === 'feathers' && R('l4') ? 2 : 1; }
+const supMult = () => R('c5') ? 1.6 : 1;
+function rankMult(i){ return (i < 5 ? 1.2 : 1) * (i >= 5 && R('a3a') ? 1.3 : 1) * (R('c3b') ? 1.1 : 1); }
+function offlineCap(){ return (4 * 3600 + 2 * 3600 * L('ledger') + (R('l3b') ? 7200 : 0)) * (G('away') ? 2 : 1); }
+
+/* ---------- gear ---------- */
+function gearOf(a){ const o = {}; if (!a.gear) return o; for (const s in a.gear) { const it = S.gear.find(i => i.id === a.gear[s]); if (it) o[s] = it; } return o; }
+const gearOwner = id => S.roster.find(a => a.gear && Object.values(a.gear).includes(id));
+const itemName = it => GSLOT[it.s].names[it.r];
+function itemStat(it){ return it.s === 'bow' ? `+${it.v}% damage` : it.s === 'head' ? `+${Math.round(it.v / 2)}% damage, +${Math.round((.04 + .03 * it.r) * 100)}% pierce` : it.s === 'armour' ? `+${it.v}% health` : `+${Math.round(it.v / 2)}% loose rate`; }
+function rollItemRar(min){ const w = [45, 30, 16, 7, 2]; let r = Math.random() * 100; for (let i = 0; i < 5; i++) { r -= w[i]; if (r <= 0) return Math.max(min || 0, i); } return Math.max(min || 0, 0); }
+function makeItem(r, il, s){ s = s || pick(Object.keys(GSLOT)); return {id:uid(), s, r, il, v:Math.max(1, Math.round((4 + 4 * r) * (1 + il / 15) * rnd(.85, 1.15)))}; }
+function salvageVal(it){ const m = Math.pow(1.07, Math.min(it.il, 150)); return {iron:15 * (it.r + 1) * m, feathers:10 * (it.r + 1) * m, medals:it.r >= 3 ? it.r - 1 : 0}; }
+function dropItem(il, min){
+  const it = makeItem(rollItemRar(min), il);
+  if (S.gear.length >= 80) { const v = salvageVal(it); for (const k in v) addRes(k, v[k]); return null; }
+  S.gear.push(it); if (it.r >= 4) chron(`Found ${itemName(it)} at stage ${il}.`);
+  return it;
+}
+function gearHtml(a){
+  const g = gearOf(a);
+  return `<h3>GEAR</h3><div class="grid" style="grid-template-columns:repeat(2,1fr)">${Object.keys(GSLOT).map(s => { const it = g[s]; return `<div class="pk" data-act="gearslot" data-id="${a.id}" data-s="${s}" style="text-align:left;padding:8px">${it ? `<small class="r${it.r}"><b>${itemName(it)}</b></small><small class="sub">${itemStat(it)}</small>` : `<small><b>${GSLOT[s].n}</b></small><small class="sub">Empty. Tap to equip.</small>`}</div>`; }).join('')}</div>`;
+}
+function sheetGear(aid, s){
+  sheetFn = () => sheetGear(aid, s);
+  const a = S.roster.find(x => x.id === aid), cur = a && a.gear[s], items = S.gear.filter(i => i.s === s).sort((p, q) => q.v - p.v);
+  openSheet(`<div class="fell" style="font-size:22px">${GSLOT[s].n} for ${esc(a.name.split(' ')[0])}</div><div class="sub">Better ${GSLOT[s].st}. Bosses, set pieces and expeditions drop gear; anything from later stages is stronger.</div>
+  <div style="margin-top:10px">${cur ? `<button class="btn big" data-act="unequip" data-id="${aid}" data-s="${s}">Take it off</button>` : ''}
+  ${items.length ? items.map(it => { const o = gearOwner(it.id); return `<div class="card row" data-act="equip" data-id="${aid}" data-i="${it.id}" style="cursor:pointer;${it.id === cur ? 'border-color:var(--gold)' : ''}"><div class="grow"><b class="r${it.r}">${itemName(it)}</b> <span class="sub">from stage ${it.il}</span><div class="sub">${itemStat(it)}${o && o !== a ? ` · used by ${esc(o.name.split(' ')[0])}` : it.id === cur ? ' · equipped' : ''}</div></div></div>`; }).join('') : '<div class="sub" style="margin-top:8px">No gear for this slot yet.</div>'}</div>`);
+}
+function sheetArmoury(){
+  sheetFn = sheetArmoury;
+  const items = [...S.gear].sort((p, q) => q.r - p.r || q.v - p.v);
+  openSheet(`<div class="fell" style="font-size:24px">The Armoury</div><div class="sub">${S.gear.length}/80 pieces. When it is full, new drops are broken down automatically. Breaking gear down gives iron and feathers, and medals for Epic and Legendary pieces.</div>
+  <button class="btn big" style="margin-top:10px" data-act="salvageall">Break down all spare Common and Uncommon gear</button>
+  <div style="margin-top:10px">${items.map(it => { const o = gearOwner(it.id); return `<div class="card row"><div class="grow"><b class="r${it.r}">${itemName(it)}</b> <span class="sub">${GSLOT[it.s].n} · stage ${it.il}</span><div class="sub">${itemStat(it)}${o ? ` · ${esc(o.name.split(' ')[0])}` : ''}</div></div>${o ? '' : `<button class="btn" data-act="salvage" data-i="${it.id}">Break down</button>`}</div>`; }).join('') || '<div class="sub">Empty. Beat a boss.</div>'}</div>`);
+}
+
+/* ---------- bonds and nicknames ---------- */
+const bondKey = (a, b) => a < b ? a + '|' + b : b + '|' + a;
+function adjacentSlots(i){ const out = [], col = i % 5, row = i < 5 ? 0 : 1; if (col > 0) out.push(i - 1); if (col < 4) out.push(i + 1); out.push(row ? i - 5 : i + 5); return out; }
+function bondMult(i, ln){ let m = 1; adjacentSlots(i).forEach(j => { const a = ln[i], b = ln[j]; if (!a || !b) return; const bd = S.bonds[bondKey(a.id, b.id)]; if (bd && bd.st === 'f') m += .06; if (bd && bd.st === 'g') m -= .06; }); return m; }
+function growBonds(units){
+  const bySlot = {}; units.forEach(u => bySlot[u.i] = u.a);
+  units.forEach(u => adjacentSlots(u.i).forEach(j => { const b = bySlot[j]; if (!b || b.id < u.a.id) return; const k = bondKey(u.a.id, b.id), bd = S.bonds[k] || (S.bonds[k] = {p:0}); bd.p++;
+    if (!bd.st && bd.p >= 20) { bd.st = Math.random() < .82 ? 'f' : 'g'; chron(bd.st === 'f' ? `${u.a.name} and ${b.name} have stood side by side long enough to be friends.` : `${u.a.name} and ${b.name} cannot stand each other. It shows in their shooting.`); } }));
+}
+function bondHtml(a){
+  const fr = [], gr = []; for (const k in S.bonds) { const bd = S.bonds[k]; if (!bd.st) continue; const ids = k.split('|'); if (!ids.includes(a.id)) continue; const o = S.roster.find(x => x.id === (ids[0] === a.id ? ids[1] : ids[0])); if (!o) continue; (bd.st === 'f' ? fr : gr).push(esc(o.name.split(' ')[0])); }
+  if (!fr.length && !gr.length) return '<div class="sub" style="margin-top:8px">No firm friends yet. Men who stand next to each other long enough become friends (+6% damage when side by side), or occasionally enemies.</div>';
+  return `<div class="sub" style="margin-top:8px">${fr.length ? `Friends with <b>${fr.join(', ')}</b>. ` : ''}${gr.length ? `Cannot stand <b style="color:#e9988c">${gr.join(', ')}</b>.` : ''}</div>`;
+}
+function checkNick(a){
+  if (a.nick) return; const tot = Object.values(a.kt).reduce((s, v) => s + v, 0);
+  for (const n of NICKS) { const v = n.t === 'all' ? tot : a.kt[n.t] || 0; if (v >= n.n) { a.nick = n.k; chron(`${a.name} is known now as "${n.k}".`); if (BT) BT.fx.push({t:0, x:BT.units.find(u => u.a === a)?.x || W / 2, y:H / 2, txt:`${a.name.split(' ')[0]} "${n.k}"`, col:'#f2d07a', big:1}); return; } }
+}
+function killArcher(a, how){
+  S.fallen.push({name:dispName(a), rar:a.rar, lvl:a.lvl, kills:a.kills, how, ep:pick(EPITAPH)});
+  if (S.fallen.length > 60) S.fallen.shift();
+  chron(`${dispName(a)} fell. ${how}`);
+  S.roster = S.roster.filter(m => m !== a); S.form = S.form.map(f => f === a.id ? null : f);
+}
+
+/* ---------- research ---------- */
+function rUnlocked(n){
+  if (R(n.id)) return false;
+  if (n.x && RESEARCH.some(o => o.x === n.x && R(o.id))) return false;
+  if (n.t === 1) return true;
+  return RESEARCH.some(o => o.br === n.br && o.t === n.t - 1 && R(o.id));
+}
+const rSlots = () => R('l5') ? 2 : 1;
+const rTime = n => RTIME[n.t - 1] * (G('scholar') ? .5 : 1);
+function viewStudy(){
+  let h = `<h2>The Scriptorium</h2><div class="sub">Monks, clerks and one very old knight write down what the company has learned. Research is permanent: it survives every new campaign. One subject at a time${rSlots() > 1 ? ' (two with Scribes)' : ''}. Some choices rule out others.</div>
+  <div class="card" style="margin-top:10px">📖 <b>${fmt(S.res.parchment)}</b> parchment <span class="sub">· +${fmt(rate('scriptorium'))}/s from the Scriptorium${B_('scriptorium') ? '' : ' (build it in Camp)'}</span></div>`;
+  S.research.active.forEach(x => { const n = RESEARCH.find(r => r.id === x.id), left = (x.end - Date.now()) / 1000; h += `<div class="card"><b>Studying: ${n.n}</b><div class="bar"><i style="width:${clamp(100 * (1 - left / rTime(n)), 0, 100)}%"></i></div><div class="sub">${fmtT(left)} left</div></div>`; });
+  ['Archery', 'Logistics', 'Command'].forEach(br => {
+    h += `<h3>${br.toUpperCase()}</h3>`;
+    RESEARCH.filter(n => n.br === br).forEach(n => {
+      const done = R(n.id), act = S.research.active.some(x => x.id === n.id), lockedOut = n.x && !done && RESEARCH.some(o => o.x === n.x && R(o.id)), can = rUnlocked(n) && !act, c = RCOST[n.t - 1];
+      h += `<div class="card row ${!done && !can && !act ? 'lock' : ''}"><div class="grow"><b>${done ? '✓ ' : ''}${n.n}</b> <span class="sub">tier ${n.t}${n.x ? ' · choose one' : ''}</span><div class="sub">${n.d}${lockedOut ? ' · ruled out by your choice' : ''}</div>${!done && !lockedOut ? `<div class="cost">📖${fmt(c)} · ${fmtT(rTime(n))}</div>` : ''}</div>${can ? `<button class="btn ${S.res.parchment >= c && S.research.active.length < rSlots() ? 'gold' : ''}" data-act="research" data-id="${n.id}" ${S.res.parchment >= c && S.research.active.length < rSlots() ? '' : 'disabled'}>Study</button>` : act ? '<span class="sub">Studying</span>' : ''}</div>`;
+    });
+  });
+  return h;
+}
+
+/* ---------- garter ---------- */
+const garterGain = () => Math.floor(Math.sqrt(S.gloryOrder) / 2);
+function garterHtml(){
+  if (S.prestiges < 10 && !S.garters) return `<h3>THE ORDER OF THE GARTER</h3><div class="card sub">Unlocks after ten campaigns (${S.prestiges}/10). Then you can give up your whole Legacy for Garter stars and far bigger, permanent rewards.</div>`;
+  const g = garterGain();
+  let h = `<h3>THE ORDER OF THE GARTER · 🎗️ ${S.res.garter}</h3><div class="card"><div class="sub">Give up your glory and every Legacy upgrade, and end the campaign, for Garter stars. Glory earned since your last investiture: <b>${fmt(S.gloryOrder)}</b>. Research, men, gear and the Codex are kept.</div>
+  <button class="btn red big" style="margin-top:8px" data-act="garter" ${g > 0 ? '' : 'disabled'}>Kneel for 🎗️ ${g} Garter star${g === 1 ? '' : 's'}</button></div>`;
+  Object.keys(GARTER).forEach(k => { const P = GARTER[k], l = G(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row"><div class="grow"><b>${P.n}</b> <span class="lvl" style="color:var(--gold);font-weight:800">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Held</span>' : `<button class="btn ${S.res.garter >= c ? 'gold' : ''}" data-act="gperk" data-id="${k}" ${S.res.garter >= c ? '' : 'disabled'}>🎗️ ${c}</button>`}</div>`; });
+  return h;
+}
+function codexHtml(){
+  const kills = Object.keys(EN).filter(k => k !== 'cart').map(k => { const v = S.codex.kills[k] || 0, tiers = [100, 1000, 10000, 100000], t = tiers.filter(x => v >= x).length; return `<div class="row" style="padding:3px 0"><span class="grow">${EN[k].n}</span><span class="sub">${fmt(v)} killed · next at ${fmt(tiers[t] || tiers[3])}</span><span class="stars" style="width:44px;text-align:right">${'★'.repeat(t)}</span></div>`; }).join('');
+  const cl = [...Object.keys(CLS), ...Object.keys(HEROES).map(h => 'hero_' + h)];
+  return `<h3>THE CODEX</h3><div class="card"><div class="sub" style="margin-bottom:6px">Permanent bonuses for everything you have seen and done.</div>
+  <b>Enemies</b> <span class="sub">+2% damage per star (now ×${codexDmg().toFixed(2)})</span>${kills}
+  <div style="margin-top:8px"><b>Recruits</b> <span class="sub">+3% health each, Legendaries also +5% damage</span><div>${cl.map(k => `<span class="pill ${S.codex.classes[k] ? 'g' : ''}">${k.startsWith('hero_') ? HEROES[k.slice(5)].n : CLS[k].n}</span>`).join('')}</div></div>
+  <div style="margin-top:8px"><b>Zones conquered</b> <span class="sub">+2% production each: ${Object.keys(S.codex.zones).length}</span></div>
+  <div style="margin-top:8px"><b>Set pieces won</b> <span class="sub">+5% silver each</span><div>${SETPIECES.map(s => `<span class="pill ${S.codex.setpieces[s.id] ? 'g' : ''}">${s.n}</span>`).join('')}</div></div></div>`;
+}
+
+/* ---------- ticking extras ---------- */
+let notifiedFull = false, lastDailyNote = '';
+function extraTick(dt){
+  const now = Date.now();
+  S.research.active = S.research.active.filter(x => { if (x.end > now) return true; S.research.done[x.id] = 1; const n = RESEARCH.find(r => r.id === x.id); chron(`The clerks have finished: ${n.n}.`); toast(`Research complete: ${n.n}`, true); notify('Research complete', n.n); gtag('event', 'research', {id:x.id}); refreshLineStats(); return false; });
+  S.exped.forEach(x => { if (!x.noted && x.end <= now) { x.noted = 1; notify('Expedition back', `${EXPED[x.type].n}: your men are back in camp.`); } });
+  const full = S.res.food >= storeCap('food') - 1 && S.res.wood >= storeCap('wood') - 1;
+  if (full && !notifiedFull) { notifiedFull = true; notify('Storehouse full', 'Food and wood are at the cap. Spend them or build up the Storehouse.'); } else if (!full) notifiedFull = false;
+  if (dailyReady() && lastDailyNote !== dayKey()) { lastDailyNote = dayKey(); notify('Daily rations', 'Your daily rations are ready to collect.'); }
+  if (G('auto')) { S._autoT = (S._autoT || 0) + dt; if (S._autoT > 5) { S._autoT = 0; S.roster.forEach(a => { if (a.lvl >= cap(a) && a.stars < MAXSTARS && canPay(promoteCost(a))) { pay(promoteCost(a)); a.stars++; } }); } }
+}
+
+/* ---------- notifications and install ---------- */
+let swReg = null, installEvt = null;
+function notify(title, body){
+  try { if (!S.notify || !document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return; if (swReg) swReg.showNotification(title, {body, icon:'icon-192.png', tag:title}); else new Notification(title, {body, icon:'icon-192.png'}); } catch(e){}
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+function initPwa(){ try { if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname.endsWith('github.io')) navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {}); } catch(e){} }
+
+/* ---------- cloud save ---------- */
+let fbAuth = null, fbDb = null, fbUser = null, cloudState = 'off', cloudMsg = '', cloudChoice = null;
+function initCloud(){
+  if (!window.firebase || !firebase.initializeApp) { cloudState = 'unavailable'; return; }
+  try { if (!firebase.apps.length) firebase.initializeApp(FB); fbAuth = firebase.auth(); fbDb = firebase.firestore(); cloudState = 'ready';
+    fbAuth.onAuthStateChanged(u => { fbUser = u; if (u) onSignedIn(); refreshSheet(); }); } catch(e) { cloudState = 'unavailable'; }
+}
+function signIn(){ if (!fbAuth) return; fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => { cloudMsg = e.code === 'auth/popup-blocked' ? 'Your browser blocked the sign-in window. Allow pop-ups and try again.' : 'Sign-in did not work: ' + (e.message || e.code); refreshSheet(); }); }
+async function onSignedIn(){
+  gtag('event', 'login'); cloudMsg = 'Checking your cloud save...'; refreshSheet();
+  try {
+    const doc = await fbDb.collection('loose_saves').doc(fbUser.uid).get();
+    if (!doc.exists) { await cloudUpload(); cloudMsg = 'Saved to the cloud.'; refreshSheet(); return; }
+    const d = doc.data();
+    if (d.updated > (S.cloudAt || 0) + 60000 && d.data !== JSON.stringify(S)) { cloudChoice = d; sheetCloudChoice(); return; }
+    await cloudUpload(); cloudMsg = 'Saved to the cloud.';
+  } catch(e) { cloudMsg = e.code === 'permission-denied' ? 'Signed in, but the cloud database is not open yet. Your game is still saved on this device.' : 'Could not reach the cloud: ' + (e.message || e.code); }
+  refreshSheet();
+}
+async function cloudUpload(){
+  if (!fbUser || !fbDb) return; S.cloudAt = Date.now(); save();
+  await fbDb.collection('loose_saves').doc(fbUser.uid).set({data:JSON.stringify(S), updated:S.cloudAt, best:S.bestEver, stage:S.stage, prestiges:S.prestiges, v:VERSION});
+}
+function sheetCloudChoice(){
+  const d = cloudChoice; sheetFn = null;
+  openSheet(`<div class="fell" style="font-size:24px">Two saves found</div><p class="ev">Your account has a save from ${new Date(d.updated).toLocaleString('en-GB')}. This device has a different one. Which do you want to keep? The other is replaced.</p>
+  <div class="card"><b>Cloud save</b><div class="sub">Best stage ${d.best} · ${d.prestiges} campaigns ended</div><button class="btn gold big" style="margin-top:8px" data-act="usecloud">Use the cloud save</button></div>
+  <div class="card"><b>This device</b><div class="sub">Best stage ${S.bestEver} · ${S.prestiges} campaigns ended</div><button class="btn big" style="margin-top:8px" data-act="keeplocal">Keep this device's save</button></div>`);
+}
+setInterval(() => { if (fbUser && cloudState === 'ready') cloudUpload().catch(() => {}); }, 120000);
+document.addEventListener('visibilitychange', () => { if (document.hidden && fbUser) cloudUpload().catch(() => {}); });
+
+/* ---------- anonymous play stats for the admin page ---------- */
+function fsVal(v){ if (typeof v === 'boolean') return {booleanValue:v}; if (typeof v === 'number') return Number.isInteger(v) ? {integerValue:String(v)} : {doubleValue:v}; if (typeof v === 'string') return {stringValue:v}; if (v && typeof v === 'object') { const f = {}; for (const k in v) f[k] = fsVal(v[k]); return {mapValue:{fields:f}}; } return {nullValue:null}; }
+function pushStats(){
+  try {
+    const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
+      heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
+      kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION};
+    const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
+    fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
+  } catch(e){}
+}
+setInterval(pushStats, 180000);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pushStats(); });
+
+/* ---------- settings ---------- */
+function sheetSettings(){
+  sheetFn = sheetSettings;
+  const acct = cloudState === 'unavailable' ? '<div class="sub">Accounts work on the live site, neilfletcher.github.io/Loose. Here, use the save code below to move your game.</div>'
+    : fbUser ? `<div class="sub">Signed in as <b>${esc(fbUser.email || fbUser.displayName || 'you')}</b>. Your game saves to the cloud every two minutes and when you leave.${S.cloudAt ? ` Last saved ${new Date(S.cloudAt).toLocaleTimeString('en-GB')}.` : ''}</div><div class="row" style="margin-top:8px"><button class="btn gold grow" data-act="cloudsave">Save now</button><button class="btn" data-act="signout">Sign out</button></div>`
+    : `<div class="sub">Sign in to keep your company safe and carry on from any phone or computer.</div><button class="btn gold big" style="margin-top:8px" data-act="signin">Sign in with Google</button>`;
+  openSheet(`<div class="fell" style="font-size:26px">Settings</div>
+  <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
+  <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:11px;padding:6px"></textarea>
+  <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
+  <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
+  ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
+  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:14px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
+  <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
+  <div class="sub" style="text-align:center;margin-top:12px">Loose! version ${VERSION}</div>`);
+}
+
 /* ================= sound ================= */
 let AC = null;
 function ac(){ if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){} } if (AC && AC.state === 'suspended') AC.resume(); return AC; }
@@ -608,15 +878,21 @@ const SLOTS = PATHS.map(p => {
   return out;
 });
 function newBattle(){
-  const N = S.stage, zi = Math.floor((N - 1) / 10), li = zi % LAYOUTS.length;
+  const N = S.stage, zi = Math.floor((N - 1) / 10), li = zi % LAYOUTS.length, sp = SP(N);
   const ln = lineUp();
-  BT = {N, z:zoneOf(N), li, path:PATHS[li], slots:SLOTS[li], t:0, phase:'fight', units:[], en:[], arrows:[], fx:[], decals:BT && BT.li === li ? BT.decals.filter(d => !d.arrow).slice(-40) : [],
-    spawns:genStage(N), spawnI:0, camp:100, volleyCD:6, volleys:[], streaks:[], kills:0, endT:0, shake:0, noArrows:false, silver:0};
-  ln.forEach((a, i) => { if (!a) return; const s = stats(a); const [x, y] = BT.slots[i]; BT.units.push({a, s, x, y, i, front:i < 5, hp:s.hp, max:s.hp, cd:rnd(.1, 1), face:-Math.PI / 2, drawAmt:0, down:false, charge:rnd(0, 6), chargeMax:14, rapidT:0, fireT:0, bodkinT:0, rally:0, hurtT:0}); });
+  BT = {N, z:zoneOf(N), sp, li, path:PATHS[li], slots:SLOTS[li], t:0, phase:'fight', units:[], en:[], arrows:[], fx:[], decals:BT && BT.li === li ? BT.decals.filter(d => !d.arrow).slice(-40) : [],
+    spawns:genStage(N), spawnI:0, camp:100, volleyCD:6, volleys:[], streaks:[], stones:[], kills:0, endT:0, shake:0, noArrows:false, silver:0};
+  const pav = B_('pavise') * supMult();
+  ln.forEach((a, i) => { if (!a) return; const s = stats(a); const [x, y] = BT.slots[i], front = i < 5, max = s.hp * (1 + .05 * pav) * (front && R('c3a') ? 1.4 : 1);
+    BT.units.push({a, s, x, y, i, front, rm:rankMult(i) * bondMult(i, ln), hp:max * (sp && sp.id === 'flux' ? .5 : 1), max, cd:rnd(.1, 1), face:-Math.PI / 2, drawAmt:0, down:false, charge:rnd(0, 6), chargeMax:R('c2') ? 10.5 : 14, rapidT:0, fireT:0, bodkinT:0, rally:0, hurtT:0}); });
+  const hu = HU(N) * supMult();
+  if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')), max:hu * (3 + 1.2 * B_('bill')), dps:hu * (.08 + .03 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
+  if (B_('treb')) { const end = BT.path.pts[BT.path.pts.length - 1]; BT.treb = {x:end[0] < W / 2 ? end[0] + 64 : end[0] - 64, y:Math.min(end[1], H - 26) - 4, cd:4, arm:0}; }
   if (!BT.units.length) { BT.phase = 'empty'; BT.endT = 2; }
+  if (sp && tab === 'battle') setTimeout(() => bmsg(sp.n, sp.d), 250);
 }
 function spawnEnemy(type){
-  const d = EN[type], p = BT.path, a = pathAt(p, 0), off = rnd(-9, 9), hp = d.hp * HU(BT.N);
+  const d = EN[type], p = BT.path, a = pathAt(p, 0), off = rnd(-9, 9), hp = d.hp * HU(BT.N) * (BT.sp && BT.sp.id === 'rain' ? .7 : 1);
   BT.en.push({type, d, s:0, off, x:a[0] + a[2] * off, y:a[1] + a[3] * off, hp, max:hp, ang:Math.PI / 2, wob:rnd(0, 6), scan:0, tg:null, acd:rnd(.5, 2), charged:false, flash:0, shooting:false});
   if (d.boss) { bmsg(BT.z.boss, 'has taken the field'); sfx('horn'); BT.shake = 6; }
 }
@@ -633,7 +909,7 @@ function shoot(u, e, o){
   const dd = dist(e.x, e.y, u.x, u.y), hit = o.sure || Math.random() < clamp(u.s.acc - .2 * dd / u.s.range, .4, .98);
   const T = (u.s.xbow ? .18 : .25) + dd / (u.s.xbow ? 520 : 330);
   let tx = e.x, ty = e.y; if (!hit) { const a = Math.random() * 7, m = rnd(7, 16); tx += Math.cos(a) * m; ty += Math.sin(a) * m; }
-  let dmg = u.s.dmg * (o.mult || 1) * (u.bodkinT > 0 ? 1.3 : 1) * (u.front ? 1.2 : 1) * (good ? 1.5 : 1); if (u.s.brawler && dd < 34) dmg *= 2;
+  let dmg = u.s.dmg * (o.mult || 1) * (u.bodkinT > 0 ? 1.3 : 1) * u.rm * (good ? 1.5 : 1); if (u.s.brawler && dd < 34) dmg *= 2;
   BT.arrows.push({x0:u.x + Math.cos(u.face) * 10, y0:u.y + Math.sin(u.face) * 10, tx, ty, e:hit ? e : null, T, t:0, h:u.s.xbow ? dd * .05 : dd * .16, dmg, pierce:u.bodkinT > 0 ? 1 : u.s.pierce, fire:u.fireT > 0, src:u, gold:o.gold, bolt:u.s.xbow});
   u.drawAmt = 0; u.face = Math.atan2(e.y - u.y, e.x - u.x); sfx('twang');
 }
@@ -645,10 +921,11 @@ function hurt(e, dmg, pierce, src, fire){
   if (e.hp <= 0) kill(e, src);
 }
 function kill(e, src){
-  e.dead = true; BT.kills++; S.stats.kills++; bump('kills');
+  e.dead = true; BT.kills++; S.stats.kills++; bump('kills'); S.codex.kills[e.type] = (S.codex.kills[e.type] || 0) + 1;
   const p = e.d.pay * .6 * Math.pow(1.095, BT.N - 1) * silverMult(); S.res.silver += p; BT.silver += p;
-  if (src && !src.down) { src.charge = Math.min(src.chargeMax, src.charge + 1.2); src.a.kills++; }
+  if (src && !src.down) { src.charge = Math.min(src.chargeMax, src.charge + 1.2); src.a.kills++; src.a.kt[e.type] = (src.a.kt[e.type] || 0) + 1; checkNick(src.a); }
   BT.fx.push({t:0, x:e.x, y:e.y - 10, txt:'+' + fmt(p), col:'#e8dcc0'});
+  if (!e.d.boss && Math.random() < .0025) { const it = dropItem(BT.N); if (it) BT.fx.push({t:0, x:e.x, y:e.y - 24, txt:itemName(it), col:RAR[it.r].c, big:1}); }
   if (BT.decals.length > 120) BT.decals.shift();
   BT.decals.push({x:e.x, y:e.y, ang:e.ang + rnd(-.6, .6), type:e.type, t:0});
 }
@@ -678,7 +955,7 @@ function bstep(dt){
   while (b.spawnI < b.spawns.length && b.spawns[b.spawnI].t <= b.t) spawnEnemy(b.spawns[b.spawnI++].type);
   // volley
   b.volleyCD -= dt;
-  if (b.volleyCD <= 0 && B_('drill') && b.en.length) { const t = densest(); const live = b.units.filter(u => !u.down); if (t && live.length) { const avg = live.reduce((s, u) => s + u.s.dmg, 0) / live.length; b.volleys.push({x:t.x, y:t.y, t:0, n:14 + B_('drill') * 3, r:36, src:live, dmg:avg * .5 * (1 + .1 * B_('drill'))}); sfx('volley'); } b.volleyCD = Math.max(6, 20 - B_('drill')); }
+  if (b.volleyCD <= 0 && B_('drill') && b.en.length) { const t = densest(); const live = b.units.filter(u => !u.down); if (t && live.length) { const avg = live.reduce((s, u) => s + u.s.dmg, 0) / live.length; b.volleys.push({x:t.x, y:t.y, t:0, n:(14 + B_('drill') * 3) * (R('a5') ? 2 : 1), r:36, src:live, dmg:avg * .5 * (1 + .1 * B_('drill'))}); sfx('volley'); } b.volleyCD = Math.max(6, 20 - B_('drill')); }
   for (const u of b.units) {
     if (u.down) continue;
     u.charge = Math.min(u.chargeMax, u.charge + dt); u.rapidT -= dt; u.fireT -= dt; u.bodkinT -= dt; u.hurtT -= dt;
@@ -688,7 +965,7 @@ function bstep(dt){
     const t = pickTarget(u);
     if (t) { const want = Math.atan2(t.y - u.y, t.x - u.x); let d = want - u.face; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; u.face += d * Math.min(1, dt * 10); }
     if (u.charge >= u.chargeMax && t) useAbility(u);
-    if (u.cd <= 0) { if (t) { shoot(u, t); u.cd = u.rally > 0 ? .18 : u.s.int * rnd(.9, 1.1); if (u.rally > 0) { u.rally--; u.drawAmt = 1; } } else u.cd = .15; }
+    if (u.cd <= 0) { if (t) { shoot(u, t); u.cd = u.rally > 0 ? .18 : u.s.int * rnd(.9, 1.1) * (b.sp && b.sp.id === 'rain' ? 1.3 : 1); if (u.rally > 0) { u.rally--; u.drawAmt = 1; } } else u.cd = .15; }
   }
   for (const a of b.arrows) {
     if (a.enemy) { a.t += dt; if (a.t >= a.T && !a.done) { a.done = 1; if (!a.u.down && Math.random() < .7) { a.u.hp -= a.dmg; a.u.hurtT = .15; if (a.u.hp <= 0) downUnit(a.u); } } continue; }
@@ -707,18 +984,23 @@ function bstep(dt){
       for (let i = 0; i < v.n; i++) { const u = live[i % live.length], ang = Math.random() * 7, r = Math.sqrt(Math.random()) * v.r, tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r, dd = dist(u.x, u.y, tx, ty); b.arrows.push({x0:u.x, y0:u.y, tx, ty, t:-i * .02, T:.7 + dd / 420 + Math.random() * .15, h:60 + dd * .25, dmg:v.dmg, area:1}); } }
   }
   b.volleys = b.volleys.filter(v => v.t < 2.2);
-  const live = b.units.filter(u => !u.down), mud = b.z.mud || 1, du = DU(b.N);
+  if (b.treb) { b.treb.cd -= dt; b.treb.arm = Math.max(0, b.treb.arm - dt);
+    if (b.treb.cd <= 0 && b.en.length) { const t = densest(); if (t) { b.stones.push({x0:b.treb.x, y0:b.treb.y - 10, tx:t.x, ty:t.y, t:0, T:1.3}); b.treb.arm = .5; } b.treb.cd = Math.max(6, 14 - .5 * B_('treb')); } }
+  for (const st of b.stones) { st.t += dt; if (st.t >= st.T && !st.done) { st.done = 1; const dmg = HU(b.N) * (1 + .4 * B_('treb')) * supMult() * (b.sp && b.sp.id === 'walls' ? 3 : 1); b.en.forEach(e => { if (!e.dead && dist(e.x, e.y, st.tx, st.ty) < 30) hurt(e, dmg, .5, null); }); b.fx.push({t:0, x:st.tx, y:st.ty, ring:1, col:'#b8a888'}); for (let i = 0; i < 6; i++) b.fx.push({t:0, x:st.tx, y:st.ty, vx:rnd(-60, 60), vy:rnd(-60, 60), blood:1}); b.shake = 4; sfx('clash'); } }
+  b.stones = b.stones.filter(s => !s.done);
+  const live = b.units.filter(u => !u.down), mud = b.sp && b.sp.id === 'mud' ? .5 : b.z.mud || 1, du = DU(b.N), night = b.sp && b.sp.id === 'night';
+  let nBlock = 0; if (b.bill && !b.bill.down) b.en.forEach(e => { if (!e.dead && !e.tg && !e.d.ranged && e.s >= b.bill.s - 16 && e.s <= b.bill.s + 2) nBlock++; });
   for (const e of b.en) {
     if (e.dead) continue;
     e.flash -= dt; e.acd -= dt; e.scan -= dt;
     let spd = e.d.spd * mud, moving = true;
     if (e.scan <= 0) { e.scan = .3;
       if (e.d.ranged) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.range).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null;
-      else if (!e.tg || e.tg.down) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.aggro).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null; }
+      else if (!e.tg || e.tg.down) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.aggro * (night && !u.front ? 3 : 1)).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null; }
     if (e.tg && e.tg.down) e.tg = null;
     if (e.tg && e.d.ranged) {
       moving = false; e.shooting = true; e.ang = Math.atan2(e.tg.y - e.y, e.tg.x - e.x);
-      if (e.acd <= 0) { e.acd = e.d.cd * rnd(.85, 1.15); const u = e.tg; b.arrows.push({x0:e.x, y0:e.y, tx:u.x, ty:u.y, T:.35 + dist(u.x, u.y, e.x, e.y) / 480, t:0, h:6, enemy:1, u, dmg:e.d.ranged * du * 2 * (u.s.xbow ? .5 : 1)}); }
+      if (e.acd <= 0) { e.acd = e.d.cd * rnd(.85, 1.15); const u = e.tg; b.arrows.push({x0:e.x, y0:e.y, tx:u.x, ty:u.y, T:.35 + dist(u.x, u.y, e.x, e.y) / 480, t:0, h:6, enemy:1, u, dmg:e.d.ranged * du * 2 * (u.s.xbow ? .5 : 1) * (B_('pavise') ? .5 : 1)}); }
     } else if (e.tg) {
       e.shooting = false; const u = e.tg, dd = dist(u.x, u.y, e.x, e.y); e.ang = Math.atan2(u.y - e.y, u.x - e.x);
       if (dd > e.d.r + 9) { const sp = spd * (e.d.cav && !e.charged ? 1.35 : 1); e.x += Math.cos(e.ang) * sp * dt; e.y += Math.sin(e.ang) * sp * dt; }
@@ -728,6 +1010,13 @@ function bstep(dt){
         if (u.hp <= 0) downUnit(u); }
     } else {
       e.shooting = false;
+      if (b.bill && !b.bill.down && e.s >= b.bill.s - 16 && e.s <= b.bill.s + 2) {
+        moving = false; e.ang = Math.atan2(b.bill.y - e.y, b.bill.x - e.x); b.bill.hp -= e.d.dps * du * dt; e.hp -= b.bill.dps * dt / Math.max(1, nBlock) * (1 - e.d.arm * .5); e.flash = Math.random() < dt * 4 ? .1 : e.flash;
+        if (Math.random() < dt * 1.5) sfx('clash');
+        if (e.hp <= 0) kill(e, null);
+        if (b.bill.hp <= 0) { b.bill.down = true; b.fx.push({t:0, x:b.bill.x, y:b.bill.y - 16, txt:'The billmen break', col:'#ff9a8a', big:1}); b.shake = 4; }
+        continue;
+      }
       const a = pathAt(b.path, e.s), lag = dist(e.x, e.y, a[0] + a[2] * e.off, a[1] + a[3] * e.off);
       e.s = Math.min(b.path.total, e.s + spd * dt * (lag < 16 ? 1 : lag < 40 ? .6 : .2));
       const q = pathAt(b.path, e.s + 10), tx = q[0] + q[2] * e.off, ty = q[1] + q[3] * e.off, ang = Math.atan2(ty - e.y, tx - e.x);
@@ -751,17 +1040,23 @@ function bstep(dt){
 function stick(x, y){ if (BT.decals.length > 140) BT.decals.shift(); BT.decals.push({x, y, arrow:1, ang:rnd(-.5, .5), t:0}); }
 function endBattle(win){
   const b = BT; b.phase = win ? 'won' : 'lost'; b.endT = win ? 1.4 : 2.4;
-  b.units.forEach(u => { if (u.down) u.a.woundT = woundTime(); });
+  const deadly = isBoss(b.N) || !!b.sp, dead = [];
+  b.units.forEach(u => { if (!u.down) return; u.a.woundT = woundTime(); if (deadly && Math.random() < .06 * (1 - .08 * B_('surgeon')) * (R('c4') ? .5 : 1)) dead.push(u.a); });
+  dead.forEach(a => killArcher(a, `Fell at stage ${b.N}, ${b.sp ? b.sp.n : stageName(b.N)}.`));
   if (win) {
-    const N = b.N, cb = clearBonus(N) * (isBoss(N) ? 4 : 1) * silverMult(); S.res.silver += cb; spoils(N, isBoss(N) ? 4 : 1);
+    const N = b.N, cb = clearBonus(N) * (isBoss(N) ? 4 : 1) * (b.sp ? 3 : 1) * silverMult(); S.res.silver += cb; spoils(N, isBoss(N) ? 4 : 1);
     S.stats.clears++; bump('clears');
+    growBonds(b.units.filter(u => !dead.includes(u.a)));
     let sub = '+' + fmt(b.silver + cb) + ' silver';
     if (isBoss(N)) {
-      S.stats.bosses++; bump('bosses'); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`;
-      if (!S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; }
+      S.stats.bosses++; bump('bosses'); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`; S.codex.zones[Math.floor((N - 1) / 10)] = 1;
+      if (!S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; if (N % 50 === 0) chron(`Beat ${zoneOf(N).boss} at stage ${N}.`); }
+      const it = dropItem(N, N >= 50 ? 1 : 0); if (it) sub += ` · ${itemName(it)}`;
     }
-    bmsg(isBoss(N) ? 'Boss defeated!' : 'Stage cleared', sub); sfx('win');
+    if (b.sp) { S.codex.setpieces[b.sp.id] = 1; if (!S.spFirst[N]) { S.spFirst[N] = 1; const it = dropItem(N, 2); if (it) sub += ` · ${itemName(it)}`; chron(`Won ${b.sp.n} at stage ${N}.`); gtag('event', 'set_piece', {id:b.sp.id, stage:N}); } }
+    bmsg(b.sp ? b.sp.n + ' won!' : isBoss(N) ? 'Boss defeated!' : 'Stage cleared', sub); sfx('win');
   } else { bmsg(b.camp <= 0 ? 'The camp is overrun' : 'Driven back', S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
+  if (dead.length) setTimeout(() => toast(`${dead.map(a => a.name).join(' and ')} fell in the fighting. See the Roll of Honour.`), 900);
   b.won = win;
 }
 function woundTime(){ return 90 * (1 - .09 * B_('surgeon')); }
@@ -773,6 +1068,7 @@ function afterBattle(){
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
     else { S.farmN++; if (S.farmN >= 10 && S.stage < S.runMax) { S.autoAdv = true; S.farmN = 0; } }
     S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax);
+    if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
   checkUnlocks(); newBattle(); if (tab === 'battle') battleHud(true);
 }
@@ -780,7 +1076,7 @@ function afterBattle(){
 /* ================= offline ================= */
 function offlineSim(sec){
   const rep = {sec, clears:0, startStage:S.stage, silver0:S.res.silver, res0:Object.assign({}, S.res)};
-  const capSec = 4 * 3600 + 2 * 3600 * L('ledger'); sec = Math.min(sec, capSec); rep.counted = sec;
+  const capSec = offlineCap(); sec = Math.min(sec, capSec); let drops = 0; rep.counted = sec;
   let t = 0; const chunk = 30;
   S.roster.forEach(a => { if (a.woundT) a.woundT = Math.max(0, a.woundT - sec); });
   while (t < sec) {
@@ -793,7 +1089,8 @@ function offlineSim(sec){
     if (D <= 0) break;
     if (D < req) { if (S.stage > 1) { S.stage--; S.autoAdv = false; continue; } break; }
     const ct = Math.max(15, 10 + .8 * stageHp(N) / D); if (bt + ct > sec) break; bt += ct;
-    S.res.silver += stageReward(N); spoils(N, isBoss(N) ? 4 : 1); rep.clears++; S.stats.clears++; bump('clears'); bump('kills', genStage(N).length); S.stats.kills += genStage(N).length;
+    S.res.silver += stageReward(N); spoils(N, isBoss(N) ? 4 : 1); rep.clears++; S.stats.clears++; bump('clears'); genStage(N).forEach(e => S.codex.kills[e.type] = (S.codex.kills[e.type] || 0) + 1);
+    if (isBoss(N)) { S.codex.zones[Math.floor((N - 1) / 10)] = 1; if (drops < 25) { dropItem(N, N >= 50 ? 1 : 0); drops++; } } else if (drops < 25 && Math.random() < .03) { dropItem(N); drops++; } bump('kills', genStage(N).length); S.stats.kills += genStage(N).length;
     if (isBoss(N)) { S.res.medals += 1 + Math.floor(N / 20); if (!S.bossFirst[N]) { S.bossFirst[N] = 1; S.res.writs += 1 + Math.floor(N / 50); } }
     if (arrowsOn()) S.res.arrows = Math.max(0, S.res.arrows - lineUp().filter(Boolean).length * 12);
     if (S.autoAdv && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.stage++; S.runMax = Math.max(S.runMax, S.stage); }
@@ -818,7 +1115,7 @@ function renderRes(){
   $('#rank').textContent = rankName() + (S.prestiges ? ` · campaign ${S.prestiges + 1}` : '');
 }
 function navBadges(){
-  const show = {battle:1, camp:1, company:1, tavern:S.seen.tavern, orders:S.seen.orders, legacy:S.seen.legacy};
+  const show = {battle:1, camp:1, company:1, tavern:S.seen.tavern, orders:S.seen.orders, study:S.bestEver >= 18 || Object.keys(S.research.done).length, legacy:S.seen.legacy};
   document.querySelectorAll('nav button').forEach(b => {
     b.classList.toggle('on', b.dataset.tab === tab); b.classList.toggle('hide', !show[b.dataset.tab]);
     let bd = false;
@@ -826,6 +1123,7 @@ function navBadges(){
     if (b.dataset.tab === 'legacy') bd = S.runMax >= 40 && gloryGain() > 0 && !S.prestiges;
     if (b.dataset.tab === 'camp') bd = Object.keys(BLD).some(k => bUnlocked(k) && !isMax(k) && canPay(bCost(k)) && B_(k) === 0);
     if (b.dataset.tab === 'tavern') bd = S.res.writs >= 1;
+    if (b.dataset.tab === 'study') bd = S.research.active.length < rSlots() && RESEARCH.some(n => rUnlocked(n) && S.res.parchment >= RCOST[n.t - 1]);
     let el = b.querySelector('.badge'); if (bd && !el) { el = document.createElement('i'); el.className = 'badge'; b.appendChild(el); } else if (!bd && el) el.remove();
   });
 }
@@ -835,7 +1133,7 @@ function render(){
   renderRes(); navBadges();
   const v = $('#view');
   if (tab === 'battle') { if (!$('#battleView')) { v.innerHTML = viewBattle(); bindBattleView(); } battleHud(true); return; }
-  v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : viewLegacy();
+  v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
 }
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">Camp news</button><button class="btn" id="spd">1×</button></div>
@@ -843,12 +1141,25 @@ function viewBattle(){
   <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
 }
-let cv = null, ctx = null;
+let cv = null, ctx = null, dragU = null;
 function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
   $('#spd').addEventListener('click', () => { const max = L('swift') ? 3 : 2; S.speed = S.speed >= max ? 1 : S.speed + 1; battleHud(true); });
   $('#newsBtn').addEventListener('click', () => campEvent());
+  const toL = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H]; };
+  cv.style.touchAction = 'none';
+  cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); const [x, y] = toL(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24); if (u) { dragU = {u, ox:u.x, oy:u.y}; cv.setPointerCapture(ev.pointerId); } });
+  cv.addEventListener('pointermove', ev => { if (!dragU) return; const [x, y] = toL(ev); dragU.u.x = clamp(x, 0, W); dragU.u.y = clamp(y, 0, H); });
+  const drop = () => { if (!dragU || !BT) { dragU = null; return; } const u = dragU.u; let j = -1, bd = 36; BT.slots.forEach((s, i) => { if (!slotOpen(i)) return; const d = dist(s[0], s[1], u.x, u.y); if (d < bd) { bd = d; j = i; } });
+    if (j < 0 || j === u.i) { u.x = dragU.ox; u.y = dragU.oy; dragU = null; return; }
+    const other = BT.units.find(o => o !== u && o.i === j), fi = S.form[u.i], fj = S.form[j];
+    S.form[u.i] = other ? other.a.id : (fj && fj !== u.a.id ? fj : null); S.form[j] = u.a.id; if (fi && fi !== u.a.id && !other) S.form[u.i] = fi;
+    const oi = u.i; u.i = j; u.front = j < 5; [u.x, u.y] = BT.slots[j];
+    if (other) { other.i = oi; other.front = oi < 5; [other.x, other.y] = BT.slots[oi]; }
+    const ln = BT.units.reduce((m, o) => (m[o.i] = o.a, m), []); BT.units.forEach(o => o.rm = rankMult(o.i) * bondMult(o.i, ln));
+    BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; save(); };
+  cv.addEventListener('pointerup', drop); cv.addEventListener('pointercancel', drop);
   layoutStage();
 }
 function layoutStage(){
@@ -862,7 +1173,7 @@ function battleHud(full){
   const b = BT, N = b.N;
   if (full) {
     $('#bT').textContent = `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
-    $('#bS').textContent = `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
+    $('#bS').textContent = b.sp ? `Set piece: ${b.sp.n} · best ${S.runMax}` : `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
     $('#adv').classList.toggle('on', S.autoAdv); $('#spd').textContent = S.speed + '×';
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
@@ -870,11 +1181,11 @@ function battleHud(full){
   $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} enemies left · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · out of arrows, no bonus' : arrowsOn() ? ' · good arrows +50%' : '');
   $('#bD').textContent = `Line DPS ${fmt(squadDps(N))}`;
   $('#bBar').style.width = (100 * (1 - left / Math.max(1, b.spawns.length))) + '%';
-  $('#bA').textContent = S.autoAdv ? '' : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
+  $('#bA').textContent = S.autoAdv ? 'Drag archers to swap places' : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
 }
 function viewCamp(){
   let h = `<h2>The Camp</h2><div class="sub">Every building runs while you are away. Storage caps stop production, so build the Storehouse up as you grow.</div>`;
-  const groups = [['GATHERING', ['farm','woodcut','mine','geese','store','fletcher','market']], ['WAR', ['barracks','bowyer','drill','surgeon','butts','tavern']]];
+  const groups = [['GATHERING', ['farm','woodcut','mine','geese','store','fletcher','market','scriptorium']], ['WAR', ['barracks','bowyer','drill','surgeon','butts','tavern']], ['SUPPORT TROOPS', ['bill','pavise','treb']]];
   groups.forEach(([g, ks]) => {
     h += `<h3>${g}</h3>`;
     ks.forEach(k => {
@@ -889,7 +1200,10 @@ function viewCamp(){
 function bEffect(k){
   const l = B_(k);
   switch (k) {
-    case 'farm': case 'woodcut': case 'mine': case 'geese': return `${BLD[k].d} <b>+${fmt(rate(k))}/s</b>${l ? `, doubles at level ${(Math.floor(l / 25) + 1) * 25}` : ''}`;
+    case 'bill': return `${BLD[k].d} ${l ? `<b>Holds ${(3 + 1.2 * l).toFixed(1)}× a man's worth of punishment</b>` : ''}`;
+    case 'pavise': return `${BLD[k].d} ${l ? `<b>Line health +${Math.round(5 * l * supMult())}%</b>` : ''}`;
+    case 'treb': return `${BLD[k].d} ${l ? `<b>A stone every ${Math.max(6, 14 - .5 * l).toFixed(1)}s</b>` : ''}`;
+    case 'farm': case 'woodcut': case 'mine': case 'geese': case 'scriptorium': return `${BLD[k].d} <b>+${fmt(rate(k))}/s</b>${l ? `, doubles at level ${(Math.floor(l / 25) + 1) * 25}` : ''}`;
     case 'store': return `${BLD[k].d} Cap <b>${fmt(storeCap('food'))}</b>.`;
     case 'fletcher': return `${BLD[k].d} <b>${fmt(fletchRate())}/s</b>.`;
     case 'barracks': return `${BLD[k].d} Line: <b>${slotsOpen()}</b> men, roll ${rosterCap()}.`;
@@ -905,7 +1219,7 @@ function bEffect(k){
 function archerCard(a){
   const b = base(a), st = stats(a), inLine = S.form.includes(a.id), c = lvlCost(a, 1), atCap = a.lvl >= cap(a);
   const status = a.away ? '<span class="pill">On expedition</span>' : a.woundT ? `<span class="pill b">Wounded ${fmtT(a.woundT)}</span>` : inLine ? '<span class="pill g">In the line</span>' : '';
-  return `<div class="card"><div class="row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 50)}" alt=""><div class="grow"><div class="nm r${a.rar}">${esc(a.name)} <span class="stars">${'★'.repeat(a.stars)}</span></div><div class="sub">Lv ${a.lvl}/${cap(a)} ${a.cls === 'hero' ? b.title : b.n} · DPS <b>${fmt(st.dps)}</b> · HP ${fmt(st.hp)}</div><div>${status}${a.traits.map(t => `<span class="pill ${TRAITS[t].g ? 'g' : 'b'}">${TRAITS[t].n}</span>`).join('')}</div></div></div>
+  return `<div class="card"><div class="row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 50)}" alt=""><div class="grow"><div class="nm r${a.rar}">${esc(dispName(a))} <span class="stars">${'★'.repeat(a.stars)}</span></div><div class="sub">Lv ${a.lvl}/${cap(a)} ${a.cls === 'hero' ? b.title : b.n} · DPS <b>${fmt(st.dps)}</b> · HP ${fmt(st.hp)}</div><div>${status}${a.traits.map(t => `<span class="pill ${TRAITS[t].g ? 'g' : 'b'}">${TRAITS[t].n}</span>`).join('')}</div></div></div>
   <div class="row" style="margin-top:8px">${atCap ? (a.stars < MAXSTARS ? `<button class="btn gold grow" data-act="promote" data-id="${a.id}" ${canPay(promoteCost(a)) ? '' : 'disabled'}>Promote<small>${costHtml(promoteCost(a))}</small></button>` : '<span class="sub">At the top of his trade.</span>') :
   `<button class="btn ${canPay(c) ? 'gold' : ''} grow" data-act="lvl" data-id="${a.id}" data-n="1" ${canPay(c) ? '' : 'disabled'}>Train<small>${costHtml(c)}</small></button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="10" ${canPay(lvlCost(a, Math.min(10, cap(a) - a.lvl))) ? '' : 'disabled'}>×10</button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="max">Max</button>`}</div></div>`;
 }
@@ -916,9 +1230,12 @@ function viewCompany(){
   <h3>THE LINE · ${slotsOpen()} OF 10 PLACES</h3><div class="sub" style="margin-bottom:6px">Front rank</div><div class="form">${[0,1,2,3,4].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="sub" style="margin:8px 0 6px">Back rank</div><div class="form">${[5,6,7,8,9].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="row" style="margin-top:10px"><button class="btn grow" data-act="autofill">Best men forward</button><label class="tog" data-act="autores"><span class="sw ${S.autoRes ? 'on' : ''}"></span>Reserves step in</label></div>
+  <div class="sub" style="margin-top:6px">You can also drag archers on the battlefield to swap places.</div>
+  ${S.gear.length || S.bestEver >= 10 ? `<button class="btn big" style="margin-top:10px" data-act="armoury">The Armoury · ${S.gear.length} pieces</button>` : ''}
   <h3>MUSTER ROLL · ${S.roster.length}/${rosterCap()}</h3>`;
   h += [...S.roster].sort((p, q) => (S.form.includes(q.id) - S.form.includes(p.id)) || power(q) - power(p)).map(archerCard).join('');
-  if (S.fallen.length) { h += `<h3>ROLL OF THE FALLEN</h3>`; S.fallen.slice(-10).reverse().forEach(f => { h += `<div class="sub" style="margin-bottom:5px">✝ <b class="r${f.rar}">${esc(f.name)}</b>, Lv ${f.lvl}. ${esc(f.how)}</div>`; }); }
+  if (S.chronicle.length) { h += `<h3>THE COMPANY CHRONICLE</h3><div class="card">`; S.chronicle.slice(-15).reverse().forEach(c => { h += `<div class="sub" style="margin-bottom:6px"><span style="color:var(--gold)">${new Date(c.t).toLocaleDateString('en-GB', {day:'numeric', month:'short'})}</span> ${esc(c.txt)}</div>`; }); h += '</div>'; }
+  if (S.fallen.length) { h += `<h3>ROLL OF HONOUR · ${S.fallen.length}</h3>`; S.fallen.slice(-20).reverse().forEach(f => { h += `<div class="card" style="padding:9px 11px"><b class="r${f.rar}">✝ ${esc(f.name)}</b> <span class="sub">Lv ${f.lvl} · ${fmt(f.kills || 0)} kills</span><div class="sub">${esc(f.how)}${f.ep ? ' ' + esc(f.ep) : ''}</div></div>`; }); }
   return h;
 }
 function slotHtml(i, ln){
@@ -953,7 +1270,7 @@ function viewOrders(){
   }
   return h;
 }
-function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor(Math.pow(S.runMax / 10, 2.2) * (1 + .15 * L('chron'))); }
+function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor(Math.pow(S.runMax / 10, 2.2) * (1 + .15 * L('chron')) * Math.pow(1.5, G('glory'))); }
 function viewLegacy(){
   const g = gloryGain();
   let h = `<h2>Legacy</h2><div class="sub">Every campaign ends. Lead the company home, and the next campaign starts from the beginning with everything you learned. Buildings, stages and resources reset. Your men, their stars, writs, medals and Legacy remain.</div>
@@ -961,6 +1278,7 @@ function viewLegacy(){
   <button class="btn red big" style="margin-top:10px" data-act="prestige" ${g > 0 ? '' : 'disabled'}>Go home with ⚜️ ${fmt(g)} glory</button></div>
   <h3>THE LEGACY · ⚜️ ${fmt(S.res.glory)} TO SPEND</h3>`;
   Object.keys(LEGACY).forEach(k => { const P = LEGACY[k], l = L(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row perk"><div class="grow"><b>${P.n}</b> <span class="lvl">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Max</span>' : `<button class="btn ${S.res.glory >= c ? 'gold' : ''}" data-act="perk" data-id="${k}" ${S.res.glory >= c ? '' : 'disabled'}>⚜️ ${fmt(c)}</button>`}</div>`; });
+  h += garterHtml() + codexHtml();
   h += `<h3>CHRONICLE</h3><div class="card sub">Campaigns ended: <b>${S.prestiges}</b> · best stage ever: <b>${S.bestEver}</b> · Frenchmen killed: <b>${fmt(S.stats.kills)}</b> · stages cleared: <b>${fmt(S.stats.clears)}</b> · bosses: <b>${S.stats.bosses}</b> · recruits: <b>${S.stats.recruits}</b></div>`;
   return h;
 }
@@ -970,12 +1288,14 @@ function sheetArcher(id){
   const a = S.roster.find(x => x.id === id); if (!a) return closeSheet();
   sheetFn = () => sheetArcher(id);
   const b = base(a), st = stats(a), dm = [1, 2, 4, 8, 20][a.rar] * a.stars;
-  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><div class="nm r${a.rar}" style="font-size:18px">${esc(a.name)}</div><div class="stars" style="font-size:15px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
+  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><div class="nm r${a.rar}" style="font-size:18px">${esc(dispName(a))}</div><div class="stars" style="font-size:15px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
   <p class="bio">${esc(a.bio)}</p>
   <div class="stat4"><div><b>${fmt(st.dps)}</b><span>DPS</span></div><div><b>${fmt(st.hp)}</b><span>HEALTH</span></div><div><b>${(60 / st.int).toFixed(0)}</b><span>PER MIN</span></div><div><b>${st.range.toFixed(0)}</b><span>RANGE</span></div></div>
   <div class="card"><b>${b.abN}</b><div class="sub">${b.abD} Fires on its own when charged.</div></div>
   ${a.traits.map(t => `<div class="card row" style="padding:8px 11px"><span class="pill ${TRAITS[t].g ? 'g' : 'b'}">${TRAITS[t].n}</span><span class="sub">${TRAITS[t].d}</span></div>`).join('')}
   <div class="sub">${a.kills} kills. Damage doubles every 25 levels. Promotion adds a star: +40% damage, +30% health and 25 more levels.</div>
+  ${bondHtml(a)}
+  ${gearHtml(a)}
   ${archerCard(a).replace(/^<div class="card">/, '<div class="card" style="margin-top:10px">')}
   <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="close">Done</button><button class="btn ghost" data-act="dismiss" data-id="${a.id}">Pay off · 🎖️${dm}</button></div>`);
 }
@@ -1000,8 +1320,9 @@ function expedReward(x){
   const str = men.reduce((s, a) => s + a.lvl * a.stars, 0), m = (1 + str / 40) * Math.pow(1.07, Math.min(S.runMax, 200)) * E.t / 3600, out = {};
   if (x.type === 'forage') { out.food = 120 * m; out.wood = 100 * m; }
   if (x.type === 'fowl') { out.feathers = 120 * m; out.food = 60 * m; }
-  if (x.type === 'raid') { out.silver = clearBonus(S.runMax) * 8 * m; out.iron = 60 * m; if (Math.random() < .35) out.writs = 1; }
-  if (x.type === 'patrol') { out.medals = Math.round(3 + S.runMax / 15 + str / 30); out.writs = 1; out.iron = 50 * m; }
+  if (x.type === 'raid') { out.silver = clearBonus(S.runMax) * 8 * m; out.iron = 60 * m; if (Math.random() < .35) out.writs = 1; if (Math.random() < .5) out.items = 1; }
+  if (x.type === 'patrol') { out.medals = Math.round(3 + S.runMax / 15 + str / 30); out.writs = 1; out.iron = 50 * m; out.items = 2; }
+  if (x.type === 'fowl' && Math.random() < .25) out.items = 1;
   return out;
 }
 
@@ -1019,7 +1340,8 @@ function pull(n){
     if (r === 4) { const keys = Object.keys(HEROES), un = keys.filter(k => !S.roster.some(x => x.hero === k)), k = un.length && Math.random() < .75 ? pick(un) : pick(keys), have = S.roster.find(x => x.hero === k);
       if (have) { if (have.stars < MAXSTARS) have.stars++; else S.res.medals += 30; a = have; dupe = true; } else a = newArcher(4, 'hero', k); }
     else a = newArcher(r, r === 0 ? 'levy' : r === 1 ? 'yeoman' : r === 2 ? (Math.random() < .55 ? 'welsh' : 'genoese') : 'veteran');
-    if (!dupe) S.roster.push(a); out.push({a, dupe});
+    if (!dupe) { a.gear = {}; a.kt = {}; S.roster.push(a); } out.push({a, dupe});
+    S.codex.classes[a.cls === 'hero' ? 'hero_' + a.hero : a.cls] = 1; if (a.hero) { if (!S.codex.heroes[a.hero]) chron(`${a.name} joined the company.`); S.codex.heroes[a.hero] = 1; }
   }
   S.stats.recruits += n; bump('recruits', n); save(); render(); sfx('coin');
   gtag('event', 'recruit', {count:n, best:Math.max(...out.map(o => o.a.rar))});
@@ -1097,20 +1419,31 @@ function autofill(){
   byHp.slice(0, front.length).forEach((a, j) => S.form[front[j]] = a.id);
   byHp.slice(front.length).forEach((a, j) => S.form[back[j]] = a.id);
 }
-function prestige(){
-  const g = gloryGain(); if (!g) return;
-  const keep = .1 * L('granary');
-  S.res.glory += g; S.prestiges++;
-  const old = Object.assign({}, S.res); const f = freshRun();
+function resetCampaign(){
+  const keep = .1 * L('granary'), old = Object.assign({}, S.res), f = freshRun();
   for (const r in f) S.res[r] = f[r] + (old[r] || 0) * keep;
-  S.bld = {farm:1, woodcut:1};
+  S.res.parchment = (old.parchment || 0) * keep;
+  S.bld = G('found') ? {farm:10, woodcut:10, mine:10, geese:10, store:5} : {farm:1, woodcut:1};
   const st = 1 + 5 * L('march'); S.stage = st; S.runMax = st; S.autoAdv = true; S.farmN = 0; S.writBuys = 0; S.buttsT = 0;
   S.roster.forEach(a => { a.lvl = Math.min(cap(a), 1 + 5 * L('vets')); a.woundT = 0; a.away = null; });
   S.exped = []; S.quests = []; S.qp = {};
-  ['b_store','b_mine','b_geese','b_fletcher','b_barracks','b_drill','b_market','b_bowyer','b_surgeon','b_butts','b_tavern'].forEach(k => {});
   checkUnlocks(); newBattle(); save(); tab = 'battle'; render(); closeSheet();
-  gtag('event', 'prestige', {glory:g, n:S.prestiges});
+}
+function prestige(){
+  const g = gloryGain(); if (!g) return;
+  S.res.glory += g; S.gloryOrder += g; S.prestiges++;
+  chron(`Ended campaign ${S.prestiges} at stage ${S.runMax} and came home with ${fmt(g)} glory.`);
+  gtag('event', 'prestige', {glory:g, n:S.prestiges, stage:S.runMax});
+  resetCampaign();
   toast(`The company comes home with ${fmt(g)} glory. A new campaign begins.`, true);
+}
+function doGarter(){
+  const g = garterGain(); if (!g) return;
+  S.res.garter += g; S.garters++; S.prestiges++; S.legacy = {}; S.res.glory = 0; S.gloryOrder = 0;
+  chron(`Knelt before the King and joined the Order of the Garter. ${g} Garter star${g > 1 ? 's' : ''}.`);
+  gtag('event', 'garter', {stars:g, n:S.garters});
+  resetCampaign();
+  toast(`Honi soit qui mal y pense. +${g} Garter stars.`, true);
 }
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el) { if (e.target.id === 'modal') closeSheet(); return; }
@@ -1120,7 +1453,7 @@ document.addEventListener('click', e => {
     case 'close': closeSheet(); break;
     case 'build': { const c = bCost(id); if (!canPay(c) || isMax(id)) return; pay(c); S.bld[id] = B_(id) + 1; if (id === 'fletcher' && S.bld[id] === 1) S.res.arrows += 1000; bump('builds'); sfx('coin'); if (id === 'barracks') { const i = [0,5,1,6,2,7,3,8,4,9][slotsOpen() - 1]; if (!S.form[i]) { const r = S.roster.filter(x => fit(x) && !S.form.includes(x.id)).sort((p, q) => power(q) - power(p))[0]; if (r) S.form[i] = r.id; } } newBattleIfIdle(); break; }
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
-    case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
+    case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); if (ar.stars >= 5) chron(`${ar.name} was promoted to ${ar.stars} stars.`); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
     case 'archer': sheetArcher(id); return;
     case 'dismiss': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure?'; return; } if (S.roster.length <= 1) return toast('You cannot pay off your last man.'); const m = [1, 2, 4, 8, 20][ar.rar] * ar.stars; S.res.medals += m; S.roster = S.roster.filter(x => x !== ar); S.form = S.form.map(f => f === ar.id ? null : f); closeSheet(); toast(`${ar.name} takes his pay and heads for the alehouse. +${m} medals.`, true); refreshLineStats(); break; }
     case 'slot': if (!slotOpen(+el.dataset.i)) return; sheetSlot(+el.dataset.i); return;
@@ -1139,6 +1472,25 @@ document.addEventListener('click', e => {
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
     case 'evc': { const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
+    case 'armoury': sheetArmoury(); return;
+    case 'gearslot': sheetGear(id, el.dataset.s); return;
+    case 'equip': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || !ar) return; const o = gearOwner(it.id); if (o) delete o.gear[it.s]; ar.gear[it.s] = it.id; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
+    case 'unequip': { if (!ar) return; delete ar.gear[el.dataset.s]; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
+    case 'salvage': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || gearOwner(it.id)) return; const v = salvageVal(it); for (const k in v) addRes(k, v[k]); S.gear = S.gear.filter(i => i !== it); sfx('coin'); break; }
+    case 'salvageall': { let n = 0; S.gear = S.gear.filter(it => { if (it.r <= 1 && !gearOwner(it.id)) { const v = salvageVal(it); for (const k in v) addRes(k, v[k]); n++; return false; } return true; }); toast(`Broke down ${n} piece${n === 1 ? '' : 's'}.`, true); break; }
+    case 'research': { const n = RESEARCH.find(r => r.id === id), c = RCOST[n.t - 1]; if (!rUnlocked(n) || S.res.parchment < c || S.research.active.length >= rSlots()) return; S.res.parchment -= c; S.research.active.push({id, end:Date.now() + rTime(n) * 1000}); sfx('coin'); break; }
+    case 'garter': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Your whole Legacy goes'; return; } doGarter(); return; }
+    case 'gperk': { const P = GARTER[id], l = G(id), c = Math.ceil(P.c * Math.pow(P.g, l)); if (S.res.garter < c || (P.max && l >= P.max)) return; S.res.garter -= c; S.garterPerks[id] = l + 1; sfx('legend'); refreshLineStats(); break; }
+    case 'signin': cloudMsg = ''; signIn(); return;
+    case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
+    case 'cloudsave': cloudUpload().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
+    case 'usecloud': { try { const d = JSON.parse(cloudChoice.data); d.cloudAt = cloudChoice.updated; d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); } catch(e){} window.__skipSave = true; location.reload(); return; }
+    case 'keeplocal': cloudUpload().catch(() => {}); cloudMsg = "This device's save is now in the cloud."; closeSheet(); return;
+    case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
+    case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
+    case 'notify': { if (!S.notify && 'Notification' in window) Notification.requestPermission().then(p => { S.notify = p === 'granted'; if (!S.notify) toast('Notifications are blocked in your browser settings.'); save(); refreshSheet(); }); else { S.notify = false; save(); refreshSheet(); } return; }
+    case 'install': if (installEvt) { installEvt.prompt(); installEvt = null; refreshSheet(); } return;
+    case 'startover': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Really? All of it'; return; } try { localStorage.removeItem(KEY); } catch(e){} window.__skipSave = true; location.reload(); return; }
   }
   save(); render(); refreshSheet();
 });
@@ -1146,17 +1498,19 @@ function refreshLineStats(){ if (BT) BT.units.forEach(u => { if (u.down) return;
 function newBattleIfIdle(){ if (BT && (BT.phase === 'empty' || (BT.phase === 'fight' && BT.t < 1.5))) newBattle(); else if (BT && BT.phase === 'fight') { const ids = new Set(BT.units.map(u => u.a.id)); if (lineUp().some(a => a && !ids.has(a.id))) BT.pendingRebuild = true; } }
 function collectExped(i){
   const x = S.exped[i], E = EXPED[x.type], r = expedReward(x), men = x.ids.map(id => S.roster.find(a => a.id === id)).filter(Boolean);
-  for (const k in r) addRes(k, r[k]);
-  let notes = [];
+  for (const k in r) if (k !== 'items') addRes(k, r[k]);
+  let notes = []; const got = []; for (let i = 0; i < (r.items || 0); i++) { const it = dropItem(S.runMax, x.type === 'patrol' ? 1 : 0); if (it) got.push(it); } delete r.items;
   men.forEach(a => { a.away = null; a.lvl = Math.min(cap(a), a.lvl + Math.ceil(E.t / 3600));
     if (Math.random() < .12 && a.traits.length < 4) { const t = pickTrait(.75, a.traits); a.traits.push(t); notes.push(`${esc(a.name)} picked up a new habit: <b>${TRAITS[t].n}</b>.`); }
-    if (E.risk && Math.random() < E.risk) { if (x.type === 'patrol' && Math.random() < .2) { S.fallen.push({name:a.name, rar:a.rar, lvl:a.lvl, how:'Did not come back from a long patrol.'}); S.roster = S.roster.filter(m => m !== a); S.form = S.form.map(f => f === a.id ? null : f); notes.push(`<span style="color:#e9988c">${esc(a.name)} did not come back. The others buried him by the road.</span>`); } else { a.woundT = 1200; notes.push(`${esc(a.name)} came back with a crossbow bolt in him. Out for twenty minutes.`); } }
+    if (E.risk && Math.random() < E.risk) { if (x.type === 'patrol' && Math.random() < .2) { killArcher(a, 'Did not come back from a long patrol.'); notes.push(`<span style="color:#e9988c">${esc(a.name)} did not come back. The others buried him by the road.</span>`); } else { a.woundT = 1200; notes.push(`${esc(a.name)} came back with a crossbow bolt in him. Out for twenty minutes.`); } }
   });
   S.exped.splice(i, 1); bump('expeds'); save(); render(); sfx('coin');
   sheetFn = null;
-  openSheet(`<div class="fell" style="font-size:24px">${E.n}</div><p class="ev">${men.map(a => esc(a.name.split(' ')[0])).join(' and ')} ${pick(RETURN_LINES)}</p>${notes.map(n => `<p class="ev" style="margin:6px 0">${n}</p>`).join('')}<div class="card">${Object.entries(r).map(([k, v]) => `${RES[k].i} <b>${fmt(v)}</b>`).join(' &nbsp; ')}<div class="sub">Each man also gained ${Math.ceil(E.t / 3600)} level${E.t > 3600 ? 's' : ''} on the road.</div></div><button class="btn gold big" data-act="close">Good work</button>`);
+  openSheet(`<div class="fell" style="font-size:24px">${E.n}</div><p class="ev">${men.map(a => esc(a.name.split(' ')[0])).join(' and ')} ${pick(RETURN_LINES)}</p>${notes.map(n => `<p class="ev" style="margin:6px 0">${n}</p>`).join('')}<div class="card">${Object.entries(r).map(([k, v]) => `${RES[k].i} <b>${fmt(v)}</b>`).join(' &nbsp; ')}${got.length ? `<div style="margin-top:6px">${got.map(it => `<span class="pill" style="color:${RAR[it.r].c}">${itemName(it)}</span>`).join('')}</div>` : ''}<div class="sub">Each man also gained ${Math.ceil(E.t / 3600)} level${E.t > 3600 ? 's' : ''} on the road.</div></div><button class="btn gold big" data-act="close">Good work</button>`);
 }
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => { ac(); tab = b.dataset.tab; pickSlot = null; render(); $('#view').scrollTop = 0; }));
+$('#setBtn').addEventListener('click', () => { ac(); sheetSettings(); });
+window.addEventListener('load', () => { initCloud(); initPwa(); setTimeout(pushStats, 4000); });
 $('#snd').addEventListener('click', () => { S.sound = !S.sound; $('#snd').textContent = S.sound ? '🔊' : '🔈'; save(); });
 
 /* ================= render battle ================= */
@@ -1212,11 +1566,15 @@ function draw(){
     else { ctx.fillStyle = d.type === 'maa' || d.type === 'boss' ? '#5c636c' : '#3c4458'; ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 4.6, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#6a6a66'; ctx.beginPath(); ctx.arc(9, 0, 3, 0, 7); ctx.fill(); }
     ctx.restore(); ctx.globalAlpha = 1;
   }
+  if (dragU) b.slots.forEach((s, i) => { if (!slotOpen(i)) return; ctx.strokeStyle = i < 5 ? 'rgba(232,140,110,.8)' : 'rgba(255,240,200,.7)'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(s[0], s[1], 15, 0, 7); ctx.stroke(); ctx.setLineDash([]); });
   const list = [];
   b.units.forEach(u => list.push([u.y, 0, u])); b.en.forEach(e => list.push([e.y, 1, e]));
+  if (b.bill) list.push([b.bill.y, 2, b.bill]); if (b.treb) list.push([b.treb.y, 3, b.treb]);
   list.sort((p, q) => p[0] - q[0]);
   for (const [, kind, o] of list) {
     if (kind === 0) drawUnit(o);
+    else if (kind === 2) drawBill(o);
+    else if (kind === 3) drawTreb(o);
     else { if (o.d.cav) drawKnight(ctx, o, o.ang); else drawFoot(ctx, o, o.ang);
       if (o.flash > 0) { ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(o.x, o.y, o.d.r * .8, 0, 7); ctx.fill(); }
       if (o.hp < o.max) { const w = o.d.boss ? 30 : 16; ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(o.x - w / 2, o.y - o.d.r - 6, w, 2.6); ctx.fillStyle = o.d.boss ? '#e8b64c' : '#e0503e'; ctx.fillRect(o.x - w / 2, o.y - o.d.r - 6, w * Math.max(0, o.hp) / o.max, 2.6); } }
@@ -1233,6 +1591,7 @@ function draw(){
     ctx.strokeStyle = a.fire ? '#ffb040' : a.gold ? '#ffd76a' : a.enemy ? '#222' : '#2a1d10'; ctx.lineWidth = a.gold ? 2 : 1.2; ctx.beginPath(); ctx.moveTo(x, ay); ctx.lineTo(x - dx * len, ay - dy * len); ctx.stroke();
     if (!a.enemy) { ctx.strokeStyle = a.fire ? '#ff5a1f' : '#f2ede0'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(x - dx * (len - 2), ay - dy * (len - 2)); ctx.lineTo(x - dx * len, ay - dy * len); ctx.stroke(); }
   }
+  for (const st of b.stones) { const s = clamp(st.t / st.T, 0, 1), x = st.x0 + (st.tx - st.x0) * s, gy = st.y0 + (st.ty - st.y0) * s, z = 4 * 90 * s * (1 - s); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, gy, 4, 2, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#8a8478'; ctx.beginPath(); ctx.arc(x, gy - z, 4 + z / 60, 0, 7); ctx.fill(); ctx.strokeStyle = '#5a5448'; ctx.lineWidth = 1; ctx.stroke(); }
   b.streaks.forEach(s => { ctx.strokeStyle = `rgba(255,230,160,${1 - s.t / .35})`; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke(); });
   for (const f of b.fx) {
     if (f.blood) { ctx.fillStyle = `rgba(150,20,15,${1 - f.t / .5})`; ctx.fillRect(f.x, f.y, 1.6, 1.6); continue; }
@@ -1241,15 +1600,34 @@ function draw(){
     const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 11 : 9}px Inter,sans-serif`; ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(f.txt, f.x + .7, f.y - s * 18 + .7); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - s * 18); ctx.globalAlpha = 1;
   }
-  if (b.z.mud) { ctx.strokeStyle = 'rgba(200,210,220,.16)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 60; i++) { const x = (i * 53 + b.t * 30) % (W + 20), y = (i * 97 + b.t * 380) % (H + 20) - 10; ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9); } ctx.stroke(); }
+  if (b.sp && b.sp.id === 'night') { ctx.fillStyle = 'rgba(6,10,30,.42)'; ctx.fillRect(0, 0, W, H); b.units.forEach(u => { const g = ctx.createRadialGradient(u.x, u.y, 2, u.x, u.y, 40); g.addColorStop(0, 'rgba(255,190,90,.18)'); g.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g; ctx.fillRect(u.x - 40, u.y - 40, 80, 80); }); }
+  if (b.z.mud || (b.sp && (b.sp.id === 'rain' || b.sp.id === 'mud'))) { ctx.strokeStyle = 'rgba(200,210,220,.16)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 60; i++) { const x = (i * 53 + b.t * 30) % (W + 20), y = (i * 97 + b.t * 380) % (H + 20) - 10; ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9); } ctx.stroke(); }
 }
 function drawUnit(u){
   if (u.down) { ctx.save(); ctx.translate(u.x, u.y); ctx.scale(SPR, SPR); ctx.rotate(u.face + 1.2); ctx.globalAlpha = .75; ctx.fillStyle = 'rgba(100,15,10,.45)'; ctx.beginPath(); ctx.ellipse(1, 1, 9, 5, 0, 0, 7); ctx.fill(); ctx.fillStyle = look(u.a).tunic; ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 4.8, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#c9a882'; ctx.beginPath(); ctx.arc(9.5, 0, 3, 0, 7); ctx.fill(); ctx.restore(); ctx.globalAlpha = 1; return; }
-  ctx.save(); ctx.translate(u.x, u.y); ctx.scale(SPR, SPR); drawArcher(ctx, 0, 0, u.face, u.L || (u.L = look(u.a)), u.drawAmt, {ring:true}); ctx.restore();
+  ctx.save(); ctx.translate(u.x, u.y); ctx.scale(SPR, SPR); drawArcher(ctx, 0, 0, u.face, u.L || (u.L = look(u.a)), u.drawAmt, {ring:true});
+  if (B_('pavise')) { ctx.rotate(u.face); ctx.fillStyle = '#7a3a24'; ctx.fillRect(14, -7, 3.2, 14); ctx.fillStyle = '#e8e0cc'; ctx.fillRect(14.4, -1.6, 2.4, 3.2); }
+  ctx.restore();
   if (u.hurtT > 0) { ctx.fillStyle = 'rgba(255,60,40,.35)'; ctx.beginPath(); ctx.arc(u.x, u.y, 10, 0, 7); ctx.fill(); }
   if (u.fireT > 0 || u.rapidT > 0 || u.bodkinT > 0) { ctx.strokeStyle = u.fireT > 0 ? '#ff7a2a' : '#f2d07a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(u.x, u.y, 17 + Math.sin(BT.t * 10) * 1.5, 0, 7); ctx.stroke(); }
   ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(u.x - 10, u.y + 15, 20, 2.6); ctx.fillStyle = '#7fcf5a'; ctx.fillRect(u.x - 10, u.y + 15, 20 * Math.max(0, u.hp) / u.max, 2.6);
   ctx.fillStyle = '#e8b64c'; ctx.fillRect(u.x - 10, u.y + 18, 20 * u.charge / u.chargeMax, 1.6);
+}
+
+function drawBill(o){
+  const n = 3; for (let k = 0; k < n; k++) { const off = (k - 1) * 9, x = o.x + o.nx * off, y = o.y + o.ny * off;
+    ctx.save(); ctx.translate(x, y); ctx.scale(SPR, SPR); ctx.globalAlpha = o.down ? .45 : 1; ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(2, 3, 8, 7, 0, 0, 7); ctx.fill(); ctx.rotate(o.ang);
+    if (!o.down) { ctx.strokeStyle = '#6b5030'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-4, 3); ctx.lineTo(18, 3); ctx.stroke(); ctx.fillStyle = '#b9c0c8'; ctx.beginPath(); ctx.moveTo(17, 0); ctx.lineTo(23, 3); ctx.lineTo(17, 6); ctx.lineTo(19, 3); ctx.fill(); }
+    ctx.fillStyle = '#e6e0cf'; ctx.beginPath(); ctx.ellipse(0, 0, 5.8, 8.6, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#c8372d'; ctx.fillRect(-1, -8.6, 2, 17.2); ctx.fillRect(-5.8, -1, 11.6, 2); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = .9; ctx.beginPath(); ctx.ellipse(0, 0, 5.8, 8.6, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#9aa2ab'; ctx.beginPath(); ctx.arc(.5, 0, 4.4, 0, 7); ctx.fill(); ctx.restore(); }
+  ctx.globalAlpha = 1;
+  if (!o.down) { ctx.fillStyle = 'rgba(0,0,0,.6)'; ctx.fillRect(o.x - 16, o.y + 16, 32, 3); ctx.fillStyle = '#e8b64c'; ctx.fillRect(o.x - 16, o.y + 16, 32 * Math.max(0, o.hp) / o.max, 3); }
+}
+function drawTreb(o){
+  ctx.save(); ctx.translate(o.x, o.y); ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-12, -6, 28, 18);
+  ctx.fillStyle = '#6b4e2e'; ctx.fillRect(-14, -9, 28, 4); ctx.fillRect(-14, 5, 28, 4); ctx.fillStyle = '#5a3d22'; ctx.fillRect(-3, -9, 6, 18);
+  const a = -Math.PI / 2 + (o.arm > 0 ? (o.arm / .5) * 2.4 : 0); ctx.strokeStyle = '#4a3218'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * 22, Math.sin(a) * 22); ctx.stroke();
+  ctx.fillStyle = '#3a3a3a'; ctx.fillRect(Math.cos(a + Math.PI) * 8 - 4, Math.sin(a + Math.PI) * 8 - 4, 8, 8); ctx.restore();
 }
 
 /* ================= main loop ================= */
@@ -1291,12 +1669,13 @@ function welcome(rep){
 /* ================= boot ================= */
 const existed = load();
 if (!S.seen) S.seen = {};
+migrate();
 checkUnlocks();
 if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
 newBattle(); render(); save();
-if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. Your job is the rest: who stands in the line, how well they are trained, what you build, who you recruit, and when to take the company home for glory.</p><button class="btn gold big" data-act="close">To the field</button>`); }
+if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:13px">Sign in from Settings ⚙️ to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 </body>
