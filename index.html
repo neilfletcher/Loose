@@ -641,7 +641,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.4';
+const VERSION = '2.5';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -819,20 +819,46 @@ function initCloud(){
     fbAuth.onAuthStateChanged(u => { fbUser = u; if (u) onSignedIn(); refreshSheet(); }); } catch(e) { cloudState = 'unavailable'; }
 }
 function signIn(){ if (!fbAuth) return; fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => { cloudMsg = e.code === 'auth/popup-blocked' ? 'Your browser blocked the sign-in window. Allow pop-ups and try again.' : 'Sign-in did not work: ' + (e.message || e.code); refreshSheet(); }); }
-async function onSignedIn(){
-  gtag('event', 'login'); cloudMsg = 'Checking your cloud save...'; refreshSheet();
+const DEV = (() => { try { let d = localStorage.getItem('loose-device'); if (!d) { d = uid(); localStorage.setItem('loose-device', d); } return d; } catch(e) { return uid(); } })();
+const syncAt = {get(){ try { return +localStorage.getItem('loose-sync') || 0; } catch(e) { return 0; } }, set(v){ try { localStorage.setItem('loose-sync', String(v)); } catch(e){} }};
+let lastInput = Date.now(), cloudDoc = null, unsubCloud = null, pendingAdopt = null, syncing = false;
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => lastInput = Date.now(), true));
+const isActive = () => !document.hidden && Date.now() - lastInput < 120000;
+const fromOther = d => d && d.device !== DEV && d.updated > syncAt.get();
+function adoptCloud(d){
   try {
-    const doc = await fbDb.collection('loose_saves').doc(fbUser.uid).get();
-    if (!doc.exists) { await cloudUpload(); cloudMsg = 'Saved to the cloud.'; refreshSheet(); return; }
-    const d = doc.data();
-    if (d.updated > (S.cloudAt || 0) + 60000 && d.data !== JSON.stringify(S)) { cloudChoice = d; sheetCloudChoice(); return; }
-    await cloudUpload(); cloudMsg = 'Saved to the cloud.';
+    const data = JSON.parse(d.data); syncAt.set(d.updated); pendingAdopt = null;
+    S = Object.assign(defaultSave(), data); migrate(); bgKey = '';
+    const gap = (Date.now() - d.updated) / 1000; if (gap > 30) offlineSim(gap);
+    S.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(S));
+    closeSheet(); newBattle(); render(); toast(`Synced from your other device: stage ${S.stage}.`, true); cloudMsg = 'Synced.';
+  } catch(e) {}
+}
+async function onSignedIn(){
+  gtag('event', 'login'); cloudMsg = 'Syncing...'; refreshSheet();
+  try {
+    const ref = fbDb.collection('loose_saves').doc(fbUser.uid), doc = await ref.get();
+    if (!doc.exists) await cloudUpload();
+    else { const d = doc.data(); cloudDoc = d;
+      if (!fromOther(d)) await cloudUpload();
+      else if (syncAt.get() || S.bestEver <= 3) adoptCloud(d);
+      else { cloudChoice = d; sheetCloudChoice(); } }
+    if (unsubCloud) unsubCloud();
+    unsubCloud = ref.onSnapshot(s => { if (!s.exists) return; const d = s.data(); cloudDoc = d; if (fromOther(d)) { if (document.hidden || isActive()) pendingAdopt = d; else adoptCloud(d); } }, () => {});
+    cloudMsg = 'Synced. This account keeps every signed-in device up to date.';
   } catch(e) { cloudMsg = e.code === 'permission-denied' ? 'Signed in, but the cloud database is not open yet. Your game is still saved on this device.' : 'Could not reach the cloud: ' + (e.message || e.code); }
   refreshSheet();
 }
-async function cloudUpload(){
-  if (!fbUser || !fbDb) return; S.cloudAt = Date.now(); save();
-  await fbDb.collection('loose_saves').doc(fbUser.uid).set({data:JSON.stringify(S), updated:S.cloudAt, best:S.bestEver, stage:S.stage, prestiges:S.prestiges, v:VERSION});
+async function cloudUpload(force){
+  if (!fbUser || !fbDb || syncing) return;
+  if (!force && fromOther(cloudDoc) && !isActive()) { adoptCloud(cloudDoc); return; }
+  syncing = true;
+  try { const now = Date.now(); save(); await fbDb.collection('loose_saves').doc(fbUser.uid).set({data:JSON.stringify(S), updated:now, device:DEV, best:S.bestEver, stage:S.stage, prestiges:S.prestiges, v:VERSION}); syncAt.set(now); S.cloudAt = now; }
+  finally { syncing = false; }
+}
+async function pullCloud(){
+  if (!fbUser || !fbDb) return;
+  try { const doc = await fbDb.collection('loose_saves').doc(fbUser.uid).get(); if (doc.exists) { cloudDoc = doc.data(); if (fromOther(cloudDoc)) adoptCloud(cloudDoc); } } catch(e) {}
 }
 function sheetCloudChoice(){
   const d = cloudChoice; sheetFn = null;
@@ -840,8 +866,13 @@ function sheetCloudChoice(){
   <div class="card"><b>Cloud save</b><div class="sub">Best stage ${d.best} · ${d.prestiges} campaigns ended</div><button class="btn gold big" style="margin-top:8px" data-act="usecloud">Use the cloud save</button></div>
   <div class="card"><b>This device</b><div class="sub">Best stage ${S.bestEver} · ${S.prestiges} campaigns ended</div><button class="btn big" style="margin-top:8px" data-act="keeplocal">Keep this device's save</button></div>`);
 }
-setInterval(() => { if (fbUser && cloudState === 'ready') cloudUpload().catch(() => {}); }, 120000);
-document.addEventListener('visibilitychange', () => { if (document.hidden && fbUser) cloudUpload().catch(() => {}); });
+setInterval(() => { if (fbUser && cloudState === 'ready' && isActive()) cloudUpload().catch(() => {}); }, 30000);
+document.addEventListener('visibilitychange', () => {
+  if (!fbUser) return;
+  if (document.hidden) { if (lastInput > syncAt.get()) cloudUpload(true).catch(() => {}); }
+  else if (pendingAdopt && fromOther(pendingAdopt)) adoptCloud(pendingAdopt); else pullCloud();
+});
+window.addEventListener('pagehide', () => { if (fbUser && lastInput > syncAt.get()) cloudUpload(true).catch(() => {}); });
 
 /* ---------- anonymous play stats for the admin page ---------- */
 function fsVal(v){ if (typeof v === 'boolean') return {booleanValue:v}; if (typeof v === 'number') return Number.isInteger(v) ? {integerValue:String(v)} : {doubleValue:v}; if (typeof v === 'string') return {stringValue:v}; if (v && typeof v === 'object') { const f = {}; for (const k in v) f[k] = fsVal(v[k]); return {mapValue:{fields:f}}; } return {nullValue:null}; }
@@ -861,7 +892,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pushS
 function sheetSettings(){
   sheetFn = sheetSettings;
   const acct = cloudState === 'unavailable' ? '<div class="sub">Accounts work on the live site, neilfletcher.github.io/Loose. Here, use the save code below to move your game.</div>'
-    : fbUser ? `<div class="sub">Signed in as <b>${esc(fbUser.email || fbUser.displayName || 'you')}</b>. Your game saves to the cloud every two minutes and when you leave.${S.cloudAt ? ` Last saved ${new Date(S.cloudAt).toLocaleTimeString('en-GB')}.` : ''}</div><div class="row" style="margin-top:8px"><button class="btn gold grow" data-act="cloudsave">Save now</button><button class="btn" data-act="signout">Sign out</button></div>`
+    : fbUser ? `<div class="sub">Signed in as <b>${esc(fbUser.email || fbUser.displayName || 'you')}</b>. Every device signed in to this account stays in step: open the game anywhere and it carries on from wherever you last played.${syncAt.get() ? ` Last synced ${new Date(syncAt.get()).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}.` : ''}</div><div class="row" style="margin-top:8px"><button class="btn gold grow" data-act="cloudsave">Sync now</button><button class="btn" data-act="signout">Sign out</button></div>`
     : `<div class="sub">Sign in to keep your company safe and carry on from any phone or computer.</div><button class="btn gold big" style="margin-top:8px" data-act="signin">Sign in with Google</button>`;
   openSheet(`<div class="fell" style="font-size:26px">Settings</div>
   <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
@@ -1695,14 +1726,14 @@ document.addEventListener('click', e => {
     case 'gperk': { const P = GARTER[id], l = G(id), c = Math.ceil(P.c * Math.pow(P.g, l)); if (S.res.garter < c || (P.max && l >= P.max)) return; S.res.garter -= c; S.garterPerks[id] = l + 1; sfx('legend'); refreshLineStats(); break; }
     case 'signin': cloudMsg = ''; signIn(); return;
     case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
-    case 'cloudsave': cloudUpload().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
-    case 'usecloud': { try { const d = JSON.parse(cloudChoice.data); d.cloudAt = cloudChoice.updated; d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); } catch(e){} window.__skipSave = true; location.reload(); return; }
-    case 'keeplocal': cloudUpload().catch(() => {}); cloudMsg = "This device's save is now in the cloud."; closeSheet(); return;
+    case 'cloudsave': cloudUpload(true).then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
+    case 'usecloud': adoptCloud(cloudChoice); return;
+    case 'keeplocal': cloudUpload(true).catch(() => {}); cloudMsg = "This device's save is now in the cloud."; closeSheet(); return;
     case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
-    case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
+    case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); syncAt.set(Date.now() + 60000); lastInput = Date.now() + 60000; window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
     case 'notify': { if (!S.notify && 'Notification' in window) Notification.requestPermission().then(p => { S.notify = p === 'granted'; if (!S.notify) toast('Notifications are blocked in your browser settings.'); save(); refreshSheet(); }); else { S.notify = false; save(); refreshSheet(); } return; }
     case 'install': if (installEvt) { installEvt.prompt(); installEvt = null; refreshSheet(); } return;
-    case 'startover': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Really? All of it'; return; } try { localStorage.removeItem(KEY); } catch(e){} window.__skipSave = true; location.reload(); return; }
+    case 'startover': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Really? All of it'; return; } try { localStorage.removeItem(KEY); } catch(e){} syncAt.set(Date.now() + 60000); window.__skipSave = true; location.reload(); return; }
   }
   save(); render(); refreshSheet();
 });
