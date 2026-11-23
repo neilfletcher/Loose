@@ -641,7 +641,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.6';
+const VERSION = '2.7';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -966,11 +966,11 @@ function eventHtml(){
   if (!evOpen()) return `<h3>WEEKLY EVENT</h3><div class="card sub">Weekly events unlock at stage 20. Each week brings a special campaign with its own rules, rewards and shop.</div>`;
   const E = evState(), ev = curEvent(), on = S.mode === 'event';
   return `<h3>WEEKLY EVENT · ENDS IN ${fmtT(weekEnds()).toUpperCase()}</h3><div class="tav" style="margin-top:0"><div class="fell" style="font-size:22px">${ev.n}</div><div class="sub" style="color:#c9b08a">${ev.d}</div>
-  <div class="sub" style="color:#e8dcc0;margin-top:6px">Event stage <b>${E.stage}</b> · best <b>${E.best}</b> · 🪙 tokens <b>${E.tokens}</b>. Event battles only run while you watch; your campaign carries on while you're away.</div>
+  <div class="sub" style="color:#e8dcc0;margin-top:6px">Event stage <b>${E.stage}</b> · best <b>${E.best}</b> · 🎟️ tokens <b>${E.tokens}</b>. Event battles only run while you watch; your campaign carries on while you're away.</div>
   <div style="margin-top:6px">${EV_MS.map(([s, r]) => `<span class="pill ${E.ms[s] ? 'g' : ''}">Stage ${s}: ${Object.keys(r).map(k => k === 'hero' ? HEROES[featuredHero()].n : k === 'gear' ? 'gear' : `${r[k]} ${k}`).join(', ')}</span>`).join('')}</div>
   <button class="btn ${on ? '' : 'gold'} big" style="margin-top:10px" data-act="evmode">${on ? 'Back to the campaign' : 'Fight in the event'}</button>
   <div class="sub" style="color:#c9b08a;margin-top:10px">Token shop</div>
-  ${EV_SHOP.map(s => `<div class="row" style="padding:4px 0"><span class="grow">${s.id === 'hero' ? `${s.n}: <b class="r4">${HEROES[featuredHero()].n}</b>` : s.n}</span><button class="btn" data-act="evbuy" data-id="${s.id}" ${E.tokens >= s.c ? '' : 'disabled'}>${s.c} tokens</button></div>`).join('')}</div>`;
+  ${EV_SHOP.map(s => `<div class="row" style="padding:4px 0"><span class="grow">${s.id === 'hero' ? `${s.n}: <b class="r4">${HEROES[featuredHero()].n}</b>` : s.n}</span><button class="btn" data-act="evbuy" data-id="${s.id}" ${E.tokens >= s.c ? '' : 'disabled'}>🎟️ ${s.c}</button></div>`).join('')}</div>`;
 }
 
 /* ================= league ================= */
@@ -1268,26 +1268,26 @@ function bstep(dt){
 function stick(x, y){ if (BT.decals.length > 140) BT.decals.shift(); BT.decals.push({x, y, arrow:1, ang:rnd(-.5, .5), t:0}); }
 function endBattle(win){
   const b = BT; b.phase = win ? 'won' : 'lost'; b.endT = win ? 1.4 : 2.4;
-  const deadly = isBoss(b.N) || !!b.sp, dead = [];
+  const boss = b.spawns.some(s => s.type === 'boss'), deadly = boss || !!b.sp, dead = [];
   b.units.forEach(u => { if (!u.down) return; u.a.woundT = woundTime(); if (deadly && Math.random() < .06 * (1 - .08 * B_('surgeon')) * (R('c4') ? .5 : 1)) dead.push(u.a); });
-  dead.forEach(a => killArcher(a, `Fell at stage ${b.N}, ${b.sp ? b.sp.n : stageName(b.N)}.`));
+  dead.forEach(a => killArcher(a, b.ev ? `Fell in the weekly event, ${b.ev.n}.` : `Fell at stage ${b.N}, ${b.sp ? b.sp.n : stageName(b.N)}.`));
   if (win) {
-    const N = b.N, cb = clearBonus(N) * (isBoss(N) ? 4 : 1) * (b.sp ? 3 : 1) * silverMult(); S.res.silver += cb; spoils(N, isBoss(N) ? 4 : 1);
+    const N = b.N, cb = clearBonus(N) * (boss ? 4 : 1) * (b.sp ? 3 : 1) * silverMult(); S.res.silver += cb; spoils(N, boss ? 4 : 1);
     S.stats.clears++; bump('clears');
     growBonds(b.units.filter(u => !dead.includes(u.a)));
     let sub = '+' + fmt(b.silver + cb) + ' silver';
-    if (isBoss(N)) {
-      S.stats.bosses++; bump('bosses'); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`; S.codex.zones[Math.floor((N - 1) / 10)] = 1;
+    if (boss) {
+      S.stats.bosses++; bump('bosses'); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`; if (!b.ev) S.codex.zones[Math.floor((N - 1) / 10)] = 1;
       if (!b.ev && !S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; if (N % 50 === 0) chron(`Beat ${zoneOf(N).boss} at stage ${N}.`); }
       const it = dropItem(N, N >= 50 ? 1 : 0); if (it) sub += ` · ${itemName(it)}`;
     }
     if (b.sp) { S.codex.setpieces[b.sp.id] = 1; if (!S.spFirst[N]) { S.spFirst[N] = 1; const it = dropItem(N, 2); if (it) sub += ` · ${itemName(it)}`; chron(`Won ${b.sp.n} at stage ${N}.`); gtag('event', 'set_piece', {id:b.sp.id, stage:N}); } }
-    bmsg(b.sp ? b.sp.n + ' won!' : isBoss(N) ? 'Boss defeated!' : 'Stage cleared', sub); sfx('win');
-  } else { bmsg(b.camp <= 0 ? 'The camp is overrun' : 'Driven back', S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
+    bmsg(b.sp ? b.sp.n + ' won!' : boss ? (b.ev ? 'Champion beaten!' : 'Boss defeated!') : 'Stage cleared', sub); sfx('win');
+  } else { bmsg(b.camp <= 0 ? 'The camp is overrun' : 'Driven back', b.ev ? 'Back one event stage' : S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
   if (dead.length) setTimeout(() => toast(`${dead.map(a => a.name).join(' and ')} fell in the fighting. See the Roll of Honour.`), 900);
   b.won = win;
 }
-function woundTime(){ return 90 * (1 - .09 * B_('surgeon')); }
+function woundTime(){ return 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1); }
 function afterBattle(){
   const b = BT;
   if (b.phase === 'empty') { newBattle(); return; }
@@ -1325,7 +1325,7 @@ function offlineSim(sec){
     if (S.autoAdv && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.stage++; S.runMax = Math.max(S.runMax, S.stage); }
     else if (!S.autoAdv) { S.farmN++; if (S.farmN >= 10 && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.autoAdv = true; S.farmN = 0; S.stage++; S.runMax = Math.max(S.runMax, S.stage); } }
   }
-  S.bestEver = Math.max(S.bestEver, S.runMax);
+  S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
   rep.endStage = S.stage; return rep;
 }
 
@@ -1394,6 +1394,7 @@ function bindBattleView(){
     const ln = BT.units.reduce((m, o) => (m[o.i] = o.a, m), []); BT.units.forEach(o => o.rm = rankMult(o.i) * bondMult(o.i, ln));
     BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerup', drop); cv.addEventListener('pointercancel', drop);
+  try { new ResizeObserver(() => { if (tab === 'battle') layoutStage(); }).observe($('#stage')); } catch(e){}
   layoutStage();
 }
 function layoutStage(){
@@ -1409,7 +1410,7 @@ function battleHud(full){
     $('#bT').textContent = b.ev ? `Event stage ${evState().stage}${b.spawns.some(s => s.type === 'boss') ? ' · Champion' : ''}` : `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
     $('#modeBtn').style.display = evOpen() ? '' : 'none'; $('#modeBtn').textContent = S.mode === 'event' ? 'Campaign' : 'Event';
     $('#bS').textContent = b.ev ? `${b.ev.n} · ${evState().tokens} tokens · best ${evState().best}` : b.sp ? `Set piece: ${b.sp.n} · best ${S.runMax}` : `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
-    $('#adv').classList.toggle('on', S.autoAdv); $('#spd').textContent = S.speed + '×';
+    $('#adv').classList.toggle('on', S.autoAdv); $('#adv').closest('label').style.visibility = b.ev ? 'hidden' : ''; $('#spd').textContent = S.speed + '×';
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
   const left = b.spawns.length - b.spawnI + b.en.length;
@@ -1510,7 +1511,7 @@ function viewOrders(){
 function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor(Math.pow(S.runMax / 10, 2.2) * (1 + .15 * L('chron')) * Math.pow(1.5, G('glory'))); }
 function viewLegacy(){
   const g = gloryGain();
-  let h = `<h2>Legacy</h2><div class="sub">Every campaign ends. Lead the company home, and the next campaign starts from the beginning with everything you learned. Buildings, stages and resources reset. Your men, their stars, writs, medals and Legacy remain.</div>
+  let h = `<h2>Legacy</h2><div class="sub">Every campaign ends. Lead the company home, and the next campaign starts from the beginning with everything you learned. Buildings, stages, resources and orders reset. Your men and their stars, gear, research, the Codex, writs, medals, event tokens and your Legacy all stay.</div>
   <div class="card" style="margin-top:10px"><div class="row"><div class="grow"><div class="fell" style="font-size:22px">End the campaign</div><div class="sub">Furthest stage this campaign: <b>${S.runMax}</b>. Glory now: <b>⚜️ ${fmt(g)}</b>${S.runMax < 40 ? '. Reach stage 40 to earn glory.' : '. More stages, a lot more glory.'}</div></div></div>
   <button class="btn red big" style="margin-top:10px" data-act="prestige" ${g > 0 ? '' : 'disabled'}>Go home with ⚜️ ${fmt(g)} glory</button></div>
   <h3>THE LEGACY · ⚜️ ${fmt(S.res.glory)} TO SPEND</h3>`;
@@ -1895,7 +1896,7 @@ function frame(dtReal){
 let lastRefresh = 0;
 function liveRefresh(){
   // refresh button affordability on non-battle tabs every couple of seconds without losing scroll
-  const now = performance.now(); if (now - lastRefresh < 2000 || tab === 'battle' || $('#modal').classList.contains('show')) return; lastRefresh = now;
+  const now = performance.now(); if (now - lastRefresh < 2000 || tab === 'battle' || $('#modal').classList.contains('show') || document.querySelector('#view [data-c="1"]') || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return; lastRefresh = now;
   const v = $('#view'), sc = v.scrollTop; render(); v.scrollTop = sc;
 }
 function rafLoop(now){
