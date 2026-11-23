@@ -148,6 +148,16 @@ nav button.tutp{color:var(--gold);animation:pulse 1s infinite;border-radius:10px
 .nmin{width:100%;padding:7px 9px;border-radius:8px;background:#0f140e;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700}
 .sw2{display:inline-block;width:30px;height:30px;border-radius:8px;border:2px solid var(--line);cursor:pointer;margin:2px}
 .sw2.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,182,76,.4)}
+.gearrow{display:flex;gap:5px;margin-top:6px;align-items:center}
+.gc{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:16px;background:#0f140e;border:2px solid var(--line);cursor:pointer;position:relative}
+.gc.e{border-style:dashed;border-color:#6e3326;opacity:.8}
+.gc.e.can{border-color:var(--gold);opacity:1;animation:pulse 1.4s infinite}
+.gc.e:after{content:"+";position:absolute;font-size:13px;font-weight:800;color:#e9988c}
+.gc.e.can:after{color:var(--gold)}
+.gc span{filter:saturate(1.2)}
+.eqrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #22301f}
+.eqrow:last-child{border-bottom:0}
+.eqrow img{width:34px;height:34px;border-radius:9px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -580,10 +590,10 @@ function portrait(a, size){
 
 /* ================= expansion data ================= */
 const GSLOT = {
-  bow:{n:'Bow', st:'damage', names:['Elm self bow','Ash war bow','Yew war bow','Spanish yew bow','The Crécy bow']},
-  head:{n:'Arrowheads', st:'damage and pierce', names:['Broadheads','Swallowtails','Bodkins','Needle bodkins','Tempered bodkins']},
-  armour:{n:'Armour', st:'health', names:['Padded jack','Mail shirt','Brigandine','Jack of plates','Milanese breastplate']},
-  charm:{n:'Charm', st:'loose rate', names:['Lock of hair',"Rabbit's foot",'Pilgrim badge','St George medal','Relic of St Crispin']}
+  bow:{n:'Bow', ic:'🏹', st:'damage', names:['Elm self bow','Ash war bow','Yew war bow','Spanish yew bow','The Crécy bow']},
+  head:{n:'Arrowheads', ic:'➶', st:'damage and pierce', names:['Broadheads','Swallowtails','Bodkins','Needle bodkins','Tempered bodkins']},
+  armour:{n:'Armour', ic:'🛡️', st:'health', names:['Padded jack','Mail shirt','Brigandine','Jack of plates','Milanese breastplate']},
+  charm:{n:'Charm', ic:'📿', st:'loose rate', names:['Lock of hair',"Rabbit's foot",'Pilgrim badge','St George medal','Relic of St Crispin']}
 };
 const SETPIECES = [
   {id:'mud', n:'The Mud', d:'Freshly ploughed and soaking. Everything they send wades at half speed, and they send horse.', mix:{knight:4, maa:3}},
@@ -629,7 +639,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.1';
+const VERSION = '2.2';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -667,16 +677,41 @@ function dropItem(il, min){
   S.gear.push(it); if (it.r >= 4) chron(`Found ${itemName(it)} at stage ${il}.`);
   return it;
 }
+const spareFor = s => S.gear.filter(i => i.s === s && !gearOwner(i.id)).sort((p, q) => q.v - p.v);
+const emptySlots = a => Object.keys(GSLOT).filter(s => !gearOf(a)[s]);
+function gearChips(a, ret){
+  const g = gearOf(a);
+  return `<div class="gearrow">${Object.keys(GSLOT).map(s => { const it = g[s]; if (it) return `<div class="gc" data-act="gearslot" data-id="${a.id}" data-s="${s}" data-ret="${ret || ''}" title="${itemName(it)}: ${itemStat(it)}" style="border-color:${RAR[it.r].c}"><span>${GSLOT[s].ic}</span></div>`;
+    const can = spareFor(s).length > 0; return `<div class="gc e ${can ? 'can' : ''}" data-act="gearslot" data-id="${a.id}" data-s="${s}" data-ret="${ret || ''}" title="${GSLOT[s].n}: empty${can ? ', spare gear available' : ''}"></div>`; }).join('')}
+  ${emptySlots(a).length ? `<span class="sub" style="margin-left:4px">${emptySlots(a).length} empty</span>` : ''}</div>`;
+}
+function autoEquipBest(){
+  const before = JSON.stringify(S.roster.map(a => a.gear));
+  const line = lineUp().filter(Boolean), rest = S.roster.filter(a => !line.includes(a)).sort((p, q) => power(q) - power(p));
+  const order = [...line.sort((p, q) => power(q) - power(p)), ...rest];
+  S.roster.forEach(a => a.gear = {});
+  Object.keys(GSLOT).forEach(s => { const items = S.gear.filter(i => i.s === s).sort((p, q) => q.v - p.v); order.forEach(a => { const it = items.shift(); if (it) a.gear[s] = it.id; }); });
+  return before !== JSON.stringify(S.roster.map(a => a.gear));
+}
+function equipHtml(){
+  const line = lineUp().map((a, i) => a ? [a, i] : null).filter(Boolean);
+  if (!line.length) return '';
+  const empties = line.reduce((n, [a]) => n + emptySlots(a).length, 0), fillable = line.reduce((n, [a]) => n + emptySlots(a).filter(s => spareFor(s).length).length, 0), spare = S.gear.filter(i => !gearOwner(i.id)).length;
+  return `<h3>EQUIPMENT · THE LINE</h3><div class="card">
+  <div class="sub" style="margin-bottom:4px">${empties ? `<b style="color:${fillable ? 'var(--gold)' : '#e9988c'}">${empties} empty slot${empties > 1 ? 's' : ''}</b> in the line${fillable ? `, ${fillable} of them can be filled now` : ''}. ` : 'Everyone in the line is fully equipped. '}Tap a slot to change it. Gold slots have spare gear waiting.</div>
+  ${line.map(([a, i]) => `<div class="eqrow"><img src="${portrait(a, 34)}" alt=""><div class="grow" style="min-width:0"><div class="nm r${a.rar}" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name.split(' ')[0])} <span class="sub">${i < 5 ? 'front' : 'back'}</span></div>${gearChips(a, 'company')}</div></div>`).join('')}
+  <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="eqbest" ${S.gear.length ? '' : 'disabled'}>Equip best for everyone</button><button class="btn" data-act="armoury">Armoury · ${spare} spare</button></div></div>`;
+}
 function gearHtml(a){
   const g = gearOf(a);
-  return `<h3>GEAR</h3><div class="grid" style="grid-template-columns:repeat(2,1fr)">${Object.keys(GSLOT).map(s => { const it = g[s]; return `<div class="pk" data-act="gearslot" data-id="${a.id}" data-s="${s}" style="text-align:left;padding:8px">${it ? `<small class="r${it.r}"><b>${itemName(it)}</b></small><small class="sub">${itemStat(it)}</small>` : `<small><b>${GSLOT[s].n}</b></small><small class="sub">Empty. Tap to equip.</small>`}</div>`; }).join('')}</div>`;
+  return `<h3>GEAR</h3><div class="grid" style="grid-template-columns:repeat(2,1fr)">${Object.keys(GSLOT).map(s => { const it = g[s], can = !it && spareFor(s).length; return `<div class="pk" data-act="gearslot" data-id="${a.id}" data-s="${s}" style="text-align:left;padding:8px;${it ? `border-color:${RAR[it.r].c}` : `border-style:dashed;border-color:${can ? 'var(--gold)' : '#6e3326'}`}">${it ? `<small>${GSLOT[s].ic} <b class="r${it.r}">${itemName(it)}</b></small><small class="sub">${itemStat(it)}</small>` : `<small>${GSLOT[s].ic} <b>${GSLOT[s].n}</b></small><small class="sub" style="color:${can ? 'var(--gold)' : ''}">${can ? 'Empty: spare gear available' : 'Empty'}</small>`}</div>`; }).join('')}</div>`;
 }
 function sheetGear(aid, s){
   sheetFn = () => sheetGear(aid, s);
-  const a = S.roster.find(x => x.id === aid), cur = a && a.gear[s], items = S.gear.filter(i => i.s === s).sort((p, q) => q.v - p.v);
+  const a = S.roster.find(x => x.id === aid), cur = a && a.gear[s], curIt = S.gear.find(i => i.id === cur), items = S.gear.filter(i => i.s === s).sort((p, q) => (!!gearOwner(p.id) - !!gearOwner(q.id)) || q.v - p.v), best = spareFor(s)[0];
   openSheet(`<div class="fell" style="font-size:22px">${GSLOT[s].n} for ${esc(a.name.split(' ')[0])}</div><div class="sub">Better ${GSLOT[s].st}. Bosses, set pieces and expeditions drop gear; anything from later stages is stronger.</div>
-  <div style="margin-top:10px">${cur ? `<button class="btn big" data-act="unequip" data-id="${aid}" data-s="${s}">Take it off</button>` : ''}
-  ${items.length ? items.map(it => { const o = gearOwner(it.id); return `<div class="card row" data-act="equip" data-id="${aid}" data-i="${it.id}" style="cursor:pointer;${it.id === cur ? 'border-color:var(--gold)' : ''}"><div class="grow"><b class="r${it.r}">${itemName(it)}</b> <span class="sub">from stage ${it.il}</span><div class="sub">${itemStat(it)}${o && o !== a ? ` · used by ${esc(o.name.split(' ')[0])}` : it.id === cur ? ' · equipped' : ''}</div></div></div>`; }).join('') : '<div class="sub" style="margin-top:8px">No gear for this slot yet.</div>'}</div>`);
+  <div style="margin-top:10px">${best && (!curIt || best.v > curIt.v) ? `<button class="btn gold big" style="white-space:normal" data-act="equip" data-id="${aid}" data-i="${best.id}">Equip the best spare<small>${itemName(best)}, ${itemStat(best)}</small></button>` : ''}${cur ? `<button class="btn big" style="margin-top:6px" data-act="unequip" data-id="${aid}" data-s="${s}">Take it off</button>` : ''}
+  ${items.length ? items.map(it => { const o = gearOwner(it.id); return `<div class="card row" data-act="equip" data-id="${aid}" data-i="${it.id}" style="cursor:pointer;${it.id === cur ? 'border-color:var(--gold)' : ''}"><div class="grow"><b class="r${it.r}">${itemName(it)}</b> <span class="sub">from stage ${it.il}</span><div class="sub">${itemStat(it)}${o && o !== a ? ` · used by ${esc(o.name.split(' ')[0])}` : it.id === cur ? ' · equipped' : ' · spare'}</div></div>${curIt && it.id !== cur ? `<span class="sub" style="font-weight:800;color:${it.v >= curIt.v ? '#a8dd8e' : '#e9988c'}">${it.v >= curIt.v ? '+' : ''}${it.v - curIt.v}%</span>` : ''}</div>`; }).join('') : '<div class="sub" style="margin-top:8px">No gear for this slot yet.</div>'}</div>`);
 }
 function sheetArmoury(){
   sheetFn = sheetArmoury;
@@ -1288,6 +1323,7 @@ function navBadges(){
     if (b.dataset.tab === 'legacy') bd = S.runMax >= 40 && gloryGain() > 0 && !S.prestiges;
     if (b.dataset.tab === 'camp') bd = Object.keys(BLD).some(k => bUnlocked(k) && !isMax(k) && canPay(bCost(k)) && B_(k) === 0);
     if (b.dataset.tab === 'tavern') bd = S.res.writs >= 1;
+    if (b.dataset.tab === 'company') bd = lineUp().some(a => a && emptySlots(a).some(s => spareFor(s).length));
     if (b.dataset.tab === 'study') bd = S.research.active.length < rSlots() && RESEARCH.some(n => rUnlocked(n) && S.res.parchment >= RCOST[n.t - 1]);
     let el = b.querySelector('.badge'); if (bd && !el) { el = document.createElement('i'); el.className = 'badge'; b.appendChild(el); } else if (!bd && el) el.remove();
   });
@@ -1306,7 +1342,7 @@ function viewBattle(){
   <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
 }
-let cv = null, ctx = null, dragU = null;
+let cv = null, ctx = null, dragU = null, gearRet = 'archer';
 function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
@@ -1387,6 +1423,7 @@ function archerCard(a){
   const b = base(a), st = stats(a), inLine = S.form.includes(a.id), c = lvlCost(a, 1), atCap = a.lvl >= cap(a);
   const status = a.away ? '<span class="pill">On expedition</span>' : a.woundT ? `<span class="pill b">Wounded ${fmtT(a.woundT)}</span>` : inLine ? '<span class="pill g">In the line</span>' : '';
   return `<div class="card"><div class="row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 50)}" alt=""><div class="grow"><div class="nm r${a.rar}">${esc(dispName(a))} <span class="stars">${'★'.repeat(a.stars)}</span></div><div class="sub">Lv ${a.lvl}/${cap(a)} ${a.cls === 'hero' ? b.title : b.n} · DPS <b>${fmt(st.dps)}</b> · HP ${fmt(st.hp)}</div><div>${status}${a.traits.map(t => `<span class="pill ${TRAITS[t].g ? 'g' : 'b'}">${TRAITS[t].n}</span>`).join('')}</div></div></div>
+  ${S.gear.length || Object.keys(a.gear || {}).length ? gearChips(a, 'company') : ''}
   <div class="row" style="margin-top:8px">${atCap ? (a.stars < MAXSTARS ? `<button class="btn gold grow" data-act="promote" data-id="${a.id}" ${canPay(promoteCost(a)) ? '' : 'disabled'}>Promote<small>${costHtml(promoteCost(a))}</small></button>` : '<span class="sub">At the top of his trade.</span>') :
   `<button class="btn ${canPay(c) ? 'gold' : ''} grow" data-act="lvl" data-id="${a.id}" data-n="1" ${canPay(c) ? '' : 'disabled'}>Train<small>${costHtml(c)}</small></button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="10" ${canPay(lvlCost(a, Math.min(10, cap(a) - a.lvl))) ? '' : 'disabled'}>×10</button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="max">Max</button>`}</div></div>`;
 }
@@ -1398,7 +1435,7 @@ function viewCompany(){
   <div class="sub" style="margin:8px 0 6px">Back rank</div><div class="form">${[5,6,7,8,9].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="row" style="margin-top:10px"><button class="btn grow" data-act="autofill">Best men forward</button><label class="tog" data-act="autores"><span class="sw ${S.autoRes ? 'on' : ''}"></span>Reserves step in</label></div>
   <div class="sub" style="margin-top:6px">You can also drag archers on the battlefield to swap places.</div>
-  ${S.gear.length || S.bestEver >= 10 ? `<button class="btn big" style="margin-top:10px" data-act="armoury">The Armoury · ${S.gear.length} pieces</button>` : ''}
+  ${S.gear.length ? equipHtml() : S.bestEver >= 10 ? '<h3>EQUIPMENT</h3><div class="card sub">No gear yet. Bosses, set pieces and expeditions drop bows, arrowheads, armour and charms.</div>' : ''}
   <h3>MUSTER ROLL · ${S.roster.length}/${rosterCap()}</h3>`;
   h += [...S.roster].sort((p, q) => (S.form.includes(q.id) - S.form.includes(p.id)) || power(q) - power(p)).map(archerCard).join('');
   if (S.chronicle.length) { h += `<h3>THE COMPANY CHRONICLE</h3><div class="card">`; S.chronicle.slice(-15).reverse().forEach(c => { h += `<div class="sub" style="margin-bottom:6px"><span style="color:var(--gold)">${new Date(c.t).toLocaleDateString('en-GB', {day:'numeric', month:'short'})}</span> ${esc(c.txt)}</div>`; }); h += '</div>'; }
@@ -1646,9 +1683,10 @@ document.addEventListener('click', e => {
     case 'evbuy': { const it = EV_SHOP.find(s => s.id === id), E = evState(); if (!it || E.tokens < it.c) return; E.tokens -= it.c; it.f(); sfx('coin'); break; }
     case 'banner': S.banner = +el.dataset.i; bgKey = ''; save(); refreshSheet(); return;
     case 'music': S.music = !S.music; if (!S.music) musicStop(); else { ac(); musicStart(); } save(); refreshSheet(); return;
-    case 'gearslot': sheetGear(id, el.dataset.s); return;
-    case 'equip': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || !ar) return; const o = gearOwner(it.id); if (o) delete o.gear[it.s]; ar.gear[it.s] = it.id; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
-    case 'unequip': { if (!ar) return; delete ar.gear[el.dataset.s]; refreshLineStats(); save(); render(); sheetArcher(ar.id); return; }
+    case 'gearslot': gearRet = el.dataset.ret || 'archer'; sheetGear(id, el.dataset.s); return;
+    case 'eqbest': { const ch = autoEquipBest(); refreshLineStats(); save(); toast(ch ? 'Best gear handed out, line first.' : 'Everyone already has the best you own.', true); break; }
+    case 'equip': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || !ar) return; const o = gearOwner(it.id); if (o) delete o.gear[it.s]; ar.gear[it.s] = it.id; refreshLineStats(); save(); sfx('coin'); if (gearRet === 'company') { closeSheet(); const v = $('#view'), sc = v.scrollTop; render(); v.scrollTop = sc; } else { render(); sheetArcher(ar.id); } return; }
+    case 'unequip': { if (!ar) return; delete ar.gear[el.dataset.s]; refreshLineStats(); save(); if (gearRet === 'company') { closeSheet(); const v = $('#view'), sc = v.scrollTop; render(); v.scrollTop = sc; } else { render(); sheetArcher(ar.id); } return; }
     case 'salvage': { const it = S.gear.find(i => i.id === el.dataset.i); if (!it || gearOwner(it.id)) return; const v = salvageVal(it); for (const k in v) addRes(k, v[k]); S.gear = S.gear.filter(i => i !== it); sfx('coin'); break; }
     case 'salvageall': { let n = 0; S.gear = S.gear.filter(it => { if (it.r <= 1 && !gearOwner(it.id)) { const v = salvageVal(it); for (const k in v) addRes(k, v[k]); n++; return false; } return true; }); toast(`Broke down ${n} piece${n === 1 ? '' : 's'}.`, true); break; }
     case 'research': { const n = RESEARCH.find(r => r.id === id), c = RCOST[n.t - 1]; if (!rUnlocked(n) || S.res.parchment < c || S.research.active.length >= rSlots()) return; S.res.parchment -= c; S.research.active.push({id, end:Date.now() + rTime(n) * 1000}); sfx('coin'); break; }
