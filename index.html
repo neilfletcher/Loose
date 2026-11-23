@@ -37,12 +37,14 @@ header{padding:8px 12px 6px;border-bottom:1px solid var(--line);background:#0d11
 .logo b{color:var(--red)}
 .rank{font-size:11px;color:var(--mut);flex:1}
 .ib{width:32px;height:32px;border-radius:9px;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;font-size:14px}
-.res{display:flex;gap:5px;overflow-x:auto;margin-top:7px;scrollbar-width:none}
-.res::-webkit-scrollbar{display:none}
-.rc{flex:none;background:var(--p);border:1px solid var(--line);border-radius:9px;padding:3px 8px;font-size:12px;line-height:1.25;min-width:62px}
-.rc b{display:block;font-size:13px;white-space:nowrap}
-.rc span{color:var(--mut);font-size:10px;white-space:nowrap}
-.rc.full b{color:#e9988c}
+.res{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin-top:7px}
+.rc{background:var(--p);border:1px solid var(--line);border-radius:8px;padding:3px 6px 4px;line-height:1.2;overflow:hidden}
+.rc b{display:block;font-size:12.5px;white-space:nowrap;letter-spacing:-.01em}
+.rc span{display:block;color:var(--mut);font-size:9.5px;white-space:nowrap}
+.rc i{display:block;height:3px;border-radius:2px;background:#2a3426;margin-top:3px;overflow:hidden}
+.rc i s{display:block;height:100%;background:#7fae5a;text-decoration:none}
+.rc.full b{color:#e9988c}.rc.full i s{background:#e0503e}
+@media (min-width:480px){.res{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}.rc b{font-size:13px}}
 main{flex:1;overflow-y:auto;padding:4px 12px 20px;position:relative}
 #battleView{position:absolute;inset:0;display:flex;flex-direction:column;padding:0}
 nav{display:flex;border-top:1px solid var(--line);background:#0c100b;padding-bottom:env(safe-area-inset-bottom)}
@@ -639,7 +641,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.3';
+const VERSION = '2.4';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1305,9 +1307,11 @@ let sheetFn = null;
 function refreshSheet(){ if (sheetFn && $('#modal').classList.contains('show')) { const sc = $('#sheet').scrollTop; sheetFn(); $('#sheet').scrollTop = sc; } }
 const rankName = () => S.bestEver >= 150 ? "Master of the King's Archers" : S.bestEver >= 100 ? 'Knight Banneret' : S.bestEver >= 60 ? 'Captain of Archers' : S.bestEver >= 25 ? 'Centenar' : 'Vintenar';
 function renderRes(){
-  const show = ['silver','food','wood']; if (S.seen.mine) show.push('iron', 'feathers'); if (S.seen.fletcher) show.push('arrows'); if (S.seen.tavern) show.push('writs'); if (S.res.medals > 0 || S.seen.medals) show.push('medals'); if (S.res.glory > 0 || S.prestiges) show.push('glory');
-  const rates = {food:rate('farm'), wood:rate('woodcut'), iron:rate('mine'), feathers:rate('geese'), silver:marketRate(), arrows:B_('fletcher') ? fletchRate() : 0};
-  $('#res').innerHTML = show.map(r => { const full = CAPPED.includes(r) && S.res[r] >= storeCap(r) - .5; return `<div class="rc ${full ? 'full' : ''}"><b>${RES[r].i} ${fmt(S.res[r])}</b><span>${CAPPED.includes(r) ? (full ? 'full ' : '') + '/' + fmt(storeCap(r)) : rates[r] ? '+' + fmt(rates[r]) + '/s' : RES[r].n}</span></div>`; }).join('');
+  const show = ['silver','food','wood']; if (S.seen.mine) show.push('iron', 'feathers'); if (S.seen.fletcher) show.push('arrows'); if (B_('scriptorium') || S.res.parchment >= 1) show.push('parchment'); if (S.seen.tavern) show.push('writs'); if (S.res.medals > 0 || S.seen.medals) show.push('medals'); if (S.res.glory > 0 || S.prestiges) show.push('glory'); if (S.res.garter > 0 || S.garters) show.push('garter');
+  const rates = {food:rate('farm'), wood:rate('woodcut'), iron:rate('mine'), feathers:rate('geese'), silver:marketRate(), arrows:B_('fletcher') ? fletchRate() : 0, parchment:rate('scriptorium')};
+  const html = show.map(r => { const capd = CAPPED.includes(r), c = capd ? storeCap(r) : 0, full = capd && S.res[r] >= c - .5, rt = rates[r];
+    return `<div class="rc ${full ? 'full' : ''}" title="${RES[r].n}${capd ? `: ${fmt(S.res[r])} of ${fmt(c)}${full ? ' (full)' : ''}` : ''}${rt ? `, +${fmt(rt)}/s` : ''}"><b>${RES[r].i} ${fmt(S.res[r])}</b>${capd ? `<i><s style="width:${Math.min(100, 100 * S.res[r] / c)}%"></s></i>` : `<span>${rt ? '+' + fmt(rt) + '/s' : RES[r].n}</span>`}</div>`; }).join('');
+  if ($('#res')._h !== html) { $('#res').innerHTML = html; $('#res')._h = html; }
   $('#rank').textContent = (S.company ? S.company + ' · ' : '') + rankName() + (S.prestiges ? ` · campaign ${S.prestiges + 1}` : '');
 }
 function navBadges(){
