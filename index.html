@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.25.2';
+const VERSION = '2.25.3';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1422,6 +1422,8 @@ function bondMultU(u, units){ let m = 1; units.forEach(o => { if (o === u || dis
 /* bonds on the battlefield: who is tied to whom, and whether they are close enough for it to count */
 const BONDNEAR = 34, BONDTXT = {f:['Friends', '+6%', '#8fe08a'], w:['Married', '+10%', '#f2a0c8'], g:['Feud', '-6%', '#ff8a7a']};
 function bondPairs(units){ const out = []; for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) { const a = units[i], b = units[j]; if (a.down || b.down) continue; const bd = S.bonds[bondKey(a.a.id, b.a.id)]; if (bd && bd.st) out.push({a, b, st:bd.st, near:dist(a.x, a.y, b.x, b.y) <= BONDNEAR}); } return out; }
+/* placement messages: one at a time, fading on the real clock so they do not pile up while paused */
+function placeMsg(u, txt, col){ BT.fx = BT.fx.filter(f => !f.place); BT.fx.push({t:0, x:u.x, y:u.y - 18, txt, col, place:1, born:performance.now()}); }
 function drawBonds(ctx, b){
   /* quiet by default: a faint line between bonded men standing together. Words only for the man you are dragging or have tapped */
   const pairs = bondPairs(b.units); if (!pairs.length) return;
@@ -1612,7 +1614,7 @@ function bstep(dt){
   for (let i = 0; i < b.en.length; i++) { const p = b.en[i]; if (p.dead) continue; for (let j = i + 1; j < b.en.length; j++) { const q = b.en[j]; if (q.dead) continue; const dd = dist(p.x, p.y, q.x, q.y), m = p.d.r + q.d.r - 3; if (dd < m && dd > .01) { const k = (m - dd) / 2, nx = (p.x - q.x) / dd, ny = (p.y - q.y) / dd; p.x += nx * k; p.y += ny * k; q.x -= nx * k; q.y -= ny * k; } } }
   b.en = b.en.filter(e => !e.dead);
   b.fx.forEach(f => { f.t += dt; if (f.blood) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= .9; f.vy *= .9; } });
-  b.fx = b.fx.filter(f => f.t < (f.burn ? 1.2 : f.blood ? .5 : f.ring ? .6 : 1.3));
+  b.fx = b.fx.filter(f => f.t < (f.burn ? 1.2 : f.blood ? .5 : f.ring ? .6 : 1.3) && !(f.place && performance.now() - f.born > 1400));
   b.streaks.forEach(s => s.t += dt); b.streaks = b.streaks.filter(s => s.t < .35);
   b.decals.forEach(d => d.t += dt);
   b.shake = Math.max(0, b.shake - dt * 20); b.inspireT = (b.inspireT || 0) - dt; b.shieldT = (b.shieldT || 0) - dt;
@@ -1882,7 +1884,7 @@ function bindBattleView(){
   const toL = ev => { const [x, y] = toS(ev); return [V.x + x / V.s, V.y + y / V.s]; };
   cv.style.touchAction = 'none';
   const pts = new Map(); let pinch = null, pan = null, lastTap = 0;
-  const drop = () => { if (!dragU || !BT) { dragU = null; return; } const u = dragU.u, back = msg => { u.x = dragU.ox; u.y = dragU.oy; BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:msg, col:'#e9988c'}); dragU = null; };
+  const drop = () => { if (!dragU || !BT) { dragU = null; return; } const u = dragU.u, back = msg => { u.x = dragU.ox; u.y = dragU.oy; placeMsg(u, msg, '#e9988c'); dragU = null; };
     S.place = S.place || {};
     const other = BT.units.find(o => o !== u && !o.down && dist(o.x, o.y, u.x, u.y) < 14);
     if (other) { /* dropped on a man: they swap places */
@@ -1896,7 +1898,7 @@ function bindBattleView(){
       if ((BT.barrels || []).some(br => !br.lit && dist(br.x, br.y, u.x, u.y) < 16) || (BT.treb && dist(BT.treb.x, BT.treb.y, u.x, u.y) < 28) || (BT.bill && dist(BT.bill.x, BT.bill.y, u.x, u.y) < 18)) return back('Something is in the way');
       S.place[u.i] = {f:+pr.f.toFixed(4), o:+pr.o.toFixed(1)}; tr('placeMove');
     }
-    rerank(); const nf = BT.units.filter(o => o.front).length; BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? (nf > 5 ? `Front is crowded: +${Math.round(20 * 5 / nf)}% each` : 'Front: +20%, but charged') : 'Back: safer', col:'#f2d07a'});  dragU = null; S.tutSwap = 1; save(); };
+    rerank(); const nf = BT.units.filter(o => o.front).length; placeMsg(u, u.front ? (nf > 5 ? `Front, crowded: +${Math.round(20 * 5 / nf)}%` : 'Front +20%') : 'Back', '#f2d07a');  dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); cv.setPointerCapture(ev.pointerId); pts.set(ev.pointerId, toS(ev));
     if (pts.size === 2) { if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } pan = null; const [a, b] = [...pts.values()]; tr('zoom'); pinch = {d:dist(a[0], a[1], b[0], b[1]) || 1, s:V.s, cx:V.x + (a[0] + b[0]) / 2 / V.s, cy:V.y + (a[1] + b[1]) / 2 / V.s}; return; }
     const [x, y] = toL(ev), [sx, sy] = toS(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24 / Math.sqrt(V.s));
@@ -2910,6 +2912,7 @@ function draw(){
     if (f.blood) { ctx.fillStyle = `rgba(150,20,15,${1 - f.t / .5})`; ctx.fillRect(f.x, f.y, 1.6, 1.6); continue; }
     if (f.burn) { const s = f.t / 1.2; ctx.fillStyle = `rgba(255,${140 - s * 100},40,${.8 * (1 - s)})`; ctx.beginPath(); ctx.arc(f.x + Math.sin(f.t * 9) * 2, f.y - s * 14, 3 + s * 5, 0, 7); ctx.fill(); continue; }
     if (f.ring) { const s = f.t / .6; ctx.strokeStyle = f.col; ctx.globalAlpha = 1 - s; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 8 + s * 22, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; continue; }
+    if (f.place) { f.t = (performance.now() - f.born) / 1000; if (f.t > 1.3) continue; }
     const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 12.5 : 10.5}px "Alegreya Sans",sans-serif`; ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(f.txt, f.x + .7, f.y - s * 18 + .7); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - s * 18); ctx.globalAlpha = 1;
   }
@@ -3008,6 +3011,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.25.3","items":["Moving men no longer piles up Front and Back messages, even while paused: one short message at a time, gone in a second."]},
 {"v":"2.25.2","items":["Bonds on the battlefield are much quieter: just a faint coloured line between bonded men standing together. Drag or tap a man to see who he is tied to (they get a ring), with one short line of text."]},
 {"v":"2.25.1","items":["Bonds show on the battlefield. Friends (+6%), married couples (+10%) and feuding men (-6%) standing close together are joined by a coloured line with their bonus.","While you drag a man, dashed lines point to everyone he is tied to, so you can see who to put him next to and who to keep him away from.","Tap an archer to see his bonds and whether they count right now."]},
 {"v":"2.25","items":["Place your men anywhere on your half of the battlefield: drag an archer to a new spot, or drop him on another man to swap them. A shaded band shows the front while you drag.","Within 50 paces of the road counts as the front: +20% damage, but you get charged. The front has room for five; crowd more in and the bonus is shared between them.","Hold the road: if fewer than three men stand at the front, the French leave the road and hunt the rest of your company.","Bunching up has a price: a cavalry charge or a crossbow bolt now hurts the men standing next to the one it hits.","Your formation stays put from stage to stage, and keeps its shape when the road changes every ten stages. Reset to ranks on the Company page puts everyone back.","Friends and couples get their bonus when they stand close together, wherever that is. Best men forward fills the places nearest the road with your toughest men.","Time away is worked out as before, from your company's strength, so a clever formation helps while you watch but does not change overnight progress."]},
