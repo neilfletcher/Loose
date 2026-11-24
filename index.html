@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.26.2';
+const VERSION = '2.26.3';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1887,7 +1887,7 @@ function render(){
   const keepV = $('#vcv');
   v.innerHTML = tab === 'captain' ? viewCaptain() : tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
   /* keep the village canvas between refreshes so it never flashes blank */
-  if (tab === 'camp' && S.campView !== 'list') { const nv = $('#vcv'); if (keepV && nv && keepV !== nv) nv.replaceWith(keepV); villageStart(); }
+  if (tab === 'camp' && campMap()) { const nv = $('#vcv'); if (keepV && nv && keepV !== nv) nv.replaceWith(keepV); villageStart(); }
 }
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="fmBtn" title="Arrange your men">Formation</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
@@ -2068,11 +2068,13 @@ function battleHud(full){
   $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? (S.tutVolley ? 'Pinch to zoom · tap an archer' : 'Tap the field to loose a volley') : 'Holding at the last stage you beat';
   { let pb = $('#pushOn'); if (!pb) { pb = document.createElement('button'); pb.id = 'pushOn'; pb.className = 'btn gold'; pb.dataset.act = 'pushon'; pb.textContent = 'Push on'; pb.style.marginLeft = '8px'; $('#bA').after(pb); } pb.style.display = !S.autoAdv && !b.ev ? '' : 'none'; if (!S.autoAdv && !b.ev) $('#bA').textContent = ''; }
 }
+/* phones open the Camp as a list (the map is small there); computers open the map. A choice the player makes sticks. */
+const campMap = () => { let v = null; try { v = localStorage.getItem('loose-campview'); } catch (e) {} return v ? v === 'map' : wide; };
 function viewCamp(){
   const nb = (S.builds || []).length;
   let h = `<h2>The Camp</h2><div class="sub">Every building runs while you are away. Storage caps stop production, so build the Storehouse up as you grow.</div><div class="card sub" style="margin-top:8px"><b>Builders: ${nb} of ${builders()} at work.</b> Upgrades take longer as buildings grow, and carry on while you're away. Medals finish a job at once${S.bestEver < 60 ? '; a third builder joins at stage 60' : ''}.</div>
-  <div class="row" style="margin:8px 0"><button class="btn ${S.campView !== 'list' ? 'gold' : ''}" data-act="campview" data-v="map">Map</button><button class="btn ${S.campView === 'list' ? 'gold' : ''}" data-act="campview" data-v="list">List</button><span class="sub grow" style="text-align:right">${S.campView === 'list' ? '' : 'Tap a building to upgrade it.'}</span></div>`;
-  if (S.campView !== 'list') return h + viewVillage();
+  <div class="row" style="margin:8px 0"><button class="btn ${campMap() ? 'gold' : ''}" data-act="campview" data-v="map">Map</button><button class="btn ${!campMap() ? 'gold' : ''}" data-act="campview" data-v="list">List</button><span class="sub grow" style="text-align:right">${!campMap() ? '' : 'Tap a building to upgrade it.'}</span></div>`;
+  if (campMap()) return h + viewVillage();
   const groups = [['GATHERING', ['farm','woodcut','mine','geese','store','fletcher','market','scriptorium']], ['WAR', ['barracks','bowyer','drill','surgeon','butts','tavern']], ['SUPPORT TROOPS', ['bill','pavise','treb']]];
   groups.forEach(([g, ks]) => {
     h += `<h3>${g}</h3>`;
@@ -2244,7 +2246,7 @@ function vThumb(k){
 }
 function sheetBld(k){
   const b = BLD[k], l = B_(k), un = bUnlocked(k);
-  sheetFn = () => sheetBld(k);
+  sheetFn = () => sheetBld(k); sheetFn.bld = k;
   if (!un) return openSheet(`<div class="fell" style="font-size:24px">${b.n}</div><p class="sub">${b.d}</p><div class="card sub">${IC('lock')} Unlocks at stage ${b.un}.</div><button class="btn big" data-act="close">Back to camp</button>`);
   openSheet(`<div class="row" style="gap:12px"><img src="${vThumb(k)}" width="90" height="72" style="flex:none;border:1px solid var(--line)" alt=""><div class="grow"><div class="fell" style="font-size:24px">${b.n}</div><div class="sub">${l ? `Level ${l}${b.max ? ' of ' + b.max : ''}` : 'Not built yet'}</div></div></div><div style="margin-top:10px">${bRow(k)}</div>`);
 }
@@ -2851,7 +2853,7 @@ document.addEventListener('click', e => {
       setTimeout(() => { const bt = document.querySelector(`[data-act=build][data-id="${id}"]`) || document.querySelector(`[data-act=rush][data-id="${id}"]`), cd = (bt || document.querySelector(`[data-bp="${id}"]`) || {closest:() => null}).closest('.card'); if (bt) { bt.classList.remove('pop'); void bt.offsetWidth; bt.classList.add('pop'); } if (cd) { cd.classList.remove('flash'); void cd.offsetWidth; cd.classList.add('flash'); } }, 0);
       break; }
     case 'rush': rushBuild(id); break;
-    case 'campview': S.campView = el.dataset.v; tr('campView_' + el.dataset.v); break;
+    case 'campview': try { localStorage.setItem('loose-campview', el.dataset.v); } catch (e) {} tr('campView_' + el.dataset.v); break;
     case 'vbld': tr('villageTap'); sheetBld(id); return;
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
     case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); if (ar.stars >= 5) chron(`${ar.name} was promoted to ${ar.stars} stars.`); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
@@ -3105,6 +3107,8 @@ function frame(dtReal){
 }
 let lastRefresh = 0;
 function liveRefresh(){
+  /* an open building page re-draws itself when you become able (or unable) to afford its upgrade */
+  if (sheetFn && sheetFn.bld && $('#modal').classList.contains('show')) { const k = sheetFn.bld, key = canPay(bCost(k)) + '|' + !!building(k) + '|' + B_(k) + '|' + (S.builds || []).length; if (key !== sheetFn.key) { const f = sheetFn; refreshSheet(); sheetFn.key = key; if (sheetFn !== f) sheetFn.key = key; } }
   // refresh button affordability on non-battle tabs every couple of seconds without losing scroll
   const now = performance.now(); if (now - lastRefresh < 2000 || tab === 'battle' || $('#modal').classList.contains('show') || document.querySelector('#view [data-c="1"]') || (document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName))) return; lastRefresh = now;
   const v = $('#view'), sc = v.scrollTop; render(); v.scrollTop = sc;
@@ -3138,6 +3142,7 @@ window.__dbg = {chron, taleClose, taleInit, blowBarrel, useFire, get FIRE(){ ret
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.26.3","items":["On phones the Camp opens as a list again; the village map is a tap away with the Map button. Computers still open on the map, and each device remembers which you picked.","A building page opened from the map now lights up its Upgrade button as soon as you can afford it."]},
 {"v":"2.26.2","items":["The event shop now sells Ten medals five times a week and writs ten times a week. Tokens beyond that go on gear and the featured Legendary."]},
 {"v":"2.26.1","items":["Headquarters can now correct a company's medals as well as send them."]},
 {"v":"2.26","items":["The Tale of the Company: Riles writes a chapter of your company's story each time you beat a region's boss, and when a campaign ends. The weddings, hangings, nicknames and drinking matches, the deadliest man, the dead, and a few numbers he finds funny. Read it on the Captain page.","A Formation screen: tap Formation above the battlefield (or on the Company page) to arrange your men on a quiet copy of the map. Changes take effect at once during the break between stages, otherwise from the next fight.","Men can no longer be dragged on the live battlefield, so tapping near your archers always looses a volley. Tap right on a man to see his details.","When zoomed in, a Zoom out button replaces the double tap, so two quick taps are always two volleys.","A company held at a boss stage it already beats no longer prints medals: full boss medals come the first time you beat each boss in a campaign, and after that only the usual medal for every ten wins."]},
