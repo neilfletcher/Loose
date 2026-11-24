@@ -35,49 +35,49 @@ header{padding:8px 12px 6px;border-bottom:1px solid var(--line);background:#0d11
 .hrow{display:flex;align-items:center;gap:8px}
 .logo{font-family:"IM Fell English SC",serif;font-size:22px;line-height:1}
 .logo b{color:var(--red)}
-.rank{font-size:11px;color:var(--mut);flex:1}
-.ib{width:32px;height:32px;border-radius:2px;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;font-size:14px}
+.rank{font-size:12.5px;color:var(--mut);flex:1}
+.ib{width:32px;height:32px;border-radius:2px;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;font-size:15.5px}
 .res{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin-top:7px}
 .rc{background:var(--p);border:1px solid var(--line);border-radius:2px;padding:3px 6px 4px;line-height:1.2;overflow:hidden}
-.rc b{display:block;font-size:12.5px;white-space:nowrap;letter-spacing:-.01em}
-.rc span{display:block;color:var(--mut);font-size:9.5px;white-space:nowrap}
+.rc b{display:block;font-size:14px;white-space:nowrap;letter-spacing:-.01em}
+.rc span{display:block;color:var(--mut);font-size:11px;white-space:nowrap}
 .rc i{display:block;height:3px;border-radius:2px;background:#2a3426;margin-top:3px;overflow:hidden}
 .rc i s{display:block;height:100%;background:#7fae5a;text-decoration:none}
 .rc.full b{color:#e9988c}.rc.full i s{background:#e0503e}
-@media (min-width:480px){.res{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}.rc b{font-size:13px}}
+@media (min-width:480px){.res{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}.rc b{font-size:14.5px}}
 main{flex:1;overflow-y:auto;padding:4px 12px 20px;position:relative}
 #battleView{position:absolute;inset:0;display:flex;flex-direction:column;padding:0}
 nav{display:flex;border-top:1px solid var(--line);background:#0c100b;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;padding:7px 0 8px;font-size:10.5px;font-weight:600;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+nav button{flex:1;padding:7px 0 8px;font-size:12px;font-weight:600;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
 nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav button.on{color:var(--gold)}
 nav button.hide{display:none}
 .badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:9px;height:9px;border-radius:2px;background:var(--red);box-shadow:0 0 0 2px #0c100b}
 h2{font-family:"IM Fell English SC",serif;font-weight:400;font-size:24px;margin:12px 0 2px}
 h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400;color:#c9b88f;margin:16px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
-.sub{color:var(--mut);font-size:12.5px}
+.sub{color:var(--mut);font-size:14px}
 .sub b{color:var(--ink)}
 .card{background:var(--p);border:1px solid var(--line);border-radius:2px;padding:11px;margin-bottom:8px}
 .row{display:flex;gap:10px;align-items:center}
 .grow{flex:1}
-.btn{background:var(--p2);border:1px solid #3d4b38;border-radius:2px;padding:7px 11px;font-weight:700;white-space:nowrap;min-height:38px;font-size:13px;line-height:1.15}
-.btn small{display:block;font-weight:600;font-size:10.5px;opacity:.85}
+.btn{background:var(--p2);border:1px solid #3d4b38;border-radius:2px;padding:7px 11px;font-weight:700;white-space:nowrap;min-height:38px;font-size:14.5px;line-height:1.15}
+.btn small{display:block;font-weight:600;font-size:12px;opacity:.85}
 .btn.gold{background:#d29f3b;color:#1d1408;border-color:#a77a24}
 .btn.red{background:#b3342a;color:#fff;border-color:#86251d}
 .btn.ghost{color:#e9988c;border-color:#5a2a24}
 .btn:disabled{opacity:.38;cursor:default}
 .big{width:100%;padding:13px;font-size:16px}
-.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:2px;border:1px solid var(--line);margin:3px 3px 0 0;color:var(--mut)}
+.pill{display:inline-block;font-size:12px;padding:1px 7px;border-radius:2px;border:1px solid var(--line);margin:3px 3px 0 0;color:var(--mut)}
 .pill.g{color:#a8dd8e;border-color:#3e6a2e;background:#18240f}
 .pill.b{color:#e9988c;border-color:#5a2a24;background:#24120f}
-.stars{color:var(--gold);font-size:11px;letter-spacing:-1px}
+.stars{color:var(--gold);font-size:12.5px;letter-spacing:-1px}
 .pt{width:50px;height:50px;border-radius:2px;flex:none;display:block}
 .nm{font-weight:700}
 .r0{color:var(--r0)}.r1{color:var(--r1)}.r2{color:var(--r2)}.r3{color:var(--r3)}.r4{color:var(--r4)}
 .bar{height:5px;border-radius:2px;background:#2a3426;overflow:hidden;margin-top:4px}
 .bar i{display:block;height:100%;background:var(--gold)}
 .lock{opacity:.45}
-.tag{font-size:10px;font-weight:800;letter-spacing:.06em;padding:1px 6px;border-radius:2px;background:#2a3526;color:var(--mut)}
+.tag{font-size:11.5px;font-weight:800;letter-spacing:.06em;padding:1px 6px;border-radius:2px;background:#2a3526;color:var(--mut)}
 /* battle */
 .bhead{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d110c;border-bottom:1px solid var(--line)}
 .bhead .t{font-family:"IM Fell English SC",serif;font-size:19px;line-height:1.05}
@@ -85,11 +85,11 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 #cv{display:block;border-radius:2px}
 #bMsg{position:absolute;top:28%;left:0;right:0;text-align:center;pointer-events:none;font-family:"IM Fell English SC",serif;font-size:28px;color:#fff3d6;text-shadow:0 2px 0 #000;opacity:0;transition:opacity .3s,transform .3s;transform:scale(.92)}
 #bMsg.on{opacity:1;transform:scale(1)}
-#bMsg small{display:block;font-family:"Alegreya Sans";font-size:13px;color:#e8dcc0}
+#bMsg small{display:block;font-family:"Alegreya Sans";font-size:14.5px;color:#e8dcc0}
 .bfoot{background:#0d110c;border-top:1px solid var(--line);padding:8px 12px}
 .prog{height:7px;border-radius:2px;background:#2a1a14;overflow:hidden;margin:4px 0 8px}
 .prog i{display:block;height:100%;background:var(--red)}
-.tog{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--mut)}
+.tog{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--mut)}
 .sw{width:18px;height:18px;border:2px solid #7a6640;background:transparent;position:relative;flex:none}
 .sw:after{content:"";position:absolute;display:none;left:4px;top:0;width:5px;height:10px;border:solid #1d1408;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .sw.on{background:var(--gold);border-color:var(--gold)}.sw.on:after{display:block}
@@ -101,13 +101,13 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 .slot img{width:100%;height:100%;display:block}
 .slot.f{border-color:#6e3326}
 .slot.x{opacity:.3;cursor:default}
-.slot .lv{position:absolute;bottom:1px;right:3px;font-size:10px;font-weight:800;text-shadow:0 1px 2px #000}
-.slot .w{position:absolute;inset:0;background:rgba(80,10,5,.55);display:grid;place-items:center;font-size:10px;font-weight:800}
+.slot .lv{position:absolute;bottom:1px;right:3px;font-size:11.5px;font-weight:800;text-shadow:0 1px 2px #000}
+.slot .w{position:absolute;inset:0;background:rgba(80,10,5,.55);display:grid;place-items:center;font-size:11.5px;font-weight:800}
 .slot.pick{border-style:solid;border-color:var(--gold)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
 .pk{background:var(--p);border:2px solid var(--line);border-radius:2px;padding:6px;text-align:center;cursor:pointer;position:relative}
 .pk .pt{margin:0 auto 4px;width:58px;height:58px}
-.pk small{display:block;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk small{display:block;font-size:12.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pk.off{opacity:.35;cursor:default}
 .pk.sel{border-color:var(--gold);background:#2a2614}
 /* sheet */
@@ -117,12 +117,12 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
-.stat4 b{display:block;font-size:15px}.stat4 span{font-size:9.5px;color:var(--mut);letter-spacing:.05em}
-.bio{font-family:Georgia,serif;font-style:italic;color:#c7c0ad;font-size:14px;margin:8px 0}
-.ev{font-family:Georgia,serif;font-size:15px;line-height:1.55;color:#ddd5c2}
+.stat4 b{display:block;font-size:16.5px}.stat4 span{font-size:11px;color:var(--mut);letter-spacing:.05em}
+.bio{font-family:Georgia,serif;font-style:italic;color:#c7c0ad;font-size:15.5px;margin:8px 0}
+.ev{font-family:Georgia,serif;font-size:16.5px;line-height:1.55;color:#ddd5c2}
 .tav{border-radius:2px;padding:14px;background:#2a1d10;border:1px solid #5a3d1e;margin-top:8px}
 .odds{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
-.odds span{font-size:11px;font-weight:700;padding:2px 7px;border-radius:2px;background:rgba(0,0,0,.3)}
+.odds span{font-size:12.5px;font-weight:700;padding:2px 7px;border-radius:2px;background:rgba(0,0,0,.3)}
 .reveal{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:10px}
 .cd{perspective:600px;height:132px}
 .cd .in{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d}
@@ -131,20 +131,20 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 .cd .bk{background:repeating-linear-gradient(45deg,#3a2614 0 6px,#2c1c0e 6px 12px);border:2px solid #6a4a24;font-family:"IM Fell English SC",serif;font-size:28px;color:#8a6a3a}
 .cd .fc{transform:rotateY(180deg);background:#151c13;border:2px solid}
 .cd .fc .pt{width:56px;height:56px;margin-bottom:4px}
-.cd .fc small{font-size:11px;line-height:1.2}
+.cd .fc small{font-size:12.5px;line-height:1.2}
 .cd.r4 .fc{border-width:3px}
 .cd.r3 .fc{border-width:3px}
 .bico{width:44px;height:44px;border-radius:2px;background:#0f140e;border:1px solid var(--line);display:grid;place-items:center;flex:none;font-size:20px}
-.cost{font-size:11px;color:var(--mut)}
+.cost{font-size:12.5px;color:var(--mut)}
 .cost .no{color:#e9988c}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
-.days div{border:1px solid var(--line);border-radius:2px;padding:5px 2px;text-align:center;font-size:10px;color:var(--mut)}
+.days div{border:1px solid var(--line);border-radius:2px;padding:5px 2px;text-align:center;font-size:11.5px;color:var(--mut)}
 .days div.got{background:#2a2614;border-color:var(--gold);color:var(--gold)}
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
-#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:13px;z-index:80;display:none;max-width:90%;text-align:center}
+#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:14.5px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
-#tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:13px;line-height:1.35}
+#tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:14.5px;line-height:1.35}
 #tut b{color:var(--gold)}
 nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-radius:2px}
 .nmin{width:100%;padding:7px 9px;border-radius:2px;background:#0f140e;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700}
@@ -154,7 +154,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 .gc{width:34px;height:34px;border-radius:2px;display:grid;place-items:center;font-size:16px;background:#0f140e;border:2px solid var(--line);cursor:pointer;position:relative}
 .gc.e{border-style:dashed;border-color:#6e3326;opacity:.8}
 .gc.e.can{border-color:var(--gold);opacity:1}
-.gc.e:after{content:"+";position:absolute;font-size:13px;font-weight:800;color:#e9988c}
+.gc.e:after{content:"+";position:absolute;font-size:14.5px;font-weight:800;color:#e9988c}
 .gc.e.can:after{color:var(--gold)}
 .gc span{filter:saturate(1.2)}
 .eqrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #22301f}
@@ -649,7 +649,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.9';
+const VERSION = '2.9.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -709,7 +709,7 @@ function equipHtml(){
   const empties = line.reduce((n, [a]) => n + emptySlots(a).length, 0), fillable = line.reduce((n, [a]) => n + emptySlots(a).filter(s => spareFor(s).length).length, 0), spare = S.gear.filter(i => !gearOwner(i.id)).length;
   return `<h3>EQUIPMENT · THE LINE</h3><div class="card">
   <div class="sub" style="margin-bottom:4px">${empties ? `<b style="color:${fillable ? 'var(--gold)' : '#e9988c'}">${empties} empty slot${empties > 1 ? 's' : ''}</b> in the line${fillable ? `, ${fillable} of them can be filled now` : ''}. ` : 'Everyone in the line is fully equipped. '}Tap a slot to change it. Gold slots have spare gear waiting.</div>
-  ${line.map(([a, i]) => `<div class="eqrow"><img src="${portrait(a, 34)}" alt=""><div class="grow" style="min-width:0"><div class="nm r${a.rar}" style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name.split(' ')[0])} <span class="sub">${i < 5 ? 'front' : 'back'}</span></div>${gearChips(a, 'company')}</div></div>`).join('')}
+  ${line.map(([a, i]) => `<div class="eqrow"><img src="${portrait(a, 34)}" alt=""><div class="grow" style="min-width:0"><div class="nm r${a.rar}" style="font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name.split(' ')[0])} <span class="sub">${i < 5 ? 'front' : 'back'}</span></div>${gearChips(a, 'company')}</div></div>`).join('')}
   <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="eqbest" ${S.gear.length ? '' : 'disabled'}>Equip best for everyone</button><button class="btn" data-act="armoury">Armoury · ${spare} spare</button></div></div>`;
 }
 function gearHtml(a){
@@ -930,7 +930,7 @@ function sheetSettings(){
   openSheet(`<div class="fell" style="font-size:26px">Settings</div>
   <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
   ${backupCard()}
-  <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:2px;font-size:11px;padding:6px"></textarea>
+  <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:2px;font-size:12.5px;padding:6px"></textarea>
   <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
   <h3>YOUR COMPANY</h3><div class="card"><div class="sub">Captain's name, for the league</div><input class="nmin" id="capname" value="${esc(S.captain || '')}" maxlength="24" placeholder="${esc(captainName())}">
   <div class="sub" style="margin-top:8px">Company name</div><input class="nmin" id="coname" value="${esc(S.company || '')}" maxlength="40" placeholder="The Northampton Company">
@@ -938,7 +938,7 @@ function sheetSettings(){
   <h3>SOUND</h3><div class="card"><label class="tog" data-act="music"><span class="sw ${S.music ? 'on' : ''}"></span>Music</label><div class="sub" style="margin-top:4px">The speaker button at the top turns all sound on or off.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:14px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
+  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="sub" style="text-align:center;margin-top:12px">Loose! version ${VERSION}</div>`);
 }
@@ -1562,7 +1562,7 @@ function sheetArcher(id){
   const a = S.roster.find(x => x.id === id); if (!a) return closeSheet();
   sheetFn = () => sheetArcher(id);
   const b = base(a), st = stats(a), dm = [1, 2, 4, 8, 20][a.rar] * a.stars;
-  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><input class="nmin r${a.rar}" id="aname" data-id="${a.id}" value="${esc(a.name)}" maxlength="30" aria-label="Name">${a.nick ? `<div class="sub">Known as "${esc(a.nick)}"</div>` : ''}<div class="stars" style="font-size:15px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
+  openSheet(`<div class="row"><img class="pt" style="width:80px;height:80px" src="${portrait(a, 80)}" alt=""><div class="grow"><input class="nmin r${a.rar}" id="aname" data-id="${a.id}" value="${esc(a.name)}" maxlength="30" aria-label="Name">${a.nick ? `<div class="sub">Known as "${esc(a.nick)}"</div>` : ''}<div class="stars" style="font-size:16.5px">${'★'.repeat(a.stars)}<span style="color:#3a4636">${'★'.repeat(MAXSTARS - a.stars)}</span></div><div class="sub">${RAR[a.rar].n} ${a.cls === 'hero' ? b.title : b.n} · Level ${a.lvl} of ${cap(a)}</div></div></div>
   <p class="bio">${esc(a.bio)}</p>
   <div class="stat4"><div><b>${fmt(st.dps)}</b><span>DPS</span></div><div><b>${fmt(st.hp)}</b><span>HEALTH</span></div><div><b>${(60 / st.int).toFixed(0)}</b><span>PER MIN</span></div><div><b>${st.range.toFixed(0)}</b><span>RANGE</span></div></div>
   <div class="card"><b>${b.abN}</b><div class="sub">${b.abD} Fires on its own when charged.</div></div>
@@ -1884,7 +1884,7 @@ function draw(){
     if (f.blood) { ctx.fillStyle = `rgba(150,20,15,${1 - f.t / .5})`; ctx.fillRect(f.x, f.y, 1.6, 1.6); continue; }
     if (f.burn) { const s = f.t / 1.2; ctx.fillStyle = `rgba(255,${140 - s * 100},40,${.8 * (1 - s)})`; ctx.beginPath(); ctx.arc(f.x + Math.sin(f.t * 9) * 2, f.y - s * 14, 3 + s * 5, 0, 7); ctx.fill(); continue; }
     if (f.ring) { const s = f.t / .6; ctx.strokeStyle = f.col; ctx.globalAlpha = 1 - s; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 8 + s * 22, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; continue; }
-    const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 11 : 9}px "Alegreya Sans",sans-serif`; ctx.textAlign = 'center';
+    const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 12.5 : 10.5}px "Alegreya Sans",sans-serif`; ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(f.txt, f.x + .7, f.y - s * 18 + .7); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - s * 18); ctx.globalAlpha = 1;
   }
   if (b.sp && b.sp.id === 'night') { ctx.fillStyle = 'rgba(6,10,30,.42)'; ctx.fillRect(0, 0, W, H); b.units.forEach(u => { const g = ctx.createRadialGradient(u.x, u.y, 2, u.x, u.y, 40); g.addColorStop(0, 'rgba(255,190,90,.18)'); g.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g; ctx.fillRect(u.x - 40, u.y - 40, 80, 80); }); }
@@ -1960,7 +1960,7 @@ migrate();
 checkUnlocks();
 if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
 newBattle(); render(); save();
-if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:13px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
+if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
 window.__dbg = {levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
