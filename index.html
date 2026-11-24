@@ -125,6 +125,9 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 #sheet{position:absolute;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;max-height:90%;overflow-y:auto;background:#151c13;border:1px solid var(--line);border-radius:4px 4px 0 0;padding:8px 16px 22px}
 .sheetx{position:sticky;top:0;float:right;margin:-6px -4px 0 0;width:36px;height:36px;border:1px solid #3d4b38;background:#1a2016;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:2}.sheetx:hover{border-color:var(--gold)}
 .rankbtn{display:inline-flex;align-items:center;gap:7px;margin-left:10px;margin-right:auto;padding:4px 10px 4px 8px;border:1px solid #6b5a2a;background:#221f12;color:var(--ink);font:inherit;font-size:13px;line-height:1.1;cursor:pointer;text-align:left;position:relative;max-width:46vw}.rankbtn small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}.rankbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rankbtn b{color:var(--gold);font-size:18px}.rankbtn:hover{border-color:var(--gold)}.rankbtn.dot::after{content:'';position:absolute;top:-4px;right:-4px;width:9px;height:9px;background:#d8584c}
+@keyframes pop{0%{transform:scale(.88)}55%{transform:scale(1.08);box-shadow:0 0 0 5px rgba(232,182,76,.45)}100%{transform:scale(1);box-shadow:none}}.pop{animation:pop .35s ease-out}
+@keyframes flash{0%{background:rgba(232,182,76,.22)}100%{background:transparent}}.card.flash{animation:flash .6s ease-out}
+.btn:active{transform:scale(.94)}
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
@@ -828,7 +831,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.23';
+const VERSION = '2.23.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -2092,8 +2095,8 @@ ORDERS.hope = {n:'The forlorn hope', get d(){ const m = hopeMen(); return `Up to
   S.res.medals += md; S.stats.hopeMedals = (S.stats.hopeMedals || 0) + md; tr('hopeMen', men.length); repMove(0, -4); chron(`Sent ${men.length} men with the forlorn hope.`);
   return `${men.length} men go over the wall at dusk. ${back.length ? `${back.map(a => esc(a.name.split(' ')[0])).join(' and ')} came back, with 5 levels and the name "of the Breach".` : 'None of them came back.'} The company is ${md} medals richer.`; }};
 const ordReady = k => !S.ordT[k] || Date.now() >= S.ordT[k];
-/* a dot on the captain button when an order or a raid is ready */
-const capPing = () => !!(S.ordT && perk(1) && (Object.keys(ORDERS).some(ordReady) || (perk(2) && (!S.ordT.raid || Date.now() >= S.ordT.raid))));
+/* a dot on the captain button when a raid is ready; orders are optional and carry costs, so they do not nag */
+const capPing = () => !!(S.ordT && perk(2) && (!S.ordT.raid || Date.now() >= S.ordT.raid));
 function giveOrder(k){
   const o = ORDERS[k]; if (!o || !perk(1) || !ordReady(k)) return; if (o.ok && !o.ok()) return toast(o.no); const c = o.cost ? o.cost() : 0;
   if (c && S.res.silver < c) return toast(`That needs ${fmt(c)} silver.`); if (c) S.res.silver -= c;
@@ -2488,6 +2491,7 @@ document.addEventListener('click', e => {
     case 'build': { const lv = B_(id), c = bCost(id);
       if (startBuild(id)) { const job = building(id); toast(job ? `${BLD[id].n}: work started, ready in ${fmtT((job.end - Date.now()) / 1000)}.` : `${BLD[id].n} upgraded to level ${lv + 1}.`, true); }
       else if (!building(id) && !isMax(id) && !canPay(c)) { const short = Object.keys(c).filter(r => (S.res[r] || 0) < c[r]).map(r => RES[r].n.toLowerCase()); toast(`Not enough ${short.join(' or ')}.`); }
+      setTimeout(() => { const bt = document.querySelector(`[data-act=build][data-id="${id}"]`) || document.querySelector(`[data-act=rush][data-id="${id}"]`), cd = (bt || document.querySelector(`[data-bp="${id}"]`) || {closest:() => null}).closest('.card'); if (bt) { bt.classList.remove('pop'); void bt.offsetWidth; bt.classList.add('pop'); } if (cd) { cd.classList.remove('flash'); void cd.offsetWidth; cd.classList.add('flash'); } }, 0);
       break; }
     case 'rush': rushBuild(id); break;
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
@@ -2762,6 +2766,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.23.1","items":["Upgrade buttons bounce and the building's card lights up when you press them.","The red dot on the Captain button now only means a raid is ready. Orders are optional, so they no longer nag."]},
 {"v":"2.23","items":["Pitch barrels: from stage 12, two or three barrels of pitch sit by the road in every battle. Tap one to blow it up, or leave it and it goes off when a crowd of French gathers round it. The ground burns afterwards.","Fire arrows: from stage 22, tap Fire arrows under the Volleys counter to light every arrow in the line for 8 seconds. Burning arrows splash and set men alight, and burning men keep burning. Two per battle, three once the Fletcher reaches level 30.","The trebuchet throws fire pots now: every stone leaves the ground burning where it lands.","Explosions have their own sound.","The captain's record says Deadliest woman when she is one, and no longer counts friends recruited."]},
 {"v":"2.22","items":["Orders from the Constable: three small orders every day on the Orders tab, such as win battles, train archers or settle camp matters. Each pays a writ and medals, and finishing all three pays a bonus of 2 writs and three times the medals.","Every order can be done while your company is held at a wall, and if you miss a day nothing is lost. There are no streaks to break.","These replace the King's orders. Any King's order you had finished but not claimed has been paid out.","Your captain is easier to find: the rank at the top is now a Captain button, with a red dot when an order or a raid is ready.","Upgrade buttons tell you what happened: upgraded, work started (and how long), or which resource you are short of.","Volleys hit much harder: they now count front-rank and arrow bonuses, and plunging arrows half ignore armour."]},
 {"v":"2.21","items":["More ways to earn medals. Farming a stage you have already beaten pays a medal every 10 clears, offline too, so a company held at a wall still earns.","The forlorn hope, a new order: up to six spare Common and Uncommon men outside the line storm a breach. Each one pays medals, living or dead. Most do not come back; the few who do gain 5 levels and the name \"of the Breach\".","Promotions up to 3 stars now cost silver and iron only. Medals are needed from 4 stars.","Two more orders: Drill at dawn (a level for every man in the line) and Double rations (morale, at the cost of food).","Six new camp stories with clear Feared, Loved, Fair or Harsh choices, and the choice buttons now say which way each one leans.","The captain page shows the reward at every end of both reputation scales. There is no wrong way to lead.","Every pop-up has a close button in the corner.","Women in helmets and caps no longer look like bearded men. Sorry, Ellen.","Now and then a rider may arrive from headquarters with a purse of medals."]},
