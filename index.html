@@ -128,7 +128,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 @keyframes pop{0%{transform:scale(.88)}55%{transform:scale(1.08);box-shadow:0 0 0 5px rgba(232,182,76,.45)}100%{transform:scale(1);box-shadow:none}}.pop{animation:pop .35s ease-out}
 @keyframes flash{0%{background:rgba(232,182,76,.22)}100%{background:transparent}}.card.flash{animation:flash .6s ease-out}
 .btn:active{transform:scale(.94)}
-.village{display:block;width:100%;max-width:760px;height:auto;margin:0 auto;border:1px solid var(--line);touch-action:manipulation}.village .vb{cursor:pointer}.village .vb:hover>*:first-child{fill:rgba(232,182,76,.12)}.village .lockd{opacity:.55}.village .vn{font:600 8.5px 'Alegreya Sans',sans-serif;fill:#f3ead2;paint-order:stroke;stroke:#1b2414;stroke-width:2.6px}.village .vt{font:600 8px 'Alegreya Sans',sans-serif;fill:#cfd3c0}
+.village{display:block;width:100%;max-width:760px;height:auto;margin:0 auto;border:1px solid var(--line);touch-action:manipulation}
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.24';
+const VERSION = '2.24.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1714,6 +1714,7 @@ function render(){
   const v = $('#view');
   if (tab === 'battle') { if (!$('#battleView')) { v.innerHTML = viewBattle(); bindBattleView(); } battleHud(true); return; }
   v.innerHTML = tab === 'captain' ? viewCaptain() : tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
+  if (tab === 'camp' && S.campView !== 'list') villageStart();
 }
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
@@ -1900,73 +1901,166 @@ function bRow(k){
       const job = building(k), busy = !job && (S.builds || []).length >= builders() && bDur(k) >= 3;
       return `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div>${job ? `<div class="sub" style="margin-top:4px">Upgrading to level ${l + 1} · <b data-bt="${k}">${fmtT((job.end - Date.now()) / 1000)}</b></div><div class="prog" style="margin-top:4px"><i data-bp="${k}" style="width:${Math.min(100, 100 * (1 - (job.end - Date.now()) / 1000 / job.dur))}%;background:var(--gold)"></i></div>` : `<div class="cost">${mx ? 'Fully built' : costHtml(c) + (bDur(k) >= 3 ? ` · ${IC('clock', 'currentColor')}${fmtT(bDur(k))}` : '')}</div>`}</div>${mx ? '' : job ? `<button class="btn" data-act="rush" data-id="${k}">Finish · ${IC('medal')}${rushCost(job)}</button>` : `<button class="btn ${canPay(c) && !busy ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) && !busy ? '' : 'disabled'}>${busy ? 'Builders busy' : l ? 'Upgrade' : 'Build'}</button>`}</div>`;
 }
-/* ================= the village (2.24): the camp as a map; tap a building to upgrade it ================= */
+/* ================= the village (2.24.1): drawn on canvas in the battlefield's style ================= */
+const VW = 400, VH = 300;
 const VPOS = {
-  woodcut:[48,92], mine:[122,46], bowyer:[205,54], scriptorium:[300,48], treb:[362,92],
-  pavise:[40,168], barracks:[128,118], store:[200,130], fletcher:[268,112], butts:[360,160],
-  drill:[104,196], surgeon:[292,184], farm:[58,250], bill:[150,262], tavern:[226,250], market:[300,258], geese:[364,236]
+  woodcut:[46,72], mine:[118,40], bowyer:[200,44], scriptorium:[284,40], treb:[352,78],
+  pavise:[38,150], barracks:[118,108], store:[202,118], fletcher:[270,106], butts:[352,156],
+  drill:[106,186], surgeon:[290,178], farm:[56,250], bill:[148,262], tavern:[226,256], market:[300,252], geese:[358,244]
 };
+const VROAD = [[-10, 214], [60, 206], [130, 222], [196, 200], [250, 172], [318, 210], [372, 196], [410, 200]];
 const vTier = k => { const l = B_(k), mx = BLD[k].max; if (!l) return 0; if (mx) return l >= mx ? 3 : l >= mx / 2 ? 2 : 1; return l >= 25 ? 3 : l >= 10 ? 2 : 1; };
-function vArt(k, t){
-  const W = '#7a5230', Wd = '#5a3a1e', R = '#8a3a26', C = '#d9cba8', Cd = '#b9a982', St = '#9a958a', Th = '#c9a25a', G = '#4f7a3a', Gd = '#3c5e2c';
-  const tree = (x, y, r) => `<rect x="${x - 1.5}" y="${y}" width="3" height="${r}" fill="${Wd}"/><circle cx="${x}" cy="${y}" r="${r}" fill="${G}"/><circle cx="${x - r * .3}" cy="${y - r * .3}" r="${r * .45}" fill="#6a9a48"/>`;
-  const hut = (x, y, w, h, roof) => `<rect x="${x - w / 2}" y="${y - h}" width="${w}" height="${h}" fill="${W}"/><path d="M${x - w / 2 - 3} ${y - h}L${x} ${y - h - h * .8}L${x + w / 2 + 3} ${y - h}Z" fill="${roof || Th}"/><rect x="${x - 2.5}" y="${y - 7}" width="5" height="7" fill="${Wd}"/>`;
-  const tent = (x, y, s) => `<path d="M${x - 8 * s} ${y}L${x} ${y - 12 * s}L${x + 8 * s} ${y}Z" fill="${C}"/><path d="M${x} ${y - 12 * s}L${x + 8 * s} ${y}L${x + 2 * s} ${y}Z" fill="${Cd}"/><path d="M${x - 2 * s} ${y}L${x} ${y - 5 * s}L${x + 2 * s} ${y}Z" fill="#3a2a18"/>`;
+const VC = {wood:'#7a5532', woodD:'#4a3020', canvas:'#ddd1b2', canvasD:'#bfb08c', thatch:'#c9a25a', thatchD:'#a5823e', tile:'#9a4a2c', tileD:'#7a3420', slate:'#6d6a66', slateD:'#55524e', stone:'#a49e92'};
+function vRoof(c, w, h, a, b, lines){
+  c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(-w / 2 + 4, -h / 2 + 5, w, h);
+  c.fillStyle = a; c.fillRect(-w / 2, -h / 2, w, h / 2); c.fillStyle = b; c.fillRect(-w / 2, 0, w, h / 2);
+  c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = .7; c.beginPath();
+  for (let x = -w / 2 + (lines || 3); x < w / 2; x += lines || 3) { c.moveTo(x, -h / 2); c.lineTo(x, -1); c.moveTo(x - 1.2, 1); c.lineTo(x - 1.2, h / 2); }
+  c.stroke(); c.strokeStyle = 'rgba(255,255,240,.25)'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-w / 2, 0); c.lineTo(w / 2, 0); c.stroke();
+  c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1; c.strokeRect(-w / 2, -h / 2, w, h);
+}
+function vTent(c, x, y, s, a, b){
+  c.save(); c.translate(x, y); c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(-s / 2 + 3, -s / 2 + 4, s, s);
+  const h = s / 2; [[[-h, -h], [h, -h], a], [[-h, -h], [-h, h], a], [[h, -h], [h, h], b], [[-h, h], [h, h], b]].forEach(([p, q, col], i) => { c.fillStyle = i === 1 ? shade(a, .92) : i === 2 ? b : col; c.beginPath(); c.moveTo(0, 0); c.lineTo(p[0], p[1]); c.lineTo(q[0], q[1]); c.closePath(); c.fill(); });
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = .6; c.beginPath(); c.moveTo(-h, -h); c.lineTo(h, h); c.moveTo(h, -h); c.lineTo(-h, h); c.stroke();
+  c.fillStyle = '#3a2a18'; c.beginPath(); c.arc(0, 0, 1.2, 0, 7); c.fill(); c.restore();
+}
+function vRoundTent(c, x, y, r, a, b){
+  c.save(); c.translate(x, y); c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.arc(3, 4, r, 0, 7); c.fill();
+  c.fillStyle = b; c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill(); c.fillStyle = a; c.beginPath(); c.arc(0, 0, r, Math.PI * .75, Math.PI * 1.75); c.lineTo(0, 0); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = .6; for (let i = 0; i < 8; i++) { c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(i * .785) * r, Math.sin(i * .785) * r); c.stroke(); }
+  c.fillStyle = '#3a2a18'; c.beginPath(); c.arc(0, 0, 1.4, 0, 7); c.fill(); c.restore();
+}
+function vTree(c, x, y, r, s){
+  c.fillStyle = 'rgba(0,0,0,.32)'; c.beginPath(); c.arc(x + 5, y + 6, r, 0, 7); c.fill();
+  for (let q = 0; q < 5; q++) { const a = q * 1.3 + s * 6; c.fillStyle = s < .5 ? '#284a1e' : '#2f5422'; c.beginPath(); c.arc(x + Math.cos(a) * r * .38, y + Math.sin(a) * r * .38, r * .62, 0, 7); c.fill(); }
+  c.fillStyle = '#3a6428'; c.beginPath(); c.arc(x - r * .2, y - r * .2, r * .55, 0, 7); c.fill(); c.fillStyle = 'rgba(190,220,120,.28)'; c.beginPath(); c.arc(x - r * .38, y - r * .38, r * .3, 0, 7); c.fill();
+}
+function vBarrel(c, x, y){ c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.arc(x + 1.5, y + 2, 3.6, 0, 7); c.fill(); c.fillStyle = '#6a4a24'; c.beginPath(); c.arc(x, y, 3.6, 0, 7); c.fill(); c.strokeStyle = '#2a1c10'; c.lineWidth = .8; c.beginPath(); c.arc(x, y, 2.4, 0, 7); c.stroke(); }
+function vBuild(c, k, t){
+  const T = Math.max(1, t);
   switch (k) {
-    case 'farm': { let h = ''; const n = 1 + t; for (let i = 0; i < n; i++) h += `<rect x="${-26 + (i % 2) * 2}" y="${-14 + i * 7}" width="34" height="6" fill="${i % 2 ? '#a9b24e' : '#c9b25a'}"/>`; return h + hut(18, 8, 12, 9); }
-    case 'woodcut': { let h = ''; for (let i = 0; i < 2 + t; i++) h += tree(-18 + i * 11, -6 - (i % 2) * 6, 7); return h + `<g fill="${W}">${[0, 1, 2].slice(0, t).map(i => `<rect x="${-6 + i * 3}" y="${9 - i * 3}" width="16" height="3.4" rx="1.7"/>`).join('')}</g>`; }
-    case 'mine': return `<path d="M-26 10L-10 -16L4 -12L24 10Z" fill="#7d776c"/><path d="M-10 -16L4 -12L-2 -4Z" fill="#a39d90"/><path d="M-6 10V0a6 6 0 0 1 12 0V10Z" fill="#1e1a14"/><rect x="-7" y="-1" width="14" height="2" fill="${W}"/>${t >= 2 ? `<rect x="10" y="4" width="10" height="5" fill="${Wd}"/><circle cx="12" cy="10" r="1.6" fill="#333"/><circle cx="18" cy="10" r="1.6" fill="#333"/>` : ''}`;
-    case 'geese': { let h = `<ellipse cx="0" cy="2" rx="${18 + t * 3}" ry="${10 + t}" fill="none" stroke="${W}" stroke-width="1.6" stroke-dasharray="3 2"/>`; for (let i = 0; i < 2 + t * 2; i++) { const x = -12 + (i * 7) % 26, y = -3 + (i % 3) * 4; h += `<ellipse cx="${x}" cy="${y}" rx="3" ry="2" fill="#f1eee4"/><circle cx="${x + 2.6}" cy="${y - 1.6}" r="1.2" fill="#f1eee4"/><path d="M${x + 3.6} ${y - 1.6}l1.6 .4" stroke="#e0902a" stroke-width="1"/>`; } return h; }
-    case 'store': { const w = 26 + t * 6; return `<rect x="${-w / 2}" y="-10" width="${w}" height="18" fill="${W}"/><path d="M${-w / 2 - 4} -10L0 ${-24 - t * 2}L${w / 2 + 4} -10Z" fill="${R}"/><rect x="-6" y="-1" width="12" height="9" fill="${Wd}"/><path d="M-6 -1L6 8M6 -1L-6 8" stroke="${W}" stroke-width="1.2"/>`; }
-    case 'fletcher': return hut(-6, 8, 18, 12) + `<g stroke="#e8dcc0" stroke-width="1">${[0, 1, 2, 3].slice(0, 1 + t).map(i => `<path d="M${10 + i * 3} 8V-8"/><path d="M${8.5 + i * 3} -8l1.5 -3l1.5 3" fill="#e8dcc0"/>`).join('')}</g><rect x="8" y="6" width="${4 + t * 3}" height="3" fill="${Wd}"/>`;
-    case 'market': { let h = ''; for (let i = 0; i < Math.max(1, t); i++) { const x = -16 + i * 14; h += `<rect x="${x - 6}" y="-2" width="12" height="9" fill="${W}"/><path d="M${x - 8} -2h16l-2 -7h-12z" fill="${i % 2 ? '#c8372d' : '#e6e0cf'}"/><path d="M${x - 4} -9l-1 7M${x} -9v7M${x + 4} -9l1 7" stroke="${i % 2 ? '#e6e0cf' : '#c8372d'}" stroke-width="1.4"/>`; } return h; }
-    case 'scriptorium': return `<rect x="-14" y="-14" width="28" height="22" fill="${St}"/><path d="M-17 -14L0 -26L17 -14Z" fill="#6d6258"/><path d="M-8 8V-2a4 4 0 0 1 8 0V8Z" fill="#3a3028"/><path d="M5 -6v-4a3 3 0 0 1 6 0v4Z" fill="#e8c86a"/>`;
-    case 'barracks': { let h = ''; const n = Math.max(1, B_(k)); for (let i = 0; i < n; i++) h += tent(-20 + (i % 4) * 13, -2 + Math.floor(i / 4) * 13, .9); return h; }
-    case 'bowyer': return hut(0, 8, 22, 13, R) + `<path d="M-15 6q-5 -12 0 -24" fill="none" stroke="#c9a25a" stroke-width="1.8"/><path d="M-15 6V-18" stroke="#e8dcc0" stroke-width=".6"/>${t >= 2 ? '<path d="M15 6q5 -12 0 -24" fill="none" stroke="#c9a25a" stroke-width="1.8"/><path d="M15 6V-18" stroke="#e8dcc0" stroke-width=".6"/>' : ''}`;
-    case 'drill': { let h = `<rect x="-22" y="-14" width="44" height="26" fill="#8a7a4a" opacity=".5"/><rect x="-22" y="-14" width="44" height="26" fill="none" stroke="${W}" stroke-width="1.5"/>`; for (let i = 0; i < 1 + t; i++) { const x = -14 + i * 9; h += `<path d="M${x} 8V-6M${x - 4} -2h8" stroke="#c9a25a" stroke-width="1.8"/><circle cx="${x}" cy="-8" r="2.6" fill="#c9a25a"/>`; } return h; }
-    case 'surgeon': return tent(0, 8, 1.6) + `<rect x="-3" y="-8" width="6" height="2" fill="#b3342a"/><rect x="-1" y="-10" width="2" height="6" fill="#b3342a"/>`;
-    case 'butts': { let h = ''; for (let i = 0; i < 1 + t; i++) { const x = -14 + i * 10; h += `<path d="M${x - 5} 8h10l-2 -8h-6z" fill="${Th}"/><circle cx="${x}" cy="-4" r="5" fill="#f1eee4"/><circle cx="${x}" cy="-4" r="3.4" fill="#c8372d"/><circle cx="${x}" cy="-4" r="1.6" fill="#e8c86a"/>`; } return h; }
-    case 'tavern': return `<rect x="-16" y="-14" width="32" height="22" fill="${W}"/><path d="M-19 -14L0 -28L19 -14Z" fill="${Th}"/><rect x="-11" y="-8" width="6" height="5" fill="#e8c86a"/><rect x="5" y="-8" width="6" height="5" fill="#e8c86a"/><rect x="-3" y="-1" width="6" height="9" fill="${Wd}"/><path d="M16 -10h8M24 -10v4" stroke="${Wd}" stroke-width="1.2"/><rect x="20" y="-6" width="7" height="6" fill="#c9a25a"/>${t >= 2 ? '<rect x="-24" y="2" width="6" height="6" rx="2" fill="#6a4a24"/>' : ''}`;
-    case 'bill': return tent(-8, 8, 1.1) + `<g stroke="#b8b8b0" stroke-width="1.4">${[0, 1, 2].slice(0, 1 + Math.min(2, t)).map(i => `<path d="M${6 + i * 5} 8V-16"/><path d="M${6 + i * 5} -16l3 3l-3 2" fill="none"/>`).join('')}</g>`;
-    case 'pavise': { let h = ''; for (let i = 0; i < 1 + t; i++) h += `<rect x="${-14 + i * 8}" y="${-12 + (i % 2) * 2}" width="10" height="20" fill="#7a5230" stroke="#4a3018"/><path d="M${-9 + i * 8} ${-8 + (i % 2) * 2}v12M${-12 + i * 8} ${-2 + (i % 2) * 2}h6" stroke="#c8372d" stroke-width="1.6"/>`; return h; }
-    case 'treb': return `<path d="M-14 10L0 -16L14 10" fill="none" stroke="${W}" stroke-width="3"/><path d="M-18 10h36" stroke="${Wd}" stroke-width="3"/><path d="M-22 -24L16 -4" stroke="${Wd}" stroke-width="2.4"/><rect x="11" y="-6" width="9" height="8" fill="#6d6258"/><path d="M-22 -24l-3 8" stroke="#d9cba8" stroke-width=".8"/>`;
+    case 'farm': { c.save(); c.rotate(-.08); const n = 2 + T; for (let i = 0; i < n; i++) { const y = -18 + i * 9; c.fillStyle = i % 2 ? '#a9a24a' : '#c4ac58'; c.fillRect(-30, y, 44, 8); c.strokeStyle = 'rgba(70,55,20,.45)'; c.lineWidth = .7; c.beginPath(); for (let x = -28; x < 14; x += 3) { c.moveTo(x, y + 1); c.lineTo(x, y + 7); } c.stroke(); } c.restore(); c.save(); c.translate(24, -4); vRoof(c, 14, 12, VC.thatch, VC.thatchD); c.restore(); break; }
+    case 'woodcut': { const rng = mulberry(7); for (let i = 0; i < 1 + T; i++) vTree(c, -16 + i * 10, -14 + (i % 2) * 6, 7, rng()); for (let j = 0; j < 2 + T; j++) for (let i = 0; i < 3 - (j % 2); i++) { const x = -4 + i * 6 + (j % 2) * 3, y = 8 + j * -0.1 + (j > 1 ? -4 : 0); c.fillStyle = '#8a6a3e'; c.beginPath(); c.arc(x + j * 2, y, 3, 0, 7); c.fill(); c.strokeStyle = '#5a3a1e'; c.lineWidth = .6; c.beginPath(); c.arc(x + j * 2, y, 1.6, 0, 7); c.stroke(); }
+      c.fillStyle = '#6a4a24'; c.beginPath(); c.arc(18, 10, 4, 0, 7); c.fill(); c.fillStyle = '#b8a070'; c.beginPath(); c.arc(18, 10, 2.6, 0, 7); c.fill(); break; }
+    case 'mine': { c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(4, 5, 26, 17, 0, 0, 7); c.fill(); [[0, 0, 24, 15, '#7d776c'], [-8, -4, 12, 9, '#8d877a'], [8, -3, 11, 8, '#948e80'], [-2, -8, 9, 6, '#a39d90']].forEach(([x, y, rx, ry, col]) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); c.fill(); });
+      c.fillStyle = '#1e1a14'; c.beginPath(); c.ellipse(4, 6, 6, 4, 0, 0, 7); c.fill(); c.strokeStyle = VC.wood; c.lineWidth = 1.6; c.beginPath(); c.moveTo(-2, 3); c.lineTo(10, 3); c.stroke(); if (T >= 2) drawCart(c, -18, 14, .4, false); break; }
+    case 'geese': { const r = 18 + T * 3; c.strokeStyle = VC.woodD; c.lineWidth = 1.6; c.beginPath(); c.ellipse(0, 0, r, r * .62, 0, 0, 7); c.stroke(); c.fillStyle = 'rgba(110,90,50,.25)'; c.beginPath(); c.ellipse(0, 0, r - 1, r * .62 - 1, 0, 0, 7); c.fill(); c.fillStyle = '#3f6f8f'; c.beginPath(); c.ellipse(-r * .4, 2, 6, 4, 0, 0, 7); c.fill(); for (let a = 0; a < 6.28; a += .5) { c.fillStyle = VC.woodD; c.beginPath(); c.arc(Math.cos(a) * r, Math.sin(a) * r * .62, 1.1, 0, 7); c.fill(); } break; }
+    case 'store': { const w = 30 + T * 6; vRoof(c, w, 24, VC.tile, VC.tileD, 2.5); c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(-w / 2 - 6, 4, 5, 8); vBarrel(c, -w / 2 - 5, -6); vBarrel(c, -w / 2 - 5, 2); if (T >= 2) { vBarrel(c, w / 2 + 5, 6); c.fillStyle = '#8a6a3e'; c.fillRect(w / 2 + 2, -8, 8, 7); } break; }
+    case 'fletcher': { c.save(); c.translate(-6, 0); vRoof(c, 22, 18, VC.thatch, VC.thatchD); c.restore(); c.strokeStyle = VC.woodD; c.lineWidth = 1.2; c.strokeRect(9, -10, 12, 20); for (let i = 0; i < 2 + T; i++) { const y = -8 + i * 4; c.strokeStyle = '#e8dcc0'; c.lineWidth = .8; c.beginPath(); c.moveTo(10, y); c.lineTo(20, y); c.stroke(); c.fillStyle = '#c8372d'; c.fillRect(18, y - 1, 2.5, 2); } break; }
+    case 'market': { const n = 1 + T; for (let i = 0; i < n; i++) { const x = -((n - 1) * 15) / 2 + i * 15, y = (i % 2) * 6 - 3; c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(x - 6 + 3, y - 6 + 4, 12, 12); for (let s = 0; s < 4; s++) { c.fillStyle = (s + i) % 2 ? '#c8372d' : '#e6e0cf'; c.fillRect(x - 6 + s * 3, y - 6, 3, 12); } c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = .7; c.strokeRect(x - 6, y - 6, 12, 12); }
+      c.fillStyle = '#8a6a3e'; c.fillRect(-4, 10, 7, 5); c.fillStyle = '#e6c94a'; c.beginPath(); c.arc(8, 12, 2, 0, 7); c.fill(); break; }
+    case 'scriptorium': { vRoof(c, 30, 22, VC.slate, VC.slateD, 2); c.fillStyle = VC.stone; c.fillRect(-15, 11, 30, 3); c.strokeStyle = '#e8dcc0'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-10, -2); c.lineTo(-10, -8); c.moveTo(-13, -5); c.lineTo(-7, -5); c.stroke(); if (T >= 2) { c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(17, -4, 10, 10); c.fillStyle = VC.stone; c.fillRect(15, -6, 10, 10); } break; }
+    case 'barracks': { const n = Math.max(1, B_(k)); for (let i = 0; i < n; i++) vTent(c, -21 + (i % 4) * 14, -6 + Math.floor(i / 4) * 14, 12, VC.canvas, VC.canvasD); break; }
+    case 'bowyer': { vRoof(c, 26, 18, VC.tile, VC.tileD); c.strokeStyle = '#c9a25a'; c.lineWidth = 1.6; for (let i = 0; i < 1 + T; i++) { c.beginPath(); c.moveTo(-14 + i * 5, 13); c.quadraticCurveTo(-12 + i * 5, 17, -14 + i * 5, 22); c.stroke(); } c.fillStyle = '#5a3a1e'; c.fillRect(8, 12, 12, 4); break; }
+    case 'drill': { c.fillStyle = 'rgba(120,95,55,.55)'; c.fillRect(-24, -16, 48, 32); c.strokeStyle = VC.woodD; c.lineWidth = 1.4; c.strokeRect(-24, -16, 48, 32); for (let x = -24; x <= 24; x += 8) { c.fillStyle = VC.woodD; c.fillRect(x - 1, -17, 2, 2); c.fillRect(x - 1, 15, 2, 2); }
+      for (let i = 0; i < 1 + T; i++) { const x = -14 + i * 9; c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.arc(x + 2, 3, 3.4, 0, 7); c.fill(); c.strokeStyle = '#a5823e'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(x - 5, 0); c.lineTo(x + 5, 0); c.stroke(); c.fillStyle = '#d6b46a'; c.beginPath(); c.arc(x, 0, 3, 0, 7); c.fill(); } break; }
+    case 'surgeon': { vRoundTent(c, 0, 0, 14, '#ece6d6', '#cfc6b0'); c.fillStyle = '#b3342a'; c.fillRect(-1.5, -6, 3, 12); c.fillRect(-6, -1.5, 12, 3); if (T >= 2) { c.fillStyle = '#ddd1b2'; c.fillRect(14, 6, 10, 4); c.fillRect(14, -2, 10, 4); } break; }
+    case 'butts': { for (let i = 0; i < 1 + T; i++) { const y = -14 + i * 9; c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(9, y + 3, 7, 8); c.fillStyle = VC.thatch; c.fillRect(6, y, 7, 8); c.fillStyle = '#f1eee4'; c.beginPath(); c.arc(6, y + 4, 3.4, 0, 7); c.fill(); c.fillStyle = '#c8372d'; c.beginPath(); c.arc(6, y + 4, 2.2, 0, 7); c.fill(); c.fillStyle = '#e8c86a'; c.beginPath(); c.arc(6, y + 4, .9, 0, 7); c.fill(); }
+      c.strokeStyle = 'rgba(240,230,200,.35)'; c.setLineDash([2, 3]); c.lineWidth = .8; c.beginPath(); c.moveTo(-22, -12); c.lineTo(-22, 16); c.stroke(); c.setLineDash([]); break; }
+    case 'tavern': { vRoof(c, 34, 24, VC.thatch, VC.thatchD); c.fillStyle = '#5a4a40'; c.fillRect(8, -16, 5, 5); c.strokeStyle = VC.woodD; c.lineWidth = 1; c.beginPath(); c.moveTo(-17, 14); c.lineTo(-24, 14); c.stroke(); c.fillStyle = '#c9a25a'; c.fillRect(-27, 14, 6, 6); vBarrel(c, 21, 8); if (T >= 2) { vBarrel(c, 21, 0); c.fillStyle = VC.wood; c.fillRect(-12, 15, 16, 3); c.fillRect(-12, 20, 16, 3); } break; }
+    case 'bill': { vTent(c, -10, 0, 16, '#c9c0a8', '#a89f88'); c.strokeStyle = '#4a3020'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(5, -12); c.lineTo(5, 12); c.stroke(); for (let i = 0; i < 2 + T; i++) { const y = -10 + i * 5; c.strokeStyle = '#7a5532'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(4, y); c.lineTo(20, y + 1); c.stroke(); c.fillStyle = '#b8b8b0'; c.beginPath(); c.moveTo(20, y - 1.5); c.lineTo(24, y + 1); c.lineTo(20, y + 2.5); c.fill(); } break; }
+    case 'pavise': { for (let i = 0; i < 1 + T; i++) { const x = -12 + i * 7; c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(x + 2, -8, 6, 18); c.fillStyle = '#7a3a24'; c.fillRect(x, -10, 6, 18); c.fillStyle = '#e8e0cc'; c.fillRect(x + 2.2, -6, 1.6, 10); c.fillRect(x + .8, -2, 4.4, 1.6); } break; }
+    case 'treb': { c.fillStyle = 'rgba(0,0,0,.3)'; c.fillRect(-12, -6, 28, 16); c.fillStyle = VC.wood; c.fillRect(-14, -8, 28, 4); c.fillRect(-14, 4, 28, 4); c.fillRect(-2, -8, 4, 16); c.strokeStyle = VC.woodD; c.lineWidth = 3; c.beginPath(); c.moveTo(-26, -14); c.lineTo(12, 4); c.stroke(); c.fillStyle = '#6d6258'; c.fillRect(8, -2, 10, 10); c.fillStyle = '#8d877a'; c.beginPath(); c.arc(-24, 16, 4, 0, 7); c.fill(); c.beginPath(); c.arc(-16, 18, 3.4, 0, 7); c.fill(); break; }
   }
-  return '';
 }
-function vScenery(){
-  const bn = banner(), fire = `<circle cx="180" cy="196" r="9" fill="#3a2a18"/><path d="M175 196q5 -14 5 -2q3 -8 5 2z" fill="#ff9a3a"/><path d="M178 196q2 -7 2 -1q2 -4 2 1z" fill="#ffd76a"/>`;
-  let h = `<rect width="400" height="300" fill="#3d5a2e"/><path d="M0 0h400v300H0z" fill="url(#vgrass)"/>
-    <path d="M400 0C380 60 400 110 384 150S396 250 400 300" fill="none" stroke="#3f6f8f" stroke-width="22" opacity=".85"/><path d="M400 0C380 60 400 110 384 150S396 250 400 300" fill="none" stroke="#6a9ab8" stroke-width="2" opacity=".5" stroke-dasharray="10 14"/>
-    <path d="M0 220C60 210 120 230 180 208S300 170 400 196" fill="none" stroke="#8a7650" stroke-width="10" opacity=".55"/>
-    ${[[18,30],[78,22],[260,20],[340,18],[20,290],[110,290],[250,292],[86,140],[245,175]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#2f4a24"/><circle cx="${x - 2}" cy="${y - 2}" r="3.4" fill="#4f7a3a"/>`).join('')}
-    ${fire}<path d="M196 180V150" stroke="#4a3420" stroke-width="1.6"/><path d="M196 150h14v9h-14z" fill="${bn[0]}"/><path d="M196 154.5h14M203 150v9" stroke="${bn[1] || '#fff'}" stroke-width="1.6"/>`;
-  if (fol('cook')) h += `<path d="M164 200l4 -10l4 10" stroke="#333" fill="none"/><ellipse cx="168" cy="192" rx="5" ry="3.5" fill="#2a2a2a"/>`;
-  if (fol('laund')) h += `<path d="M330 128q18 8 36 0" fill="none" stroke="#e8dcc0" stroke-width=".8"/>${[336, 344, 352, 360].map((x, i) => `<rect x="${x}" y="${130 + (i % 2)}" width="5" height="7" fill="${['#e6e0cf', '#c8372d', '#e6e0cf', '#5a7aa0'][i]}"/>`).join('')}`;
-  if (fol('alewife')) h += `<rect x="252" y="236" width="7" height="9" rx="2" fill="#6a4a24"/><rect x="260" y="238" width="7" height="9" rx="2" fill="#6a4a24"/>`;
-  if (fol('priest')) h += `<path d="M24 40v-14M19 31h10" stroke="#e8dcc0" stroke-width="2"/>`;
-  return h;
+let vcv = null, vbg = null, vbgKey = '', vRaf = 0, vLast = 0, vT = 0, vPeople = [], vGeese = [];
+function viewVillage(){ return `<canvas id="vcv" class="village" aria-label="Map of the camp"></canvas>`; }
+function vBake(){
+  const k = vcv.width / VW, key = vcv.width + '|' + (S.banner || 0) + '|' + Object.keys(VPOS).map(b => B_(b) + (bUnlocked(b) ? 'u' : '')).join(',') + '|' + Object.keys(S.fol || {}).join(',');
+  if (key === vbgKey && vbg) return; vbgKey = key;
+  vbg = document.createElement('canvas'); vbg.width = vcv.width; vbg.height = vcv.height; const g = vbg.getContext('2d'); g.setTransform(k, 0, 0, k, 0, 0);
+  const rng = mulberry(1415), [g0, g1] = ZONES[0].g;
+  g.fillStyle = g0; g.fillRect(0, 0, VW, VH);
+  for (let i = 0; i < 200; i++) { g.fillStyle = rng() < .5 ? g1 : '#7a9a48'; g.globalAlpha = .06 + rng() * .1; g.beginPath(); g.arc(rng() * VW, rng() * VH, 8 + rng() * 30, 0, 7); g.fill(); }
+  g.globalAlpha = 1; g.lineWidth = .8;
+  for (let i = 0; i < 1300; i++) { const x = rng() * VW, y = rng() * VH; g.strokeStyle = rng() < .5 ? 'rgba(20,40,10,.35)' : 'rgba(170,200,110,.25)'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng() * 2 - 1, y - 2 - rng() * 2.5); g.stroke(); }
+  for (let i = 0; i < 40; i++) { g.fillStyle = ['#e8e2c8', '#e6c94a', '#c8a0d8'][i % 3]; g.beginPath(); g.arc(rng() * VW, rng() * VH, .9, 0, 7); g.fill(); }
+  // river down the right edge
+  const riv = () => { g.beginPath(); g.moveTo(392, -5); g.bezierCurveTo(372, 60, 398, 120, 382, 160); g.bezierCurveTo(370, 200, 396, 250, 388, 305); };
+  g.lineCap = 'round'; riv(); g.strokeStyle = 'rgba(60,50,30,.45)'; g.lineWidth = 30; g.stroke(); riv(); g.strokeStyle = '#3f6f8f'; g.lineWidth = 24; g.stroke(); riv(); g.strokeStyle = '#5a8aab'; g.lineWidth = 12; g.stroke();
+  // road, as on the battlefield
+  const road = () => { g.beginPath(); VROAD.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); };
+  g.lineJoin = 'round'; road(); g.strokeStyle = 'rgba(40,30,15,.35)'; g.lineWidth = 22; g.stroke(); road(); g.strokeStyle = '#8f7a52'; g.lineWidth = 18; g.stroke(); road(); g.strokeStyle = '#a38d62'; g.lineWidth = 10; g.stroke();
+  // trodden ground round the fire
+  g.fillStyle = 'rgba(111,96,64,.55)'; g.beginPath(); g.ellipse(190, 178, 26, 16, 0, 0, 7); g.fill();
+  // trees and bushes clear of buildings, road and river
+  const clear = (x, y, d) => Object.values(VPOS).every(([px, py]) => dist(px, py, x, y) > d) && x < 360 && VROAD.every(([rx, ry]) => dist(rx, ry, x, y) > 26) && dist(190, 178, x, y) > 34;
+  for (let i = 0; i < 60; i++) { const x = rng() * VW, y = rng() * VH, r = 3 + rng() * 3; if (!clear(x, y, 24)) continue; g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(x + 2, y + 2.5, r, 0, 7); g.fill(); g.fillStyle = '#3a6428'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+  let trees = 0; for (let i = 0; i < 400 && trees < 16; i++) { const x = rng() * VW, y = rng() * VH; if (!clear(x, y, 36)) continue; trees++; vTree(g, x, y, 8 + rng() * 6, rng()); }
+  // the camp heart: carts, banner
+  drawCart(g, 168, 160, .3, false); drawCart(g, 214, 196, -.4, false);
+  const bn = banner(); g.strokeStyle = '#4a3420'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(206, 168); g.lineTo(206, 146); g.stroke(); g.fillStyle = bn[0] === '#c8372d' ? '#f2efe6' : bn[0]; g.fillRect(206, 146, 13, 8); g.fillStyle = bn[0] === '#c8372d' ? '#c8372d' : bn[1]; g.fillRect(211, 146, 3, 8); g.fillRect(206, 149, 13, 2);
+  if (fol('laund')) { g.strokeStyle = '#e8dcc0'; g.lineWidth = .7; g.beginPath(); g.moveTo(328, 120); g.lineTo(366, 124); g.stroke(); ['#e6e0cf', '#c8372d', '#e6e0cf', '#5a7aa0'].forEach((col, i) => { g.fillStyle = col; g.fillRect(332 + i * 8, 121 + i * .4, 5, 6); }); }
+  if (fol('alewife')) { vBarrel(g, 250, 238); vBarrel(g, 257, 242); }
+  if (fol('priest')) { g.strokeStyle = '#e8dcc0'; g.lineWidth = 2; g.beginPath(); g.moveTo(22, 196); g.lineTo(22, 182); g.moveTo(17, 187); g.lineTo(27, 187); g.stroke(); }
+  // buildings
+  Object.keys(VPOS).forEach(b => { const [x, y] = VPOS[b], un = bUnlocked(b), l = B_(b); g.save(); g.translate(x, y);
+    if (!un) { g.globalAlpha = .45; g.setLineDash([3, 3]); g.strokeStyle = '#d8d0b0'; g.lineWidth = 1; g.strokeRect(-18, -12, 36, 24); g.setLineDash([]); g.globalAlpha = 1; }
+    else if (!l) { g.fillStyle = 'rgba(80,60,30,.35)'; g.fillRect(-18, -12, 36, 24); g.setLineDash([3, 3]); g.strokeStyle = '#e8c86a'; g.lineWidth = 1; g.strokeRect(-18, -12, 36, 24); g.setLineDash([]); for (let i = 0; i < 3; i++) { g.fillStyle = '#8a6a3e'; g.fillRect(-12 + i * 3, 6 - i * 2, 14, 2); } }
+    else { g.scale(1.2, 1.2); vBuild(g, b, vTier(b)); }
+    g.restore(); });
+  const v = g.createRadialGradient(VW / 2, VH / 2, VH * .35, VW / 2, VH / 2, VH * .85); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.3)'); g.fillStyle = v; g.fillRect(0, 0, VW, VH);
 }
-function viewVillage(){
-  let h = `<svg class="village" viewBox="0 0 400 300" role="img" aria-label="Map of the camp"><defs><pattern id="vgrass" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M3 5l1 -3M11 13l1 -3M9 4l1 -2" stroke="#4d6e3a" stroke-width="1"/></pattern></defs>${vScenery()}`;
-  Object.keys(VPOS).forEach(k => {
-    const [x, y] = VPOS[k], b = BLD[k], l = B_(k), un = bUnlocked(k), job = building(k), mx = un && isMax(k), c = un ? bCost(k) : null;
-    const busy = !job && (S.builds || []).length >= builders() && un && bDur(k) >= 3, can = un && !job && !mx && !busy && canPay(c);
-    h += `<g class="vb${un ? '' : ' lockd'}" data-act="vbld" data-id="${k}" transform="translate(${x} ${y})"><rect x="-27" y="-30" width="54" height="56" fill="transparent"/>`;
-    if (!un) h += `<rect x="-18" y="-14" width="36" height="24" fill="none" stroke="#9aa08a" stroke-dasharray="3 3" opacity=".6"/><text y="2" text-anchor="middle" class="vt">Stage ${b.un}</text>`;
-    else if (!l) h += `<rect x="-18" y="-14" width="36" height="24" fill="rgba(0,0,0,.18)" stroke="#e8c86a" stroke-dasharray="3 3"/><text y="1" text-anchor="middle" class="vt" fill="#e8c86a">Build</text>`;
-    else h += vArt(k, vTier(k));
-    h += `<text y="21" text-anchor="middle" class="vn"${un ? '' : ' opacity=".7"'}>${b.n.replace('Barber-surgeon', 'Surgeon').replace('Pavise-bearers', 'Pavises').replace('Practice butts', 'Butts')}${l ? ` · ${l}` : ''}</text>`;
-    if (job) { const f = Math.min(1, 1 - (job.end - Date.now()) / 1000 / job.dur), r = 9, cx = 20, cy = -22; h += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#1a1a12" stroke="#555" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e8b64c" stroke-width="2" stroke-dasharray="${(f * 2 * Math.PI * r).toFixed(1)} 99" transform="rotate(-90 ${cx} ${cy})" data-vr="${k}"/><path d="M${cx - 3} ${cy + 3}l5 -5M${cx + 1} ${cy - 4}l3 3" stroke="#e8dcc0" stroke-width="1.5"/>`; }
-    else if (can) h += `<g transform="translate(20 -22)"><circle r="7.5" fill="#d29f3b"/><path d="M0 -4l4 4h-2.5v4h-3v-4h-2.5z" fill="#1d1408"/></g>`;
-    h += `</g>`;
+function vInitPeople(){
+  const men = S.roster.filter(a => !a.away).slice(0, 8), keys = Object.keys(VPOS).filter(k => B_(k) > 0);
+  vPeople = men.map((a, i) => { const k = keys[i % Math.max(1, keys.length)] || 'store', p = VPOS[k] || [190, 178]; return {a, L:look(a), x:p[0] + rnd(-14, 14), y:p[1] + 22, tx:0, ty:0, wait:rnd(0, 3), ang:0, step:0}; });
+  const gp = VPOS.geese; vGeese = B_('geese') ? Array.from({length:2 + vTier('geese') * 2}, () => ({x:gp[0] + rnd(-12, 12), y:gp[1] + rnd(-6, 6), a:rnd(0, 6)})) : [];
+}
+function vStep(dt){
+  const keys = Object.keys(VPOS).filter(k => B_(k) > 0).concat(['fire']);
+  for (const p of vPeople) {
+    if (p.wait > 0) { p.wait -= dt; if (p.wait <= 0) { const k = pick(keys), q = k === 'fire' ? [190, 186] : VPOS[k]; p.tx = q[0] + rnd(-12, 12); p.ty = q[1] + 20 + rnd(-3, 3); } continue; }
+    const dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy); if (d < 2) { p.wait = rnd(2, 6); continue; }
+    const sp = 14 * dt; p.x += dx / d * Math.min(sp, d); p.y += dy / d * Math.min(sp, d); p.ang = Math.atan2(dy, dx); p.step += dt * 8;
+  }
+  const gp = VPOS.geese; for (const g of vGeese) { g.a += rnd(-1.5, 1.5) * dt; g.x += Math.cos(g.a) * 4 * dt; g.y += Math.sin(g.a) * 4 * dt; if (dist(g.x, g.y, gp[0], gp[1]) > 14) g.a = Math.atan2(gp[1] - g.y, gp[0] - g.x); }
+}
+function vDraw(){
+  const c = vcv.getContext('2d'), k = vcv.width / VW; vBake();
+  c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(vbg, 0, 0); c.setTransform(k, 0, 0, k, 0, 0);
+  // river glints
+  c.strokeStyle = 'rgba(220,235,245,.35)'; c.lineWidth = 1; for (let i = 0; i < 6; i++) { const y = ((vT * 14 + i * 52) % 320) - 10, x = 384 + Math.sin(y * .05) * 6; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x + 3, y + 1); c.stroke(); }
+  // fire and smoke
+  c.fillStyle = '#3a2a18'; c.beginPath(); c.arc(190, 178, 6, 0, 7); c.fill();
+  for (let i = 0; i < 5; i++) { const f = .6 + .4 * Math.sin(vT * 11 + i * 2); c.fillStyle = i % 2 ? `rgba(255,150,40,${f})` : `rgba(255,220,110,${f})`; c.beginPath(); c.arc(190 + Math.sin(i * 1.7 + vT * 3) * 2, 178 - i * .8, 2.6 - i * .3, 0, 7); c.fill(); }
+  const smoke = (x, y, n) => { for (let i = 0; i < n; i++) { const s = ((vT * .35 + i / n) % 1); c.fillStyle = `rgba(200,200,190,${.3 * (1 - s)})`; c.beginPath(); c.arc(x + s * 14 + Math.sin(s * 6 + i) * 2, y - s * 22, 2 + s * 5, 0, 7); c.fill(); } };
+  smoke(190, 174, 4); if (B_('tavern')) smoke(VPOS.tavern[0] + 10, VPOS.tavern[1] - 14, 3); if (B_('fletcher')) smoke(VPOS.fletcher[0] - 8, VPOS.fletcher[1] - 8, 2); if (fol('cook')) { c.fillStyle = '#2a2a2a'; c.beginPath(); c.arc(181, 183, 3.4, 0, 7); c.fill(); }
+  for (const g of vGeese) { c.save(); c.translate(g.x, g.y); c.rotate(g.a); c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(1, 1.5, 3.4, 2.2, 0, 0, 7); c.fill(); c.fillStyle = '#f1eee4'; c.beginPath(); c.ellipse(0, 0, 3.4, 2.2, 0, 0, 7); c.fill(); c.beginPath(); c.arc(3.2, 0, 1.3, 0, 7); c.fill(); c.fillStyle = '#e0902a'; c.fillRect(4.2, -.4, 1.4, .8); c.restore(); }
+  // arrows at the butts
+  if (B_('butts')) { const [bx, by] = VPOS.butts, s = (vT * .8) % 1; if (s < .35) { const q = s / .35, x0 = bx - 22, x = x0 + (bx + 4 - x0) * q; c.strokeStyle = '#e8dcc0'; c.lineWidth = .8; c.beginPath(); c.moveTo(x - 4, by - 8 + q * 4); c.lineTo(x, by - 8 + q * 4); c.stroke(); } }
+  // people, sorted by depth
+  vPeople.slice().sort((p, q) => p.y - q.y).forEach(p => { c.save(); c.translate(p.x, p.y + (p.wait > 0 ? 0 : Math.sin(p.step) * .3)); c.scale(.65, .65); drawArcher(c, 0, 0, p.ang, p.L, 0, {}); c.restore(); });
+  // labels, work rings and upgrade arrows
+  c.textAlign = 'center'; c.lineJoin = 'round';
+  Object.keys(VPOS).forEach(b => { const [x, y] = VPOS[b], un = bUnlocked(b), l = B_(b), job = building(b), mx = un && isMax(b), cost = un ? bCost(b) : null, busy = !job && (S.builds || []).length >= builders() && un && bDur(b) >= 3, can = un && !job && !mx && !busy && canPay(cost);
+    const nm = BLD[b].n.replace('Barber-surgeon', 'Surgeon').replace('Pavise-bearers', 'Pavises').replace('Practice butts', 'Butts');
+    c.font = '700 8.5px "Alegreya Sans",sans-serif'; c.strokeStyle = 'rgba(16,22,12,.85)'; c.lineWidth = 2.6; const t = !un ? `${nm} · stage ${BLD[b].un}` : l ? `${nm} · ${l}` : `${nm} · build`;
+    c.globalAlpha = un ? 1 : .6; c.strokeText(t, x, y + 28); c.fillStyle = !un ? '#cfd3c0' : l ? '#f3ead2' : '#e8c86a'; c.fillText(t, x, y + 28); c.globalAlpha = 1;
+    if (job) { const f = Math.min(1, 1 - (job.end - Date.now()) / 1000 / job.dur), cx = x + 24, cy = y - 22; c.fillStyle = 'rgba(16,20,14,.85)'; c.beginPath(); c.arc(cx, cy, 8, 0, 7); c.fill(); c.strokeStyle = '#e8b64c'; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, 7, -Math.PI / 2, -Math.PI / 2 + f * 6.283); c.stroke(); c.save(); c.translate(cx, cy); c.rotate(Math.sin(vT * 6) * .4 - .6); c.strokeStyle = '#e8dcc0'; c.lineWidth = 1.4; c.beginPath(); c.moveTo(-2.5, 2.5); c.lineTo(2, -2); c.stroke(); c.fillStyle = '#e8dcc0'; c.fillRect(0, -4, 4, 2.4); c.restore(); }
+    else if (can) { const bob = Math.sin(vT * 3 + x) * 1.2, cx = x + 24, cy = y - 22 + bob; c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.arc(cx + 1, cy + 1.5, 6.5, 0, 7); c.fill(); c.fillStyle = '#d29f3b'; c.beginPath(); c.arc(cx, cy, 6.5, 0, 7); c.fill(); c.fillStyle = '#1d1408'; c.beginPath(); c.moveTo(cx, cy - 4); c.lineTo(cx + 3.6, cy); c.lineTo(cx + 1.4, cy); c.lineTo(cx + 1.4, cy + 3.6); c.lineTo(cx - 1.4, cy + 3.6); c.lineTo(cx - 1.4, cy); c.lineTo(cx - 3.6, cy); c.closePath(); c.fill(); }
   });
-  return h + `</svg>`;
+}
+function villageStart(){
+  vcv = $('#vcv'); if (!vcv) return; const w = vcv.clientWidth || 360, dpr = Math.min(2, window.devicePixelRatio || 1);
+  vcv.style.height = Math.round(w * VH / VW) + 'px'; vcv.width = Math.round(w * dpr); vcv.height = Math.round(w * VH / VW * dpr); vbgKey = '';
+  if (!vPeople.length || !vPeople.every(p => S.roster.includes(p.a)) || vGeese.length !== (B_('geese') ? 2 + vTier('geese') * 2 : 0)) vInitPeople();
+  vcv.onclick = ev => { const r = vcv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * VW, y = (ev.clientY - r.top) / r.height * VH; let best = null, bd = 30;
+    for (const b in VPOS) { const d = dist(VPOS[b][0], VPOS[b][1] + 4, x, y); if (d < bd) { bd = d; best = b; } }
+    if (best) { tr('villageTap'); sheetBld(best); } };
+  vcv.onmousemove = ev => { const r = vcv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * VW, y = (ev.clientY - r.top) / r.height * VH; vcv.style.cursor = Object.values(VPOS).some(([px, py]) => dist(px, py + 4, x, y) < 30) ? 'pointer' : 'default'; };
+  if (!vRaf) { vLast = performance.now(); const loop = now => { if (!vcv || !document.body.contains(vcv)) { vRaf = 0; return; } const dt = Math.min(.1, (now - vLast) / 1000); vLast = now; if (!document.hidden) { vT += dt; vStep(dt); vDraw(); } vRaf = requestAnimationFrame(loop); }; vRaf = requestAnimationFrame(loop); }
+}
+function vThumb(k){
+  const c = document.createElement('canvas'), s = 2; c.width = 90 * s; c.height = 72 * s; const g = c.getContext('2d'); g.scale(s, s);
+  g.fillStyle = ZONES[0].g[0]; g.fillRect(0, 0, 90, 72); const rng = mulberry(9); g.lineWidth = .8; for (let i = 0; i < 160; i++) { const x = rng() * 90, y = rng() * 72; g.strokeStyle = rng() < .5 ? 'rgba(20,40,10,.35)' : 'rgba(170,200,110,.25)'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - 2.5); g.stroke(); }
+  g.translate(45, 34); g.scale(1.3, 1.3); vBuild(g, k, Math.max(1, vTier(k))); return c.toDataURL();
 }
 function sheetBld(k){
   const b = BLD[k], l = B_(k), un = bUnlocked(k);
   sheetFn = () => sheetBld(k);
   if (!un) return openSheet(`<div class="fell" style="font-size:24px">${b.n}</div><p class="sub">${b.d}</p><div class="card sub">${IC('lock')} Unlocks at stage ${b.un}.</div><button class="btn big" data-act="close">Back to camp</button>`);
-  openSheet(`<div class="row" style="gap:12px"><svg viewBox="-30 -32 60 58" width="84" height="80" style="flex:none;background:#3d5a2e">${vArt(k, Math.max(1, vTier(k)))}</svg><div class="grow"><div class="fell" style="font-size:24px">${b.n}</div><div class="sub">Level ${l}${b.max ? ' of ' + b.max : ''}</div></div></div><div style="margin-top:10px">${bRow(k)}</div>`);
+  openSheet(`<div class="row" style="gap:12px"><img src="${vThumb(k)}" width="90" height="72" style="flex:none;border:1px solid var(--line)" alt=""><div class="grow"><div class="fell" style="font-size:24px">${b.n}</div><div class="sub">${l ? `Level ${l}${b.max ? ' of ' + b.max : ''}` : 'Not built yet'}</div></div></div><div style="margin-top:10px">${bRow(k)}</div>`);
 }
 
 function bEffect(k){
@@ -2841,6 +2935,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.24.1","items":["The village is redrawn in the same style as the battlefield: the same grass, road, trees and shadows, buildings seen from above, and your own men wandering between them.","The camp is alive: the fire flickers, chimneys smoke, geese waddle round their pen, the river runs and arrows fly at the butts."]},
 {"v":"2.24","items":["The village: the Camp tab now shows your camp as a map. Every building is drawn and grows as you upgrade it, from a lone tent to a row of them, from one strip of field to many.","Tap any building on the map to see what it does and upgrade it. A gold arrow means you can afford an upgrade; a ring shows work in progress.","Plots for buildings you have not reached yet are marked with the stage they unlock at. Some camp followers show up too, if you have them.","Prefer the old way? The List button above the map brings it back."]},
 {"v":"2.23.2","items":["A tidy-up pass. The welcome and How to play text now mention the things you can do mid-fight, and holding after a defeat.","The Orders and Captain cards, the Centenar rank and the Orders tab describe what is really there now. Duke gives one more builder, not a fourth.","The Captain button appears once your captain does, at stage 15, instead of sitting there doing nothing."]},
 {"v":"2.23.1","items":["Upgrade buttons bounce and the building's card lights up when you press them.","The red dot on the Captain button now only means a raid is ready. Orders are optional, so they no longer nag."]},
