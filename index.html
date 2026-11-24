@@ -128,6 +128,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 @keyframes pop{0%{transform:scale(.88)}55%{transform:scale(1.08);box-shadow:0 0 0 5px rgba(232,182,76,.45)}100%{transform:scale(1);box-shadow:none}}.pop{animation:pop .35s ease-out}
 @keyframes flash{0%{background:rgba(232,182,76,.22)}100%{background:transparent}}.card.flash{animation:flash .6s ease-out}
 .btn:active{transform:scale(.94)}
+.village{display:block;width:100%;max-width:760px;height:auto;margin:0 auto;border:1px solid var(--line);touch-action:manipulation}.village .vb{cursor:pointer}.village .vb:hover>*:first-child{fill:rgba(232,182,76,.12)}.village .lockd{opacity:.55}.village .vn{font:600 8.5px 'Alegreya Sans',sans-serif;fill:#f3ead2;paint-order:stroke;stroke:#1b2414;stroke-width:2.6px}.village .vt{font:600 8px 'Alegreya Sans',sans-serif;fill:#cfd3c0}
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
@@ -831,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.23.2';
+const VERSION = '2.24';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1702,7 +1703,7 @@ function rushBuild(k){ const b = building(k); if (!b) return; const m = rushCost
 function buildLive(){ if (tab !== 'camp' || !S.builds) return; S.builds.forEach(b => { const t = document.querySelector(`[data-bt="${b.k}"]`), p = document.querySelector(`[data-bp="${b.k}"]`); if (t) t.textContent = fmtT((b.end - Date.now()) / 1000); if (p) p.style.width = Math.min(100, 100 * (1 - (b.end - Date.now()) / 1000 / b.dur)) + '%'; }); }
 function buildTick(){
   if (!S.builds || !S.builds.length) return; const now = Date.now(), done = S.builds.filter(b => b.end <= now); if (!done.length) return;
-  S.builds = S.builds.filter(b => b.end > now); done.forEach(b => { applyBuild(b.k); toast(`${BLD[b.k].n} upgraded to level ${B_(b.k)}.`, true); }); sfx('win'); save(); if (tab === 'camp') render();
+  S.builds = S.builds.filter(b => b.end > now); done.forEach(b => { applyBuild(b.k); toast(`${BLD[b.k].n} upgraded to level ${B_(b.k)}.`, true); }); sfx('win'); save(); if (tab === 'camp') { render(); refreshSheet(); }
 }
 function render(){
   renderRes(); navBadges();
@@ -1882,20 +1883,92 @@ function battleHud(full){
 }
 function viewCamp(){
   const nb = (S.builds || []).length;
-  let h = `<h2>The Camp</h2><div class="sub">Every building runs while you are away. Storage caps stop production, so build the Storehouse up as you grow.</div><div class="card sub" style="margin-top:8px"><b>Builders: ${nb} of ${builders()} at work.</b> Upgrades take longer as buildings grow, and carry on while you're away. Medals finish a job at once${S.bestEver < 60 ? '; a third builder joins at stage 60' : ''}.</div>`;
+  let h = `<h2>The Camp</h2><div class="sub">Every building runs while you are away. Storage caps stop production, so build the Storehouse up as you grow.</div><div class="card sub" style="margin-top:8px"><b>Builders: ${nb} of ${builders()} at work.</b> Upgrades take longer as buildings grow, and carry on while you're away. Medals finish a job at once${S.bestEver < 60 ? '; a third builder joins at stage 60' : ''}.</div>
+  <div class="row" style="margin:8px 0"><button class="btn ${S.campView !== 'list' ? 'gold' : ''}" data-act="campview" data-v="map">Map</button><button class="btn ${S.campView === 'list' ? 'gold' : ''}" data-act="campview" data-v="list">List</button><span class="sub grow" style="text-align:right">${S.campView === 'list' ? '' : 'Tap a building to upgrade it.'}</span></div>`;
+  if (S.campView !== 'list') return h + viewVillage();
   const groups = [['GATHERING', ['farm','woodcut','mine','geese','store','fletcher','market','scriptorium']], ['WAR', ['barracks','bowyer','drill','surgeon','butts','tavern']], ['SUPPORT TROOPS', ['bill','pavise','treb']]];
   groups.forEach(([g, ks]) => {
     h += `<h3>${g}</h3>`;
-    ks.forEach(k => {
-      const b = BLD[k], l = B_(k), un = bUnlocked(k);
-      if (!un) { h += `<div class="card row lock"><div class="bico">${IC('lock')}</div><div class="grow"><b>${b.n}</b><div class="sub">Reach stage ${b.un}</div></div></div>`; return; }
-      const c = bCost(k), mx = isMax(k);
-      const job = building(k), busy = !job && (S.builds || []).length >= builders() && bDur(k) >= 3;
-      h += `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div>${job ? `<div class="sub" style="margin-top:4px">Upgrading to level ${l + 1} · <b data-bt="${k}">${fmtT((job.end - Date.now()) / 1000)}</b></div><div class="prog" style="margin-top:4px"><i data-bp="${k}" style="width:${Math.min(100, 100 * (1 - (job.end - Date.now()) / 1000 / job.dur))}%;background:var(--gold)"></i></div>` : `<div class="cost">${mx ? 'Fully built' : costHtml(c) + (bDur(k) >= 3 ? ` · ${IC('clock', 'currentColor')}${fmtT(bDur(k))}` : '')}</div>`}</div>${mx ? '' : job ? `<button class="btn" data-act="rush" data-id="${k}">Finish · ${IC('medal')}${rushCost(job)}</button>` : `<button class="btn ${canPay(c) && !busy ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) && !busy ? '' : 'disabled'}>${busy ? 'Builders busy' : l ? 'Upgrade' : 'Build'}</button>`}</div>`;
-    });
+    ks.forEach(k => { h += bRow(k); });
   });
   return h;
 }
+function bRow(k){
+      const b = BLD[k], l = B_(k), un = bUnlocked(k);
+      if (!un) { return `<div class="card row lock"><div class="bico">${IC('lock')}</div><div class="grow"><b>${b.n}</b><div class="sub">Reach stage ${b.un}</div></div></div>`; }
+      const c = bCost(k), mx = isMax(k);
+      const job = building(k), busy = !job && (S.builds || []).length >= builders() && bDur(k) >= 3;
+      return `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div>${job ? `<div class="sub" style="margin-top:4px">Upgrading to level ${l + 1} · <b data-bt="${k}">${fmtT((job.end - Date.now()) / 1000)}</b></div><div class="prog" style="margin-top:4px"><i data-bp="${k}" style="width:${Math.min(100, 100 * (1 - (job.end - Date.now()) / 1000 / job.dur))}%;background:var(--gold)"></i></div>` : `<div class="cost">${mx ? 'Fully built' : costHtml(c) + (bDur(k) >= 3 ? ` · ${IC('clock', 'currentColor')}${fmtT(bDur(k))}` : '')}</div>`}</div>${mx ? '' : job ? `<button class="btn" data-act="rush" data-id="${k}">Finish · ${IC('medal')}${rushCost(job)}</button>` : `<button class="btn ${canPay(c) && !busy ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) && !busy ? '' : 'disabled'}>${busy ? 'Builders busy' : l ? 'Upgrade' : 'Build'}</button>`}</div>`;
+}
+/* ================= the village (2.24): the camp as a map; tap a building to upgrade it ================= */
+const VPOS = {
+  woodcut:[48,92], mine:[122,46], bowyer:[205,54], scriptorium:[300,48], treb:[362,92],
+  pavise:[40,168], barracks:[128,118], store:[200,130], fletcher:[268,112], butts:[360,160],
+  drill:[104,196], surgeon:[292,184], farm:[58,250], bill:[150,262], tavern:[226,250], market:[300,258], geese:[364,236]
+};
+const vTier = k => { const l = B_(k), mx = BLD[k].max; if (!l) return 0; if (mx) return l >= mx ? 3 : l >= mx / 2 ? 2 : 1; return l >= 25 ? 3 : l >= 10 ? 2 : 1; };
+function vArt(k, t){
+  const W = '#7a5230', Wd = '#5a3a1e', R = '#8a3a26', C = '#d9cba8', Cd = '#b9a982', St = '#9a958a', Th = '#c9a25a', G = '#4f7a3a', Gd = '#3c5e2c';
+  const tree = (x, y, r) => `<rect x="${x - 1.5}" y="${y}" width="3" height="${r}" fill="${Wd}"/><circle cx="${x}" cy="${y}" r="${r}" fill="${G}"/><circle cx="${x - r * .3}" cy="${y - r * .3}" r="${r * .45}" fill="#6a9a48"/>`;
+  const hut = (x, y, w, h, roof) => `<rect x="${x - w / 2}" y="${y - h}" width="${w}" height="${h}" fill="${W}"/><path d="M${x - w / 2 - 3} ${y - h}L${x} ${y - h - h * .8}L${x + w / 2 + 3} ${y - h}Z" fill="${roof || Th}"/><rect x="${x - 2.5}" y="${y - 7}" width="5" height="7" fill="${Wd}"/>`;
+  const tent = (x, y, s) => `<path d="M${x - 8 * s} ${y}L${x} ${y - 12 * s}L${x + 8 * s} ${y}Z" fill="${C}"/><path d="M${x} ${y - 12 * s}L${x + 8 * s} ${y}L${x + 2 * s} ${y}Z" fill="${Cd}"/><path d="M${x - 2 * s} ${y}L${x} ${y - 5 * s}L${x + 2 * s} ${y}Z" fill="#3a2a18"/>`;
+  switch (k) {
+    case 'farm': { let h = ''; const n = 1 + t; for (let i = 0; i < n; i++) h += `<rect x="${-26 + (i % 2) * 2}" y="${-14 + i * 7}" width="34" height="6" fill="${i % 2 ? '#a9b24e' : '#c9b25a'}"/>`; return h + hut(18, 8, 12, 9); }
+    case 'woodcut': { let h = ''; for (let i = 0; i < 2 + t; i++) h += tree(-18 + i * 11, -6 - (i % 2) * 6, 7); return h + `<g fill="${W}">${[0, 1, 2].slice(0, t).map(i => `<rect x="${-6 + i * 3}" y="${9 - i * 3}" width="16" height="3.4" rx="1.7"/>`).join('')}</g>`; }
+    case 'mine': return `<path d="M-26 10L-10 -16L4 -12L24 10Z" fill="#7d776c"/><path d="M-10 -16L4 -12L-2 -4Z" fill="#a39d90"/><path d="M-6 10V0a6 6 0 0 1 12 0V10Z" fill="#1e1a14"/><rect x="-7" y="-1" width="14" height="2" fill="${W}"/>${t >= 2 ? `<rect x="10" y="4" width="10" height="5" fill="${Wd}"/><circle cx="12" cy="10" r="1.6" fill="#333"/><circle cx="18" cy="10" r="1.6" fill="#333"/>` : ''}`;
+    case 'geese': { let h = `<ellipse cx="0" cy="2" rx="${18 + t * 3}" ry="${10 + t}" fill="none" stroke="${W}" stroke-width="1.6" stroke-dasharray="3 2"/>`; for (let i = 0; i < 2 + t * 2; i++) { const x = -12 + (i * 7) % 26, y = -3 + (i % 3) * 4; h += `<ellipse cx="${x}" cy="${y}" rx="3" ry="2" fill="#f1eee4"/><circle cx="${x + 2.6}" cy="${y - 1.6}" r="1.2" fill="#f1eee4"/><path d="M${x + 3.6} ${y - 1.6}l1.6 .4" stroke="#e0902a" stroke-width="1"/>`; } return h; }
+    case 'store': { const w = 26 + t * 6; return `<rect x="${-w / 2}" y="-10" width="${w}" height="18" fill="${W}"/><path d="M${-w / 2 - 4} -10L0 ${-24 - t * 2}L${w / 2 + 4} -10Z" fill="${R}"/><rect x="-6" y="-1" width="12" height="9" fill="${Wd}"/><path d="M-6 -1L6 8M6 -1L-6 8" stroke="${W}" stroke-width="1.2"/>`; }
+    case 'fletcher': return hut(-6, 8, 18, 12) + `<g stroke="#e8dcc0" stroke-width="1">${[0, 1, 2, 3].slice(0, 1 + t).map(i => `<path d="M${10 + i * 3} 8V-8"/><path d="M${8.5 + i * 3} -8l1.5 -3l1.5 3" fill="#e8dcc0"/>`).join('')}</g><rect x="8" y="6" width="${4 + t * 3}" height="3" fill="${Wd}"/>`;
+    case 'market': { let h = ''; for (let i = 0; i < Math.max(1, t); i++) { const x = -16 + i * 14; h += `<rect x="${x - 6}" y="-2" width="12" height="9" fill="${W}"/><path d="M${x - 8} -2h16l-2 -7h-12z" fill="${i % 2 ? '#c8372d' : '#e6e0cf'}"/><path d="M${x - 4} -9l-1 7M${x} -9v7M${x + 4} -9l1 7" stroke="${i % 2 ? '#e6e0cf' : '#c8372d'}" stroke-width="1.4"/>`; } return h; }
+    case 'scriptorium': return `<rect x="-14" y="-14" width="28" height="22" fill="${St}"/><path d="M-17 -14L0 -26L17 -14Z" fill="#6d6258"/><path d="M-8 8V-2a4 4 0 0 1 8 0V8Z" fill="#3a3028"/><path d="M5 -6v-4a3 3 0 0 1 6 0v4Z" fill="#e8c86a"/>`;
+    case 'barracks': { let h = ''; const n = Math.max(1, B_(k)); for (let i = 0; i < n; i++) h += tent(-20 + (i % 4) * 13, -2 + Math.floor(i / 4) * 13, .9); return h; }
+    case 'bowyer': return hut(0, 8, 22, 13, R) + `<path d="M-15 6q-5 -12 0 -24" fill="none" stroke="#c9a25a" stroke-width="1.8"/><path d="M-15 6V-18" stroke="#e8dcc0" stroke-width=".6"/>${t >= 2 ? '<path d="M15 6q5 -12 0 -24" fill="none" stroke="#c9a25a" stroke-width="1.8"/><path d="M15 6V-18" stroke="#e8dcc0" stroke-width=".6"/>' : ''}`;
+    case 'drill': { let h = `<rect x="-22" y="-14" width="44" height="26" fill="#8a7a4a" opacity=".5"/><rect x="-22" y="-14" width="44" height="26" fill="none" stroke="${W}" stroke-width="1.5"/>`; for (let i = 0; i < 1 + t; i++) { const x = -14 + i * 9; h += `<path d="M${x} 8V-6M${x - 4} -2h8" stroke="#c9a25a" stroke-width="1.8"/><circle cx="${x}" cy="-8" r="2.6" fill="#c9a25a"/>`; } return h; }
+    case 'surgeon': return tent(0, 8, 1.6) + `<rect x="-3" y="-8" width="6" height="2" fill="#b3342a"/><rect x="-1" y="-10" width="2" height="6" fill="#b3342a"/>`;
+    case 'butts': { let h = ''; for (let i = 0; i < 1 + t; i++) { const x = -14 + i * 10; h += `<path d="M${x - 5} 8h10l-2 -8h-6z" fill="${Th}"/><circle cx="${x}" cy="-4" r="5" fill="#f1eee4"/><circle cx="${x}" cy="-4" r="3.4" fill="#c8372d"/><circle cx="${x}" cy="-4" r="1.6" fill="#e8c86a"/>`; } return h; }
+    case 'tavern': return `<rect x="-16" y="-14" width="32" height="22" fill="${W}"/><path d="M-19 -14L0 -28L19 -14Z" fill="${Th}"/><rect x="-11" y="-8" width="6" height="5" fill="#e8c86a"/><rect x="5" y="-8" width="6" height="5" fill="#e8c86a"/><rect x="-3" y="-1" width="6" height="9" fill="${Wd}"/><path d="M16 -10h8M24 -10v4" stroke="${Wd}" stroke-width="1.2"/><rect x="20" y="-6" width="7" height="6" fill="#c9a25a"/>${t >= 2 ? '<rect x="-24" y="2" width="6" height="6" rx="2" fill="#6a4a24"/>' : ''}`;
+    case 'bill': return tent(-8, 8, 1.1) + `<g stroke="#b8b8b0" stroke-width="1.4">${[0, 1, 2].slice(0, 1 + Math.min(2, t)).map(i => `<path d="M${6 + i * 5} 8V-16"/><path d="M${6 + i * 5} -16l3 3l-3 2" fill="none"/>`).join('')}</g>`;
+    case 'pavise': { let h = ''; for (let i = 0; i < 1 + t; i++) h += `<rect x="${-14 + i * 8}" y="${-12 + (i % 2) * 2}" width="10" height="20" fill="#7a5230" stroke="#4a3018"/><path d="M${-9 + i * 8} ${-8 + (i % 2) * 2}v12M${-12 + i * 8} ${-2 + (i % 2) * 2}h6" stroke="#c8372d" stroke-width="1.6"/>`; return h; }
+    case 'treb': return `<path d="M-14 10L0 -16L14 10" fill="none" stroke="${W}" stroke-width="3"/><path d="M-18 10h36" stroke="${Wd}" stroke-width="3"/><path d="M-22 -24L16 -4" stroke="${Wd}" stroke-width="2.4"/><rect x="11" y="-6" width="9" height="8" fill="#6d6258"/><path d="M-22 -24l-3 8" stroke="#d9cba8" stroke-width=".8"/>`;
+  }
+  return '';
+}
+function vScenery(){
+  const bn = banner(), fire = `<circle cx="180" cy="196" r="9" fill="#3a2a18"/><path d="M175 196q5 -14 5 -2q3 -8 5 2z" fill="#ff9a3a"/><path d="M178 196q2 -7 2 -1q2 -4 2 1z" fill="#ffd76a"/>`;
+  let h = `<rect width="400" height="300" fill="#3d5a2e"/><path d="M0 0h400v300H0z" fill="url(#vgrass)"/>
+    <path d="M400 0C380 60 400 110 384 150S396 250 400 300" fill="none" stroke="#3f6f8f" stroke-width="22" opacity=".85"/><path d="M400 0C380 60 400 110 384 150S396 250 400 300" fill="none" stroke="#6a9ab8" stroke-width="2" opacity=".5" stroke-dasharray="10 14"/>
+    <path d="M0 220C60 210 120 230 180 208S300 170 400 196" fill="none" stroke="#8a7650" stroke-width="10" opacity=".55"/>
+    ${[[18,30],[78,22],[260,20],[340,18],[20,290],[110,290],[250,292],[86,140],[245,175]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#2f4a24"/><circle cx="${x - 2}" cy="${y - 2}" r="3.4" fill="#4f7a3a"/>`).join('')}
+    ${fire}<path d="M196 180V150" stroke="#4a3420" stroke-width="1.6"/><path d="M196 150h14v9h-14z" fill="${bn[0]}"/><path d="M196 154.5h14M203 150v9" stroke="${bn[1] || '#fff'}" stroke-width="1.6"/>`;
+  if (fol('cook')) h += `<path d="M164 200l4 -10l4 10" stroke="#333" fill="none"/><ellipse cx="168" cy="192" rx="5" ry="3.5" fill="#2a2a2a"/>`;
+  if (fol('laund')) h += `<path d="M330 128q18 8 36 0" fill="none" stroke="#e8dcc0" stroke-width=".8"/>${[336, 344, 352, 360].map((x, i) => `<rect x="${x}" y="${130 + (i % 2)}" width="5" height="7" fill="${['#e6e0cf', '#c8372d', '#e6e0cf', '#5a7aa0'][i]}"/>`).join('')}`;
+  if (fol('alewife')) h += `<rect x="252" y="236" width="7" height="9" rx="2" fill="#6a4a24"/><rect x="260" y="238" width="7" height="9" rx="2" fill="#6a4a24"/>`;
+  if (fol('priest')) h += `<path d="M24 40v-14M19 31h10" stroke="#e8dcc0" stroke-width="2"/>`;
+  return h;
+}
+function viewVillage(){
+  let h = `<svg class="village" viewBox="0 0 400 300" role="img" aria-label="Map of the camp"><defs><pattern id="vgrass" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M3 5l1 -3M11 13l1 -3M9 4l1 -2" stroke="#4d6e3a" stroke-width="1"/></pattern></defs>${vScenery()}`;
+  Object.keys(VPOS).forEach(k => {
+    const [x, y] = VPOS[k], b = BLD[k], l = B_(k), un = bUnlocked(k), job = building(k), mx = un && isMax(k), c = un ? bCost(k) : null;
+    const busy = !job && (S.builds || []).length >= builders() && un && bDur(k) >= 3, can = un && !job && !mx && !busy && canPay(c);
+    h += `<g class="vb${un ? '' : ' lockd'}" data-act="vbld" data-id="${k}" transform="translate(${x} ${y})"><rect x="-27" y="-30" width="54" height="56" fill="transparent"/>`;
+    if (!un) h += `<rect x="-18" y="-14" width="36" height="24" fill="none" stroke="#9aa08a" stroke-dasharray="3 3" opacity=".6"/><text y="2" text-anchor="middle" class="vt">Stage ${b.un}</text>`;
+    else if (!l) h += `<rect x="-18" y="-14" width="36" height="24" fill="rgba(0,0,0,.18)" stroke="#e8c86a" stroke-dasharray="3 3"/><text y="1" text-anchor="middle" class="vt" fill="#e8c86a">Build</text>`;
+    else h += vArt(k, vTier(k));
+    h += `<text y="21" text-anchor="middle" class="vn"${un ? '' : ' opacity=".7"'}>${b.n.replace('Barber-surgeon', 'Surgeon').replace('Pavise-bearers', 'Pavises').replace('Practice butts', 'Butts')}${l ? ` · ${l}` : ''}</text>`;
+    if (job) { const f = Math.min(1, 1 - (job.end - Date.now()) / 1000 / job.dur), r = 9, cx = 20, cy = -22; h += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#1a1a12" stroke="#555" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e8b64c" stroke-width="2" stroke-dasharray="${(f * 2 * Math.PI * r).toFixed(1)} 99" transform="rotate(-90 ${cx} ${cy})" data-vr="${k}"/><path d="M${cx - 3} ${cy + 3}l5 -5M${cx + 1} ${cy - 4}l3 3" stroke="#e8dcc0" stroke-width="1.5"/>`; }
+    else if (can) h += `<g transform="translate(20 -22)"><circle r="7.5" fill="#d29f3b"/><path d="M0 -4l4 4h-2.5v4h-3v-4h-2.5z" fill="#1d1408"/></g>`;
+    h += `</g>`;
+  });
+  return h + `</svg>`;
+}
+function sheetBld(k){
+  const b = BLD[k], l = B_(k), un = bUnlocked(k);
+  sheetFn = () => sheetBld(k);
+  if (!un) return openSheet(`<div class="fell" style="font-size:24px">${b.n}</div><p class="sub">${b.d}</p><div class="card sub">${IC('lock')} Unlocks at stage ${b.un}.</div><button class="btn big" data-act="close">Back to camp</button>`);
+  openSheet(`<div class="row" style="gap:12px"><svg viewBox="-30 -32 60 58" width="84" height="80" style="flex:none;background:#3d5a2e">${vArt(k, Math.max(1, vTier(k)))}</svg><div class="grow"><div class="fell" style="font-size:24px">${b.n}</div><div class="sub">Level ${l}${b.max ? ' of ' + b.max : ''}</div></div></div><div style="margin-top:10px">${bRow(k)}</div>`);
+}
+
 function bEffect(k){
   const l = B_(k);
   switch (k) {
@@ -2494,6 +2567,8 @@ document.addEventListener('click', e => {
       setTimeout(() => { const bt = document.querySelector(`[data-act=build][data-id="${id}"]`) || document.querySelector(`[data-act=rush][data-id="${id}"]`), cd = (bt || document.querySelector(`[data-bp="${id}"]`) || {closest:() => null}).closest('.card'); if (bt) { bt.classList.remove('pop'); void bt.offsetWidth; bt.classList.add('pop'); } if (cd) { cd.classList.remove('flash'); void cd.offsetWidth; cd.classList.add('flash'); } }, 0);
       break; }
     case 'rush': rushBuild(id); break;
+    case 'campview': S.campView = el.dataset.v; tr('campView_' + el.dataset.v); break;
+    case 'vbld': tr('villageTap'); sheetBld(id); return;
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
     case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); if (ar.stars >= 5) chron(`${ar.name} was promoted to ${ar.stars} stars.`); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
     case 'archer': sheetArcher(id); return;
@@ -2766,6 +2841,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.24","items":["The village: the Camp tab now shows your camp as a map. Every building is drawn and grows as you upgrade it, from a lone tent to a row of them, from one strip of field to many.","Tap any building on the map to see what it does and upgrade it. A gold arrow means you can afford an upgrade; a ring shows work in progress.","Plots for buildings you have not reached yet are marked with the stage they unlock at. Some camp followers show up too, if you have them.","Prefer the old way? The List button above the map brings it back."]},
 {"v":"2.23.2","items":["A tidy-up pass. The welcome and How to play text now mention the things you can do mid-fight, and holding after a defeat.","The Orders and Captain cards, the Centenar rank and the Orders tab describe what is really there now. Duke gives one more builder, not a fourth.","The Captain button appears once your captain does, at stage 15, instead of sitting there doing nothing."]},
 {"v":"2.23.1","items":["Upgrade buttons bounce and the building's card lights up when you press them.","The red dot on the Captain button now only means a raid is ready. Orders are optional, so they no longer nag."]},
 {"v":"2.23","items":["Pitch barrels: from stage 12, two or three barrels of pitch sit by the road in every battle. Tap one to blow it up, or leave it and it goes off when a crowd of French gathers round it. The ground burns afterwards.","Fire arrows: from stage 22, tap Fire arrows under the Volleys counter to light every arrow in the line for 8 seconds. Burning arrows splash and set men alight, and burning men keep burning. Two per battle, three once the Fletcher reaches level 30.","The trebuchet throws fire pots now: every stone leaves the ground burning where it lands.","Explosions have their own sound.","The captain's record says Deadliest woman when she is one, and no longer counts friends recruited."]},
