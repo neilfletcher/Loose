@@ -183,7 +183,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 <div id="updBar" role="status"><span class="grow">A new version of Loose! is ready.</span><button class="btn gold" data-act="updopen">See what's new</button><button class="btn" data-act="upddismiss" aria-label="Later">Later</button></div>
 <div id="app">
   <header>
-    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
+    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank" data-act="captain" role="button" tabindex="0" style="cursor:pointer;text-decoration:underline dotted rgba(232,182,76,.5);text-underline-offset:3px"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
     <div class="res" id="res"></div>
   </header>
   <div id="side"></div>
@@ -267,7 +267,15 @@ const ZONES = [
   {n:'The Castles of Normandy', mix:{maa:5, xbow:2}, g:['#5f6b3d','#4c5730'], th:'Armoured', boss:'The Castellan'},
   {n:'Baugé', mix:{knight:4, spear:3}, g:['#5d6b38','#4a572c'], th:'Cavalry', mud:.8, boss:'The Scots Earl'},
   {n:'Verneuil', mix:{knight:3, maa:3, levy:3, xbow:2}, g:['#627a3a','#4f652e'], th:'Mixed', boss:'The Lombard Horse'},
-  {n:'Orléans', mix:{maa:3, knight:3, xbow:3, spear:2}, g:['#5a6e3c','#475a30'], th:'Everything', boss:'The Maid\'s Captain'}
+  {n:'Orléans', mix:{maa:3, knight:3, xbow:3, spear:2}, g:['#5a6e3c','#475a30'], th:'Everything', boss:'The Maid\'s Captain'},
+  {n:'Cravant', mix:{maa:3, xbow:3, levy:3, spear:2}, g:['#5d7440','#4a5f33'], th:'Mixed', boss:'The Constable of Scotland'},
+  {n:'Patay', mix:{knight:5, maa:2}, g:['#6a7a40','#556532'], th:'Cavalry', boss:'La Hire'},
+  {n:'Compiègne', mix:{maa:3, xbow:3, spear:3}, g:['#58703c','#46592f'], th:'Armoured', mud:.85, boss:'Poton de Xaintrailles'},
+  {n:'Gerberoy', mix:{knight:4, levy:4, maa:1}, g:['#607a3e','#4d6530'], th:'Cavalry', boss:'Jean de Bueil'},
+  {n:'Formigny', mix:{maa:3, knight:3, xbow:3}, g:['#5c703a','#4a5b2e'], th:'Everything', boss:'The Count of Clermont'},
+  {n:'Castillon', mix:{maa:4, xbow:4, spear:2}, g:['#596b38','#47572c'], th:'Armoured', boss:'Jean Bureau, Master of Guns'},
+  {n:'Crécy, as the old men tell it', mix:{knight:5, xbow:3, maa:1}, g:['#627a3c','#4f652f'], th:'Legend', mud:.8, boss:'The Blind King of Bohemia'},
+  {n:'Poitiers, as the old men tell it', mix:{maa:5, knight:2, xbow:2}, g:['#5e723c','#4b5d2f'], th:'Legend', boss:'King John the Good'}
 ];
 const LAYOUTS = [
   [[.5,-.04],[.46,.3],[.55,.62],[.5,.94]],
@@ -377,7 +385,7 @@ const lvMul = l => l * Math.pow(2, Math.floor(l / 25));
 const cap = a => 25 + 25 * a.stars;
 const L = k => S.legacy[k] || 0;
 const B_ = k => S.bld[k] || 0;
-function dmgMult(){ return Math.pow(1.25, L('drill')) * (1 + .1 * B_('bowyer')) * Math.pow(2, Math.floor(B_('bowyer') / 10)) * codexDmg() * (R('a1') ? 1.15 : 1) * (R('a4') ? 1.3 : 1) * (R('a6') ? 1.6 : 1) * Math.pow(2, G('twin')); }
+function dmgMult(){ return (perk(5) ? 1.1 : 1) * (perk(9) ? 1.25 : 1) * buffMult('dmg') * repFx().dmg * Math.pow(1.25, L('drill')) * (1 + .1 * B_('bowyer')) * Math.pow(2, Math.floor(B_('bowyer') / 10)) * codexDmg() * (R('a1') ? 1.15 : 1) * (R('a4') ? 1.3 : 1) * (R('a6') ? 1.6 : 1) * Math.pow(2, G('twin')); }
 function stats(a){
   const b = base(a), t = a.traits, sm = Math.pow(STARPOW, a.stars - 1) * (1 + .03 * (a.extra || 0)), g = gearOf(a);
   const dmg = b.dmg * lvMul(a.lvl) * sm * (t.includes('strong') ? 1.15 : 1) * (t.includes('steady') ? 1.08 : 1) * (t.includes('drunk') ? .9 : 1) * dmgMult() * (1 + (g.bow ? g.bow.v : 0) / 100) * (1 + (g.head ? g.head.v / 2 : 0) / 100) * (a.nick ? 1.05 : 1);
@@ -462,7 +470,7 @@ function genStage(N, ev){
 function stageHp(N){ return genStage(N).reduce((s, e) => s + EN[e.type].hp * HU(N), 0) * (SP(N) && SP(N).id === 'rain' ? .7 : 1); }
 function stageArm(N){ const g = genStage(N); return g.reduce((s, e) => s + EN[e.type].arm * EN[e.type].hp, 0) / g.reduce((s, e) => s + EN[e.type].hp, 0); }
 function stageReward(N){ const g = genStage(N); const kills = g.reduce((s, e) => s + EN[e.type].pay, 0) * .6 * Math.pow(SG, N - 1); return (kills + clearBonus(N) * (isBoss(N) ? 4 : 1) * (SP(N) ? 3 : 1)) * silverMult(); }
-function silverMult(){ const greedy = lineUp().filter(a => a && a.traits.includes('greedy')).length; return Math.pow(1.3, L('tax')) * (1 + .05 * greedy) * codexSilver() * (R('c6') ? 2 : 1); }
+function silverMult(){ const greedy = lineUp().filter(a => a && a.traits.includes('greedy')).length; return (perk(3) ? 1.1 : 1) * (perk(9) ? 1.25 : 1) * repFx().silver * Math.pow(1.3, L('tax')) * (1 + .05 * greedy) * codexSilver() * (R('c6') ? 2 : 1); }
 function squadDps(N){
   const arm = stageArm(N), ln = lineUp();
   let d = 0; ln.forEach((a, i) => { if (!a) return; const s = stats(a); d += s.dps * rankMult(i) * (1 - arm * (1 - s.pierce)); });
@@ -671,7 +679,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18.5';
+const VERSION = '2.19';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -679,7 +687,7 @@ const G = k => (S.garterPerks && S.garterPerks[k]) || 0;
 function migrate(){
   S.gear = S.gear || []; S.research = S.research || {done:{}, active:[]}; S.research.done = S.research.done || {}; S.research.active = S.research.active || [];
   S.codex = S.codex || {}; ['kills','zones','classes','heroes','setpieces'].forEach(k => S.codex[k] = S.codex[k] || {});
-  S.chronicle = S.chronicle || []; S.bonds = S.bonds || {}; S.garterPerks = S.garterPerks || {}; S.gloryOrder = S.gloryOrder || 0; S.garters = S.garters || 0;
+  capInit(); S.chronicle = S.chronicle || []; S.bonds = S.bonds || {}; S.garterPerks = S.garterPerks || {}; S.gloryOrder = S.gloryOrder || 0; S.garters = S.garters || 0;
   if (S.tut === undefined) S.tut = S.bestEver > 3 ? 99 : 1; if (S.music === undefined) S.music = true; S.mode = S.mode || 'main';
   S.res.parchment = S.res.parchment || 0; S.res.garter = S.res.garter || 0; S.pid = S.pid || uid(); S.spFirst = S.spFirst || {}; S.firstSeen = S.firstSeen || Date.now();
   S.roster.forEach(a => { a.gear = a.gear || {}; a.kt = a.kt || {}; S.codex.classes[a.cls === 'hero' ? 'hero_' + a.hero : a.cls] = 1; if (a.hero) S.codex.heroes[a.hero] = 1; });
@@ -693,7 +701,7 @@ const codexSilver = () => 1 + .05 * Object.keys(S.codex.setpieces).length;
 function resMult(r){ return r === 'food' && R('l1') ? 1.5 : r === 'iron' && R('l2') ? 1.5 : r === 'feathers' && R('l4') ? 2 : 1; }
 const supMult = () => R('c5') ? 1.6 : 1;
 function rankMult(i){ return (i < 5 ? 1.2 : 1) * (i >= 5 && R('a3a') ? 1.3 : 1) * (R('c3b') ? 1.1 : 1); }
-function offlineCap(){ return (4 * 3600 + 2 * 3600 * L('ledger') + (R('l3b') ? 7200 : 0)) * (G('away') ? 2 : 1); }
+function offlineCap(){ return (4 * 3600 + (perk(6) ? 7200 : 0) + 2 * 3600 * L('ledger') + (R('l3b') ? 7200 : 0)) * (G('away') ? 2 : 1); }
 
 /* ---------- gear ---------- */
 function gearOf(a){ const o = {}; if (!a.gear) return o; for (const s in a.gear) { const it = S.gear.find(i => i.id === a.gear[s]); if (it) o[s] = it; } return o; }
@@ -967,7 +975,7 @@ function pushStats(){
     const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
       kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION,
-      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide};
+      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide, capXP:S.cap ? S.cap.xp : 0, capRank:S.cap ? capRankI() : 0, fair:S.rep ? Math.round(S.rep.fair) : 0, love:S.rep ? Math.round(S.rep.love) : 0};
     const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
     fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
   } catch(e){}
@@ -1083,7 +1091,7 @@ function eventHtml(){
 let league = {t:0, rows:[], err:'', loading:false};
 const captainName = () => (S.captain || (fbUser && (fbUser.displayName || '').split(' ')[0]) || 'A captain').slice(0, 24);
 function lgBest(){ const w = weekNo(); if (!S.lg || S.lg.wk !== w) S.lg = {wk:w, best:0}; S.lg.best = Math.max(S.lg.best, S.runMax); return S.lg.best; }
-async function leaguePush(){ if (!fbUser || !fbDb) return; const w = weekNo(); await fbDb.collection('loose_league').doc(w + '_' + fbUser.uid).set({wk:w, uid:fbUser.uid, name:captainName(), company:(S.company || '').slice(0, 40), best:lgBest(), ev:evOpen() ? evState().best : 0, camp:S.prestiges, bestEver:S.bestEver, t:Date.now()}); }
+async function leaguePush(){ if (!fbUser || !fbDb) return; const w = weekNo(); await fbDb.collection('loose_league').doc(w + '_' + fbUser.uid).set({wk:w, uid:fbUser.uid, name:captainName(), company:(S.company || '').slice(0, 40), best:lgBest(), ev:evOpen() ? evState().best : 0, camp:S.prestiges, bestEver:S.bestEver, t:Date.now(), rank:rankName(), rep:{fair:Math.round(S.rep.fair), love:Math.round(S.rep.love)}, men:[...S.roster].sort((p, q) => power(q) - power(p)).slice(0, 5).map(a => ({n:dispName(a).slice(0, 40), r:a.rar, l:a.lvl, s:a.stars}))}); }
 async function loadLeague(){
   if (league.loading) return; league.loading = true; league.t = Date.now();
   try { await leaguePush(); const snap = await fbDb.collection('loose_league').where('wk', '==', weekNo()).get(); league.rows = snap.docs.map(d => d.data()).sort((a, b) => b.best - a.best || b.ev - a.ev).slice(0, 50); league.err = ''; }
@@ -1098,7 +1106,7 @@ function leagueHtml(){
   const me = fbUser.uid;
   return `<h3>THE KING'S LEAGUE · THIS WEEK</h3><div class="card">${league.err ? `<div class="sub">${league.err}</div>` : !league.rows.length ? '<div class="sub">Loading...</div>' :
   `<div class="row sub" style="font-weight:700"><span style="width:26px">#</span><span class="grow">Captain</span><span style="width:54px;text-align:right">Stage</span><span style="width:54px;text-align:right">Event</span></div>` +
-  league.rows.map((r, i) => `<div class="row" style="padding:4px 0;${r.uid === me ? 'color:var(--gold);font-weight:700' : ''}"><span style="width:26px">${i + 1}</span><span class="grow">${esc(r.name)}${r.company ? ` <span class="sub">${esc(r.company)}</span>` : ''}</span><span style="width:54px;text-align:right">${r.best}</span><span style="width:54px;text-align:right">${r.ev || '-'}</span></div>`).join('')}
+  league.rows.map((r, i) => `<div class="row" data-act="rival" data-uid="${esc(r.uid)}" style="cursor:pointer;padding:4px 0;${r.uid === me ? 'color:var(--gold);font-weight:700' : ''}"><span style="width:26px">${i + 1}</span><span class="grow">${esc(r.name)}${r.company ? ` <span class="sub">${esc(r.company)}</span>` : ''}</span><span style="width:54px;text-align:right">${r.best}</span><span style="width:54px;text-align:right">${r.ev || '-'}</span></div>`).join('')}
   <div class="sub" style="margin-top:6px">Your best this week: stage ${lgBest()}. Set your captain's name in Settings.</div></div>`;
 }
 
@@ -1405,7 +1413,7 @@ function endBattle(win){
   if (dead.length) setTimeout(() => toast(`${dead.map(a => a.name).join(' and ')} fell in the fighting. See the Roll of Honour.`), 900);
   b.won = win;
 }
-function woundTime(){ return 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1); }
+function woundTime(){ return 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1) / (S.rep ? repFx().heal : 1); }
 function afterBattle(){
   const b = BT;
   if (b.phase === 'empty') { newBattle(); return; }
@@ -1414,7 +1422,7 @@ function afterBattle(){
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
     else { S.farmN++; if (S.farmN >= 10 && S.stage < S.runMax) { S.autoAdv = true; S.farmN = 0; } }
-    S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
+    const newBest = S.stage > S.bestEver; S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest(); capXP(1 + (newBest ? 3 : 0) + (isBoss(b.N) ? 8 : 0));
     if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
   checkUnlocks(); newBattle(); if (bOn()) battleHud(true);
@@ -1444,7 +1452,7 @@ function offlineSim(sec){
     else if (!S.autoAdv) { S.farmN++; if (S.farmN >= 10 && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.autoAdv = true; S.farmN = 0; S.stage++; S.runMax = Math.max(S.runMax, S.stage); } }
   }
   S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
-  rep.endStage = S.stage; return rep;
+  rep.endStage = S.stage; capXP(Math.floor(rep.clears / 2)); return rep;
 }
 
 /* ================= UI ================= */
@@ -1457,7 +1465,7 @@ function openSheet(h){ $('#sheet').innerHTML = '<div class="handle"></div>' + h;
 function closeSheet(){ $('#modal').classList.remove('show'); sheetFn = null; }
 let sheetFn = null;
 function refreshSheet(){ if (sheetFn && $('#modal').classList.contains('show')) { const sc = $('#sheet').scrollTop; sheetFn(); $('#sheet').scrollTop = sc; } }
-const rankName = () => S.bestEver >= 150 ? "Master of the King's Archers" : S.bestEver >= 100 ? 'Knight Banneret' : S.bestEver >= 60 ? 'Captain of Archers' : S.bestEver >= 25 ? 'Centenar' : 'Vintenar';
+const rankName = () => S.cap ? capRank().n : 'Vintenar';
 function renderRes(){
   const si = S.sound ? 'sound' : 'mute'; if ($('#snd').dataset.ic !== si) { $('#snd').dataset.ic = si; $('#snd').innerHTML = IC(si, 'currentColor'); }
   if (!$('#setBtn').firstChild) $('#setBtn').innerHTML = IC('gear', 'currentColor');
@@ -1487,7 +1495,7 @@ const bUnlocked = k => S.bestEver >= BLD[k].un || B_(k) > 0;
 const isMax = k => BLD[k].max && B_(k) >= BLD[k].max;
 /* TIMED UPGRADES: building takes time (seconds early on, up to two hours late), a few builders work at once,
    and medals finish a job now. Jobs keep going while you're away. */
-const builders = () => 2 + (S.bestEver >= 60 ? 1 : 0);
+const builders = () => 2 + (S.bestEver >= 60 ? 1 : 0) + (perk(7) ? 1 : 0);
 const WARB = ['barracks','bowyer','drill','surgeon','butts','tavern','bill','pavise','treb','market','scriptorium'];
 /* buildings with a level cap take longer the closer they get to it: 30s for the first level, then from a few minutes up to TOPT at the last */
 const TOPT = {barracks:8 * 3600, tavern:6 * 3600, drill:4 * 3600, surgeon:4 * 3600};
@@ -1521,7 +1529,7 @@ function render(){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const v = $('#view');
   if (tab === 'battle') { if (!$('#battleView')) { v.innerHTML = viewBattle(); bindBattleView(); } battleHud(true); return; }
-  v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
+  v.innerHTML = tab === 'captain' ? viewCaptain() : tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
 }
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
@@ -1550,7 +1558,7 @@ function volleyTick(dt){
 let tipU = null, tipT = 0, paused = false;
 /* the medic: tap the cross to patch up the line and get downed men back on their feet. Manual only. */
 const MED = {c:3};
-const docMax = () => 3 + Math.floor(B_('surgeon') / 3);
+const docMax = () => 3 + Math.floor(B_('surgeon') / 3) + (perk(2) ? 1 : 0);
 const medicOn = () => S.bestEver >= 25;
 let docPick = false;
 function useMedic(){
@@ -1747,13 +1755,13 @@ function viewOrders(){
   h += `<h3>ORDERS FROM THE KING</h3>`;
   S.quests.forEach((q, i) => { const p = qProgress(q), done = p >= q.n; h += `<div class="card row"><div class="grow"><b>${QT[q.t].n.replace('{n}', fmt(q.n))}</b><div class="bar"><i style="width:${clamp(100 * p / q.n, 0, 100)}%"></i></div><div class="sub">${fmt(Math.min(p, q.n))}/${fmt(q.n)} · reward ${Object.entries(q.rw).map(([r, v]) => RES[r].i + fmt(v)).join(' ')}</div></div><button class="btn ${done ? 'gold' : ''}" data-act="claimq" data-i="${i}" ${done ? '' : 'disabled'}>Claim</button></div>`; });
   if (S.seen.exped) {
-    h += `<h3>EXPEDITIONS · ${S.exped.length}/3 OUT</h3><div class="sub" style="margin-bottom:8px">Send men who are not in the line. They come back with resources, stories, and sometimes a new habit.</div>`;
+    h += `<h3>EXPEDITIONS · ${S.exped.length}/${expMax()} OUT</h3><div class="sub" style="margin-bottom:8px">Send men who are not in the line. They come back with resources, stories, and sometimes a new habit.</div>`;
     S.exped.forEach((x, i) => { const left = (x.end - Date.now()) / 1000, E = EXPED[x.type]; h += `<div class="card row"><div class="grow"><b>${E.n}</b><div class="sub">${x.ids.map(id => esc((S.roster.find(a => a.id === id) || {name:'?'}).name.split(' ')[0])).join(', ')} · ${left > 0 ? fmtT(left) + ' left' : 'back in camp'}</div><div class="bar"><i style="width:${clamp(100 * (1 - left / E.t), 0, 100)}%"></i></div></div><button class="btn ${left <= 0 ? 'gold' : ''}" data-act="collect" data-i="${i}" ${left <= 0 ? '' : 'disabled'}>Collect</button></div>`; });
-    Object.keys(EXPED).forEach(k => { const E = EXPED[k], un = S.bestEver >= E.un; h += `<div class="card row ${un ? '' : 'lock'}"><div class="grow"><b>${E.n}</b> <span class="sub">${fmtT(E.t)}</span><div class="sub">${un ? E.d : 'Reach stage ' + E.un}</div></div>${un ? (S.exped.some(x => x.type === k) ? '<span class="sub">Already out</span>' : `<button class="btn" data-act="exped" data-id="${k}" ${S.exped.length < 3 ? '' : 'disabled'}>Send</button>`) : ''}</div>`; });
+    Object.keys(EXPED).forEach(k => { const E = EXPED[k], un = S.bestEver >= E.un; h += `<div class="card row ${un ? '' : 'lock'}"><div class="grow"><b>${E.n}</b> <span class="sub">${fmtT(E.t)}</span><div class="sub">${un ? E.d : 'Reach stage ' + E.un}</div></div>${un ? (S.exped.some(x => x.type === k) ? '<span class="sub">Already out</span>' : `<button class="btn" data-act="exped" data-id="${k}" ${S.exped.length < expMax() ? '' : 'disabled'}>Send</button>`) : ''}</div>`; });
   }
   return h;
 }
-function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor(Math.pow(S.runMax / 10, 1.9) * (1 + .15 * L('chron')) * Math.pow(1.5, G('glory'))); }
+function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor((perk(8) ? 1.2 : 1) * Math.pow(S.runMax / 10, 1.9) * (1 + .15 * L('chron')) * Math.pow(1.5, G('glory'))); }
 function viewLegacy(){
   const g = gloryGain();
   let h = `<h2>Legacy</h2><div class="sub">Every campaign ends. Lead the company home, and the next campaign starts from the beginning with everything you learned. Buildings, stages, resources and orders reset. Your men and their stars, gear, research, the Codex, writs, medals, event tokens and your Legacy all stay.</div>
@@ -1807,6 +1815,90 @@ function expedReward(x){
   if (x.type === 'patrol') { out.medals = Math.round(3 + S.runMax / 15 + str / 30); out.writs = 1; out.iron = 50 * m; out.items = 2; }
   if (x.type === 'fowl' && Math.random() < .25) out.items = 1;
   return out;
+}
+
+
+/* ================= the captain: rank, reputation, orders, raids ================= */
+const RANKS = [
+  {n:'Vintenar', xp:0, p:'In charge of twenty men and a cart.'},
+  {n:'Centenar', xp:40, p:'Orders for your men: discipline, days off, a night at the tavern.'},
+  {n:'Captain of Archers', xp:150, p:'Raids (chevauchées), and Doc carries one more bandage.'},
+  {n:'Knight', xp:450, p:'+10% silver from battles.'},
+  {n:'Knight Banneret', xp:1200, p:'A fourth expedition can be out at once.'},
+  {n:'Baron', xp:3000, p:'+10% archer damage.'},
+  {n:'Earl', xp:7000, p:'Time away counts for two hours longer.'},
+  {n:'Duke', xp:15000, p:'A fourth builder.'},
+  {n:'Prince of the Blood', xp:30000, p:'+20% glory when a campaign ends.'},
+  {n:'King', xp:60000, p:'The crown: +25% damage and silver.'}
+];
+function capInit(){ if (!S.cap) S.cap = {xp:Math.round((S.stats.clears || 0) + 100 * (S.prestiges || 0) + 10 * (S.stats.bosses || 0)), r:0}; if (!S.rep) S.rep = {fair:0, love:0}; if (!S.ordT) S.ordT = {}; if (!S.buffs) S.buffs = []; S.cap.r = capRankI(); }
+const capRankI = () => { let i = 0; RANKS.forEach((r, n) => { if (S.cap.xp >= r.xp) i = n; }); return i; };
+const capRank = () => RANKS[capRankI()];
+const perk = n => S.cap && capRankI() >= n;
+function capXP(n){
+  if (!S.cap || !n) return; const before = capRankI(); S.cap.xp += n; const now = capRankI();
+  if (now > before) { S.cap.r = now; chron(`Raised to ${RANKS[now].n}.`); tr('rankUp');
+    setTimeout(() => { sheetFn = null; openSheet(`<div class="sub" style="color:var(--gold);letter-spacing:.04em">PROMOTED</div><div class="fell" style="font-size:28px">${RANKS[now].n}</div><p class="ev">${RANKS[now].p}</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button class="btn gold big" data-act="cardgo" data-tab="captain">Your captain</button><button class="btn big" data-act="close">Carry on</button></div>`); }, 400); }
+}
+/* reputation: fair runs Harsh (-100) to Fair (+100); love runs Feared (-100) to Loved (+100) */
+function repMove(fair, love){ S.rep.fair = clamp(S.rep.fair + (fair || 0), -100, 100); S.rep.love = clamp(S.rep.love + (love || 0), -100, 100); }
+const repWord = (v, lo, hi) => v >= 60 ? `Very ${hi.toLowerCase()}` : v >= 20 ? hi : v <= -60 ? `Very ${lo.toLowerCase()}` : v <= -20 ? lo : 'Neither';
+const repFx = () => !S.rep ? {dmg:1, heal:1, silver:1, raid:1} : ({dmg:S.rep.love <= -40 ? 1.05 : 1, heal:S.rep.love >= 40 ? 1.25 : 1, silver:S.rep.fair >= 40 ? 1.08 : 1, raid:S.rep.fair <= -40 ? 1.25 : 1});
+/* short-lived buffs from orders */
+function buffMult(k){ const now = Date.now(); S.buffs = (S.buffs || []).filter(b => b.end > now); return S.buffs.filter(b => b.k === k && (!b.start || b.start <= now)).reduce((m, b) => m * b.m, 1); }
+const ORDERS = {
+  flog:  {n:'Flog the slackers', d:'+10% damage for 30 minutes. The men fear you more and like you less.', cd:3, fx:() => { S.buffs.push({k:'dmg', m:1.10, end:Date.now() + 1800e3, n:'Flogged into line'}); repMove(-4, -10); return 'Scott brings out the whip. Nobody slacks for a while.'; }},
+  rest:  {n:'A day off', d:'Every wounded man is fit again at once. The men like you for it.', cd:4, fx:() => { S.roster.forEach(a => a.woundT = 0); repMove(2, 8); return 'The lads sleep in, wash their feet and mend their kit. Everyone is fit to fight.'; }},
+  ale:   {n:'A night at the tavern', d:'+15% damage for 20 minutes, then a hangover: -10% for 20 minutes. Costs silver.', cd:4, cost:() => Math.round(clearBonus(S.runMax) * 4), fx:() => { const t = Date.now(); S.buffs.push({k:'dmg', m:1.15, end:t + 1200e3, n:'Merry'}); S.buffs.push({k:'dmg', m:.90, end:t + 2400e3, start:t + 1200e3, n:'Hungover'}); repMove(0, 7); return 'Grim keeps the tap running until dawn. They will shoot well tonight, and badly tomorrow.'; }},
+  pay:   {n:'Pay a bonus', d:'Every man in the line gains 2 levels. Fair dealing is remembered. Costs silver.', cd:6, cost:() => Math.round(clearBonus(S.runMax) * 10), fx:() => { lineUp().forEach(a => { if (a) a.lvl = Math.min(cap(a), a.lvl + 2); }); repMove(8, 4); return 'Every man gets his coin, counted out in front of him. They will remember it.'; }}
+};
+const ordReady = k => !S.ordT[k] || Date.now() >= S.ordT[k];
+function giveOrder(k){
+  const o = ORDERS[k]; if (!o || !perk(1) || !ordReady(k)) return; const c = o.cost ? o.cost() : 0;
+  if (c && S.res.silver < c) return toast(`That needs ${fmt(c)} silver.`); if (c) S.res.silver -= c;
+  const out = o.fx(); S.ordT[k] = Date.now() + o.cd * 3600e3; tr('order_' + k); capXP(3); save(); refreshLineStats(); sheetFn = null;
+  openSheet(`<div class="fell" style="font-size:24px">${o.n}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`);
+}
+/* raids: rich, quick, and they cost you your good name */
+const RAIDT = 6;
+const expMax = () => 3 + (perk(4) ? 1 : 0);
+function raid(){
+  if (!perk(2)) return; if (S.ordT.raid && Date.now() < S.ordT.raid) return;
+  const cb = clearBonus(S.runMax) * silverMult() * repFx().raid, loot = {silver:cb * 40, food:cb * 12, wood:cb * 12, iron:cb * 4};
+  for (const r in loot) addRes(r, loot[r]); let extra = ''; if (Math.random() < .35) { S.res.writs++; extra += ' A writ was found in the manor strongbox.'; }
+  const ppl = S.roster.filter(a => !a.away && !a.woundT); if (ppl.length && Math.random() < .3) { const a = pick(ppl); a.woundT = woundTime(); extra += ` ${esc(a.name.split(' ')[0])} took a pitchfork in the leg.`; }
+  repMove(-12, 2); S.ordT.raid = Date.now() + RAIDT * 3600e3; tr('raid'); capXP(5); chron('Led a chevauchée through the French countryside.'); save(); sheetFn = null;
+  openSheet(`<div class="fell" style="font-size:24px">Chevauchée</div><p class="ev">The company rides through the villages, taking grain, timber and coin, and burning the barns behind them.${extra}</p><div class="card">${costHtml(loot)}</div><p class="sub">The men liked the loot. Fair-minded folk will hear of it.</p><button class="btn gold big" data-act="close">Ride on</button>`);
+}
+function viewCaptain(){
+  capInit(); const ri = capRankI(), r = RANKS[ri], nx = RANKS[ri + 1], fx = repFx();
+  const pctTo = nx ? Math.min(100, 100 * (S.cap.xp - r.xp) / (nx.xp - r.xp)) : 100;
+  const best = [...S.roster].sort((p, q) => power(q) - power(p)).slice(0, 5), fav = [...S.roster].sort((p, q) => (q.kills || 0) - (p.kills || 0))[0];
+  const bar = (v, lo, hi) => `<div class="row sub" style="margin-top:6px"><span style="width:64px">${lo}</span><span class="grow" style="position:relative;height:8px;background:#2a2a20"><i style="position:absolute;left:50%;top:-3px;width:2px;height:14px;background:#555"></i><i style="position:absolute;left:${50 + v / 2}%;top:-4px;width:10px;height:16px;margin-left:-5px;background:var(--gold)"></i></span><span style="width:64px;text-align:right">${hi}</span></div>`;
+  let h = `<h2>${esc(captainName())}</h2><div class="sub">${S.company ? esc(S.company) + ' · ' : ''}${r.n}${S.prestiges ? ` · campaign ${S.prestiges + 1}` : ''}${S.captain ? '' : ' · <a href="#" data-act="settings">name your captain in Settings</a>'}</div>
+  <div class="card" style="margin-top:10px"><div class="row"><b class="grow">${r.n}</b><span class="sub">${fmt(S.cap.xp)} experience</span></div><div class="prog" style="margin-top:6px"><i style="width:${pctTo}%;background:var(--gold)"></i></div><div class="sub" style="margin-top:4px">${nx ? `Next: <b>${nx.n}</b> at ${fmt(nx.xp)}. ${nx.p}` : 'There is no higher rank.'}</div><div class="sub" style="margin-top:4px">Experience comes from every stage cleared, bosses, camp decisions, expeditions, orders, raids and ending campaigns. It is never lost.</div></div>
+  <h3>RANKS</h3><div class="card">${RANKS.map((x, i) => `<div class="row" style="padding:3px 0;${i > ri ? 'opacity:.5' : ''}"><span style="width:20px">${i <= ri ? IC('shield', 'var(--gold)') : ''}</span><b style="width:150px">${x.n}</b><span class="sub grow">${x.p}</span></div>`).join('')}</div>
+  <h3>REPUTATION</h3><div class="card"><div class="sub">How the company sees you. Your choices in camp, your orders and your raids move it.</div>
+  ${bar(S.rep.fair, 'Harsh', 'Fair')}<div class="sub" style="text-align:center">${repWord(S.rep.fair, 'Harsh', 'Fair')}</div>${bar(S.rep.love, 'Feared', 'Loved')}<div class="sub" style="text-align:center">${repWord(S.rep.love, 'Feared', 'Loved')}</div>
+  <div class="sub" style="margin-top:8px">${[fx.dmg > 1 ? '<b>Feared:</b> +5% damage, nobody dares slack' : '', fx.heal > 1 ? '<b>Loved:</b> wounds heal 25% faster' : '', fx.silver > 1 ? '<b>Fair:</b> +8% silver, honest dealing pays' : '', fx.raid > 1 ? '<b>Harsh:</b> raids bring 25% more' : ''].filter(Boolean).join('<br>') || 'Lean far enough either way on either scale and it starts to count for something.'}</div></div>`;
+  if (perk(1)) { const buffs = (S.buffs || []).filter(b => b.end > Date.now() && (!b.start || b.start <= Date.now()));
+    h += `<h3>ORDERS FOR YOUR MEN</h3>${buffs.length ? `<div class="sub" style="margin-bottom:6px">In effect: ${buffs.map(b => `<b>${b.n}</b> (${fmtT((b.end - Date.now()) / 1000)})`).join(', ')}</div>` : ''}` + Object.keys(ORDERS).map(k => { const o = ORDERS[k], c = o.cost ? o.cost() : 0, ok = ordReady(k); return `<div class="card row"><div class="grow"><b>${o.n}</b><div class="sub">${o.d}</div>${c ? `<div class="cost">${costHtml({silver:c})}</div>` : ''}</div>${ok ? `<button class="btn ${!c || S.res.silver >= c ? 'gold' : ''}" data-act="order" data-id="${k}">Give the order</button>` : `<span class="sub">Again in ${fmtT((S.ordT[k] - Date.now()) / 1000)}</span>`}</div>`; }).join(''); }
+  else h += `<h3>ORDERS FOR YOUR MEN</h3><div class="card lock sub">Reach Centenar to give orders: discipline, days off, a night at the tavern.</div>`;
+  if (perk(2)) { const rd = !S.ordT.raid || Date.now() >= S.ordT.raid; h += `<h3>RAIDS</h3><div class="card row"><div class="grow"><b>Chevauchée</b><div class="sub">Ride through the French villages for grain, timber, iron and coin, and maybe a writ. The men enjoy it. Your name for fair dealing does not. Someone may get hurt.</div></div>${rd ? '<button class="btn gold" data-act="raid">Ride out</button>' : `<span class="sub">Again in ${fmtT((S.ordT.raid - Date.now()) / 1000)}</span>`}</div>`; }
+  else h += `<h3>RAIDS</h3><div class="card lock sub">Reach Captain of Archers to lead raids.</div>`;
+  h += `<h3>YOUR RECORD</h3><div class="card"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px">${[['Best stage', S.bestEver], ['Campaigns ended', S.prestiges], ['Enemies killed', fmt(S.stats.kills)], ['Bosses', fmt(S.stats.bosses || 0)], ['Recruited', fmt(S.stats.recruits || 0)], ['Fallen', S.fallen.length], ['Time in the field', fmtT(S.stats.playSec)], ['Friends recruited', S.roster.filter(a => a.friend).length]].map(([l, v]) => `<div class="row"><span class="sub grow">${l}</span><b>${v}</b></div>`).join('')}</div>${fav && fav.kills ? `<div class="sub" style="margin-top:8px">Deadliest man: <b class="r${fav.rar}">${esc(dispName(fav))}</b>, ${fmt(fav.kills)} kills.</div>` : ''}</div>
+  <h3>BEST MEN</h3>${best.map(a => `<div class="card row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 40)}" alt=""><div class="grow"><b class="r${a.rar}">${esc(dispName(a))}</b> <span class="stars">${'★'.repeat(a.stars)}</span><div class="sub">Lv ${a.lvl} · DPS ${fmt(stats(a).dps)}</div></div></div>`).join('')}`;
+  return h;
+}
+/* another captain's page, from the league */
+function sheetRival(uid){
+  const r = (league.rows || []).find(x => x.uid === uid); if (!r) return; sheetFn = null; tr('rivalView');
+  const men = r.men || [];
+  openSheet(`<div class="fell" style="font-size:26px">${esc(r.name)}</div><div class="sub">${r.company ? esc(r.company) + ' · ' : ''}${esc(r.rank || 'Vintenar')}</div>
+  <div class="card" style="margin-top:10px"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px"><div class="row"><span class="sub grow">Best this week</span><b>${r.best || 0}</b></div><div class="row"><span class="sub grow">Best ever</span><b>${r.bestEver || 0}</b></div><div class="row"><span class="sub grow">Campaigns ended</span><b>${r.camp || 0}</b></div><div class="row"><span class="sub grow">Event stage</span><b>${r.ev || 0}</b></div></div>
+  ${r.rep ? `<div class="sub" style="margin-top:8px">Known as ${esc(repWord(r.rep.fair || 0, 'Harsh', 'Fair').toLowerCase())} and ${esc(repWord(r.rep.love || 0, 'Feared', 'Loved').toLowerCase())}.</div>` : ''}</div>
+  <h3>THEIR BEST MEN</h3>${men.length ? men.map(m => `<div class="card row"><div class="grow"><b class="r${m.r}">${esc(m.n)}</b> <span class="stars">${'★'.repeat(m.s || 1)}</span><div class="sub">Level ${m.l}</div></div></div>`).join('') : '<div class="card sub">They have not shown their company yet.</div>'}
+  <button class="btn big" style="margin-top:8px" data-act="close">Close</button>`);
 }
 
 /* ================= gacha ================= */
@@ -1910,6 +2002,7 @@ const NEWC = [
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
   {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time. He has three bandages per battle, more as the Barber-surgeon grows.'},
+  {id:'captain', on:() => S.bestEver >= 15, t:'Your captain', tab:'captain', d:'Tap your rank at the top of the screen to see your captain: your rank, your reputation with the men, and your record. Every stage you clear earns experience towards the next rank, all the way to King.'},
   {id:'exped', on:() => S.seen.exped, t:'Expeditions', tab:'orders', d:'Send men away to forage or raid. They come back with spoils, if they come back.'},
   {id:'event', on:() => evOpen(), t:'Weekly events', tab:null, d:'A separate tournament each week, with its own token shop. Switch to it with the Event button above the battlefield.'},
   {id:'study', on:() => S.bestEver >= 32, t:'The Study', tab:'study', d:'Parchment from the Scriptorium buys research: lasting upgrades for the whole company.'},
@@ -1964,7 +2057,7 @@ function resetCampaign(){
 }
 function prestige(){
   const g = gloryGain(); if (!g) return;
-  S.res.glory += g; S.gloryOrder += g; S.prestiges++;
+  S.res.glory += g; S.gloryOrder += g; S.prestiges++; capXP(50 + S.runMax);
   chron(`Ended campaign ${S.prestiges} at stage ${S.runMax} and came home with ${fmt(g)} glory.`);
   gtag('event', 'prestige', {glory:g, n:S.prestiges, stage:S.runMax});
   resetCampaign();
@@ -2001,11 +2094,11 @@ document.addEventListener('click', e => {
     case 'claimq': { const q = S.quests[+el.dataset.i]; if (!q || qProgress(q) < q.n) return; for (const k in q.rw) addRes(k, q.rw[k]); S.quests.splice(+el.dataset.i, 1); S.quests.push(newQuest()); sfx('coin'); break; }
     case 'exped': if (S.exped.some(x => x.type === id)) return toast('That expedition is already out.'); expSel = []; sheetExped(id); return;
     case 'expsel': { if (expSel.includes(id)) expSel = expSel.filter(x => x !== id); else if (expSel.length < 3) expSel.push(id); sheetExped(el.closest('#sheet').querySelector('[data-act=expgo]').dataset.id); return; }
-    case 'expgo': { if (!expSel.length || S.exped.length >= 3 || S.exped.some(x => x.type === id)) return; S.exped.push({type:id, ids:[...expSel], end:Date.now() + EXPED[id].t * 1000}); expSel.forEach(i => { const m = S.roster.find(x => x.id === i); if (m) m.away = id; }); closeSheet(); toast('They set off down the road.', true); break; }
+    case 'expgo': { if (!expSel.length || S.exped.length >= expMax() || S.exped.some(x => x.type === id)) return; S.exped.push({type:id, ids:[...expSel], end:Date.now() + EXPED[id].t * 1000}); expSel.forEach(i => { const m = S.roster.find(x => x.id === i); if (m) m.away = id; }); closeSheet(); toast('They set off down the road.', true); break; }
     case 'collect': { const x = S.exped[+el.dataset.i]; if (!x || x.end > Date.now()) return; collectExped(+el.dataset.i); return; }
     case 'perk': { const P = LEGACY[id], l = L(id), c = Math.ceil(P.c * Math.pow(P.g, l)); if (S.res.glory < c || (P.max && l >= P.max)) return; S.res.glory -= c; S.legacy[id] = l + 1; sfx('legend'); refreshLineStats(); break; }
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
-    case 'evc': { tr('newsChoice'); const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
+    case 'evc': { tr('newsChoice'); capXP(4); { const lab = (EV.c[+el.dataset.i][0] || '').toLowerCase(); if (/hang|flog|whip|punish|dock|refuse|send (him|them) (away|packing)|turn (him|them) away|take a cut/.test(lab)) repMove(-3, -4); else if (/let|give|share|pay|forgive|keep|help|bury|feed|bread/.test(lab)) repMove(3, 4); } const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
     case 'armoury': sheetArmoury(); return;
     case 'tutskip': S.tut = 99; tutBar(); break;
@@ -2028,6 +2121,11 @@ document.addEventListener('click', e => {
     case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; tr('slotSwitch'); (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
     case 'revive': revive(el.dataset.id); return;
     case 'lchip': { if (!BT) return; const u = BT.units.find(x => x.a.id === el.dataset.id); if (!u) return; if (docPick) healOne(u); else { tipU = u; tipT = 4; } return; }
+    case 'captain': if (S.bestEver < 15) return; closeSheet(); tab = 'captain'; render(); return;
+    case 'order': giveOrder(id); return;
+    case 'settings': e.preventDefault(); $('#setBtn').click(); return;
+    case 'raid': raid(); return;
+    case 'rival': sheetRival(el.dataset.uid); return;
     case 'cardgo': tr('cardShow'); closeSheet(); tab = el.dataset.tab; render(); return;
     case 'updopen': $('#updBar').classList.remove('on'); sheetUpdate(); return;
     case 'upddismiss': try { localStorage.setItem('loose-upd-later', updInfo ? updInfo.v : ''); } catch(e){} $('#updBar').classList.remove('on'); toast('The Update button stays at the top whenever you want it.'); return;
@@ -2046,7 +2144,7 @@ document.addEventListener('click', e => {
 function refreshLineStats(){ if (BT) BT.units.forEach(u => { if (u.down) return; const s = stats(u.a); const f = u.hp / u.max; u.s = s; u.max = s.hp; u.hp = s.hp * f; }); newBattleIfIdle(); }
 function newBattleIfIdle(){ if (BT && (BT.phase === 'empty' || (BT.phase === 'fight' && BT.t < 1.5))) newBattle(); else if (BT && BT.phase === 'fight') { const ids = new Set(BT.units.map(u => u.a.id)); if (lineUp().some(a => a && !ids.has(a.id))) BT.pendingRebuild = true; } }
 function collectExped(i){
-  const x = S.exped[i], E = EXPED[x.type], r = expedReward(x), men = x.ids.map(id => S.roster.find(a => a.id === id)).filter(Boolean);
+  capXP(3); const x = S.exped[i], E = EXPED[x.type], r = expedReward(x), men = x.ids.map(id => S.roster.find(a => a.id === id)).filter(Boolean);
   for (const k in r) if (k !== 'items') addRes(k, r[k]);
   let notes = []; const got = []; for (let i = 0; i < (r.items || 0); i++) { const it = dropItem(S.runMax, x.type === 'patrol' ? 1 : 0); if (it) got.push(it); } delete r.items;
   men.forEach(a => { a.away = null; a.lvl = Math.min(cap(a), a.lvl + Math.ceil(E.t / 3600));
@@ -2246,6 +2344,7 @@ window.__dbg = {bDur, get BTs(){ return BT; }, friendRecruit, killArcher, startB
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.19","items":["Eight new regions past stage 120, from Cravant and Patay to Castillon, then the old soldiers' tales of Crécy and Poitiers: new stages up to 200 before the war starts round again.","Your captain: tap your rank at the top of the screen. Earn experience from every fight and decision and rise from Vintenar to King, with a reward at each rank. Experience is never lost.","Reputation: your choices make the men see you as Harsh or Fair, Feared or Loved, and each has its upside.","From Centenar, give orders: flog the slackers, a day off, a night at the tavern, or a bonus.","From Captain of Archers, lead raids through the French countryside for rich loot, at a cost to your good name.","Your record and best men on the captain page, and tap a name in the King's League to see their captain and army."]},
 {"v":"2.18.5","items":["Doc now has three heals per battle instead of a recharge timer, so choose who gets them. The Barber-surgeon adds one more every three levels, up to six."]},
 {"v":"2.18.4","items":["A row under the battlefield shows every archer in the line with their health, so you can see who is in trouble even in a crowd. Tap a name to see their card.","Doc now treats one archer at a time: tap Doc, then tap who needs him. He recharges faster to make up for it."]},
 {"v":"2.18.3","items":["A banner now tells you when a new version is ready, and Settings shows your version with a Check now button."]},
