@@ -87,6 +87,7 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 #bMsg.on{opacity:1;transform:scale(1)}
 #bMsg small{display:block;font-family:"Alegreya Sans";font-size:14.5px;color:#e8dcc0}
 .bfoot{background:#0d110c;border-top:1px solid var(--line);padding:8px 12px}
+.bfoot .row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bfoot .tog{white-space:nowrap}
 .prog{height:7px;border-radius:2px;background:#2a1a14;overflow:hidden;margin:4px 0 8px}
 .prog i{display:block;height:100%;background:var(--red)}
 .tog{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--mut)}
@@ -652,7 +653,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.12';
+const VERSION = '2.12.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
