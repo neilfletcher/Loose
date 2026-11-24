@@ -828,7 +828,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.22';
+const VERSION = '2.23';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1348,6 +1348,8 @@ function sfx(n){
   else if (n === 'hit') tone('sine', rnd(140, 180), 60, .06, .04);
   else if (n === 'clash') noise(.1, .1, 4200);
   else if (n === 'horn') { tone('sawtooth', 147, 140, .8, .035); tone('sawtooth', 220, 214, .8, .02, .06); }
+  else if (n === 'boom') { noise(.6, .32, 420); noise(.35, .2, 1400, .02); tone('sine', 90, 40, .5, .09); }
+  else if (n === 'whoosh') { noise(.4, .08, 2400); }
   else if (n === 'volley') { for (let i = 0; i < 5; i++) noise(.25, .04, 1800 + i * 300, i * .03); }
   else if (n === 'coin') { tone('square', 1300, 1250, .05, .02); tone('square', 1760, 1700, .08, .02, .06); }
   else if (n === 'flip') tone('triangle', 520, 700, .08, .04);
@@ -1397,6 +1399,7 @@ function newBattle(){
   const hu = HU(N) * supMult(), avg = (() => { const l = BT.units; return l.length ? l.reduce((t, u) => t + u.s.dps, 0) / l.length : 0; })() * supMult(); BT.supAvg = avg;
   if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), max:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), dps:avg * (.5 + .15 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
   if (B_('treb')) { const end = BT.path.pts[BT.path.pts.length - 1]; BT.treb = {x:end[0] < W / 2 ? end[0] + 64 : end[0] - 64, y:Math.min(end[1], H - 26) - 4, cd:4, arm:0}; }
+  placeBarrels();
   if (!BT.units.length) { BT.phase = 'empty'; BT.endT = 2; }
   if (sp && bOn()) setTimeout(() => bmsg(sp.n, sp.d), 250);
 }
@@ -1428,7 +1431,7 @@ function hurt(e, dmg, pierce, src, fire){
   if (e.dead) return;
   e.hp -= dmg * (1 - e.d.arm * (1 - Math.min(1, pierce || 0))) * (e.markT > 0 ? 2 : 1); e.flash = .12; sfx('hit');
   for (let i = 0; i < 2; i++) BT.fx.push({t:0, x:e.x, y:e.y, vx:rnd(-30, 30), vy:rnd(-30, 30), blood:1});
-  if (fire) BT.fx.push({t:0, x:e.x, y:e.y, burn:1});
+  if (fire) { BT.fx.push({t:0, x:e.x, y:e.y, burn:1}); e.burnT = Math.max(e.burnT || 0, 3); e.burnD = Math.max(e.burnD || 0, dmg * .15); }
   if (e.hp <= 0) kill(e, src);
 }
 function kill(e, src){
@@ -1507,8 +1510,9 @@ function bstep(dt){
   b.volleys = b.volleys.filter(v => v.t < 2.2);
   if (b.treb) { b.treb.cd -= dt; b.treb.arm = Math.max(0, b.treb.arm - dt);
     if (b.treb.cd <= 0 && b.en.length) { const t = densest(); if (t) { b.stones.push({x0:b.treb.x, y0:b.treb.y - 10, tx:t.x, ty:t.y, t:0, T:1.3}); b.treb.arm = .5; } b.treb.cd = Math.max(6, 14 - .5 * B_('treb')); } }
-  for (const st of b.stones) { st.t += dt; if (st.t >= st.T && !st.done) { st.done = 1; const dmg = (b.supAvg || 0) * (3 + B_('treb')) * (b.sp && b.sp.id === 'walls' ? 3 : 1); b.en.forEach(e => { if (!e.dead && dist(e.x, e.y, st.tx, st.ty) < 30) hurt(e, dmg, .5, null); }); b.fx.push({t:0, x:st.tx, y:st.ty, ring:1, col:'#b8a888'}); for (let i = 0; i < 6; i++) b.fx.push({t:0, x:st.tx, y:st.ty, vx:rnd(-60, 60), vy:rnd(-60, 60), blood:1}); b.shake = 4; sfx('clash'); } }
+  for (const st of b.stones) { st.t += dt; if (st.t >= st.T && !st.done) { st.done = 1; burnGround(st.tx, st.ty, 30, 4, (b.supAvg || 0) * .6); for (let q = 0; q < 6; q++) b.fx.push({t:Math.random() * .2, x:st.tx + rnd(-12, 12), y:st.ty + rnd(-8, 8), burn:1}); const dmg = (b.supAvg || 0) * (3 + B_('treb')) * (b.sp && b.sp.id === 'walls' ? 3 : 1); b.en.forEach(e => { if (!e.dead && dist(e.x, e.y, st.tx, st.ty) < 30) hurt(e, dmg, .5, null); }); b.fx.push({t:0, x:st.tx, y:st.ty, ring:1, col:'#b8a888'}); for (let i = 0; i < 6; i++) b.fx.push({t:0, x:st.tx, y:st.ty, vx:rnd(-60, 60), vy:rnd(-60, 60), blood:1}); b.shake = 4; sfx('clash'); } }
   b.stones = b.stones.filter(s => !s.done);
+  fireStep(b, dt);
   const live = b.units.filter(u => !u.down), mud = b.sp && b.sp.id === 'mud' ? .5 : b.z.mud || 1, du = DU(b.N), night = b.sp && b.sp.id === 'night';
   let nBlock = 0; if (b.bill && !b.bill.down) b.en.forEach(e => { if (!e.dead && !e.tg && !e.d.ranged && e.s >= b.bill.s - 16 && e.s <= b.bill.s + 2) nBlock++; });
   for (const e of b.en) {
@@ -1736,6 +1740,49 @@ function volleyTick(dt){
 let tipU = null, tipT = 0, paused = false;
 /* the medic: tap the cross to patch up the line and get downed men back on their feet. Manual only. */
 const MED = {c:3};
+/* ================= fire (2.23) =================
+   pitch barrels lie by the road: tap one to blow it up, or it goes off by itself when a crowd gathers round it.
+   fire arrows: a tap ability that lights every arrow in the line for 8 seconds; burning men keep burning.
+   trebuchet stones become fire pots that leave the ground burning. */
+const FIRE = {c:2};
+const barrelsOn = () => S.bestEver >= 12, fireOn = () => S.bestEver >= 22;
+const fireMax = () => 2 + (B_('fletcher') >= 30 ? 1 : 0);
+function placeBarrels(){
+  BT.barrels = []; BT.fires = []; FIRE.c = fireMax(); if (!barrelsOn() || !BT.path) return;
+  const n = 2 + (BT.N >= 40 ? 1 : 0), tot = BT.path.total;
+  for (let i = 0; i < n; i++) { const s0 = tot * (.3 + .5 * (i + Math.random() * .6) / n), a = pathAt(BT.path, s0), side = Math.random() < .5 ? -1 : 1, off = rnd(12, 18);
+    BT.barrels.push({x:a[0] + a[2] * off * side, y:a[1] + a[3] * off * side, lit:false}); }
+}
+function burnGround(x, y, r, t, dps){ BT.fires.push({x, y, r, t, T:t, dps}); }
+function blowBarrel(br, byHand){
+  if (!br || br.lit) return; br.lit = true; const base = BT.supAvg || 1, dmg = base * 8;
+  BT.en.forEach(e => { if (!e.dead && dist(e.x, e.y, br.x, br.y) < 55) { e.burnT = 4; e.burnD = Math.max(e.burnD || 0, base * .5); hurt(e, dmg, 1, null, true); } });
+  burnGround(br.x, br.y, 42, 5, base * .8); BT.shake = 7; sfx('boom'); tr(byHand ? 'barrelTap' : 'barrelAuto');
+  BT.fx.push({t:0, x:br.x, y:br.y, ring:1, col:'#ffb040'}, {t:0, x:br.x, y:br.y - 18, txt:'Boom!', col:'#ffb040', big:1});
+  for (let i = 0; i < 14; i++) BT.fx.push({t:Math.random() * .3, x:br.x + rnd(-20, 20), y:br.y + rnd(-14, 14), burn:1});
+}
+function useFire(){
+  if (!BT || BT.phase !== 'fight' || !fireOn()) return;
+  if (FIRE.c < 1) { BT.fx.push({t:0, x:60, y:80, txt:'No more pitch this fight', col:'#cbbd9f'}); return; }
+  FIRE.c--; BT.units.forEach(u => { if (!u.down) u.fireT = Math.max(u.fireT, 8); }); sfx('whoosh'); tr('fireArrows');
+  BT.fx.push({t:0, x:W / 2, y:H * .7, txt:'Fire arrows!', col:'#ff9a3a', big:1});
+}
+function fireStep(b, dt){
+  if (!b.barrels) return;
+  for (const br of b.barrels) { if (br.lit) continue; let n = 0, boss = false; for (const e of b.en) if (!e.dead && dist(e.x, e.y, br.x, br.y) < 50) { n++; if (e.d.boss) boss = true; } if (n >= 5 || boss) blowBarrel(br, false); }
+  for (const f of b.fires) { f.t -= dt; for (const e of b.en) if (!e.dead && dist(e.x, e.y, f.x, f.y) < f.r) { e.burnT = Math.max(e.burnT || 0, 1.5); e.burnD = Math.max(e.burnD || 0, f.dps); } }
+  b.fires = b.fires.filter(f => f.t > 0);
+  for (const e of b.en) { if (e.dead || !(e.burnT > 0)) continue; e.burnT -= dt; e.hp -= e.burnD * dt * (1 - e.d.arm * .5); if (Math.random() < dt * 6) b.fx.push({t:0, x:e.x + rnd(-4, 4), y:e.y, burn:1}); if (e.hp <= 0) kill(e, null); }
+}
+function drawFire(ctx, b){
+  if (!b.barrels) return;
+  for (const f of b.fires) { const k = f.t / f.T; ctx.fillStyle = `rgba(40,25,15,${.35 * k + .15})`; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r, f.r * .7, 0, 0, 7); ctx.fill();
+    for (let i = 0; i < 7; i++) { const a = i * 0.9 + b.t * 2, rr = f.r * (.25 + .5 * ((i * 37) % 10) / 10), x = f.x + Math.cos(a) * rr, y = f.y + Math.sin(a) * rr * .7, h = 5 + 4 * Math.sin(b.t * 12 + i); ctx.fillStyle = `rgba(255,${120 + (i % 3) * 40},40,${.75 * k})`; ctx.beginPath(); ctx.moveTo(x - 3, y); ctx.quadraticCurveTo(x, y - h * 2, x + 3, y); ctx.fill(); } }
+  for (const br of b.barrels) { if (br.lit) continue; ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(br.x + 1, br.y + 6, 8, 3, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#5a3a1e'; ctx.fillRect(br.x - 6, br.y - 7, 12, 13); ctx.fillStyle = '#2a1c10'; ctx.beginPath(); ctx.ellipse(br.x, br.y - 7, 6, 2.4, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#8a8a80'; ctx.lineWidth = 1.2; [-4, 2].forEach(dy => { ctx.beginPath(); ctx.moveTo(br.x - 6, br.y + dy); ctx.lineTo(br.x + 6, br.y + dy); ctx.stroke(); });
+    const glow = .5 + .5 * Math.sin(b.t * 4); ctx.strokeStyle = `rgba(255,170,60,${.25 + .35 * glow})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(br.x, br.y - 1, 13, 0, 7); ctx.stroke(); }
+}
 const docMax = () => 3 + Math.floor(B_('surgeon') / 3) + (perk(2) ? 1 : 0) + (fol('herb') ? 1 : 0);
 const medicOn = () => S.bestEver >= 25;
 let docPick = false;
@@ -1794,10 +1841,12 @@ function bindBattleView(){
     if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; if (docPick) { healOne(u); return; } tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
     if (pan) { const p = pan; pan = null; if (p.moved) return; const now = Date.now();
       if (medicOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= 30 && p.sy <= 50) { useMedic(); return; }
+      if (fireOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= (medicOn() ? 54 : 30) && p.sy <= (medicOn() ? 74 : 50)) { useFire(); return; }
       if (docPick) { docPick = false; stripTick(true); return; }
       if (p.sx >= 6 && p.sx <= 98 && p.sy >= 6 && p.sy <= 26) return;
       if (now - lastTap < 300 && V.s > 1) { V.s = 1; clampView(); lastTap = 0; return; } lastTap = now;
       if (BT.phase === 'ready') { BT.phase = 'fight'; tr('breakSkip'); return; }
+      { const [bx, by] = toL(ev), br = (BT.barrels || []).find(r => !r.lit && dist(r.x, r.y, bx, by) < 20 / Math.sqrt(V.s)); if (br && BT.phase === 'fight') { blowBarrel(br, true); return; } }
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', ev => { pts.delete(ev.pointerId); pinch = null; pan = null; if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } });
   cv.addEventListener('wheel', ev => { ev.preventDefault(); if (V.s === 1) tr('zoom'); const [sx, sy] = toS(ev), cx = V.x + sx / V.s, cy = V.y + sy / V.s; V.s *= ev.deltaY < 0 ? 1.15 : 1 / 1.15; clampView(); V.x = cx - sx / V.s; V.y = cy - sy / V.s; clampView(); }, {passive:false});
@@ -2079,7 +2128,7 @@ function viewCaptain(){
   else h += `<h3>ORDERS FOR YOUR MEN</h3><div class="card lock sub">Reach Centenar to give orders: discipline, days off, a night at the tavern.</div>`;
   if (perk(2)) { const rd = !S.ordT.raid || Date.now() >= S.ordT.raid; h += `<h3>RAIDS</h3><div class="card row"><div class="grow"><b>Chevauchée</b><div class="sub">Ride through the French villages for grain, timber, iron and coin, and maybe a writ. The men enjoy it. Your name for fair dealing does not. Someone may get hurt.</div></div>${rd ? '<button class="btn gold" data-act="raid">Ride out</button>' : `<span class="sub">Again in ${fmtT((S.ordT.raid - Date.now()) / 1000)}</span>`}</div>`; }
   else h += `<h3>RAIDS</h3><div class="card lock sub">Reach Captain of Archers to lead raids.</div>`;
-  h += `<h3>YOUR RECORD</h3><div class="card"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px">${[['Best stage', S.bestEver], ['Campaigns ended', S.prestiges], ['Enemies killed', fmt(S.stats.kills)], ['Bosses', fmt(S.stats.bosses || 0)], ['Recruited', fmt(S.stats.recruits || 0)], ['Fallen', S.fallen.length], ['Time in the field', fmtT(S.stats.playSec)], ['Friends recruited', S.roster.filter(a => a.friend).length]].map(([l, v]) => `<div class="row"><span class="sub grow">${l}</span><b>${v}</b></div>`).join('')}</div>${fav && fav.kills ? `<div class="sub" style="margin-top:8px">Deadliest man: <b class="r${fav.rar}">${esc(dispName(fav))}</b>, ${fmt(fav.kills)} kills.</div>` : ''}</div>
+  h += `<h3>YOUR RECORD</h3><div class="card"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px">${[['Best stage', S.bestEver], ['Campaigns ended', S.prestiges], ['Enemies killed', fmt(S.stats.kills)], ['Bosses', fmt(S.stats.bosses || 0)], ['Recruited', fmt(S.stats.recruits || 0)], ['Fallen', S.fallen.length], ['Time in the field', fmtT(S.stats.playSec)]].map(([l, v]) => `<div class="row"><span class="sub grow">${l}</span><b>${v}</b></div>`).join('')}</div>${fav && fav.kills ? `<div class="sub" style="margin-top:8px">Deadliest ${fav ? PR(fav).man : 'man'}: <b class="r${fav.rar}">${esc(dispName(fav))}</b>, ${fmt(fav.kills)} kills.</div>` : ''}</div>
   <h3>BEST MEN</h3>${best.map(a => `<div class="card row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 40)}" alt=""><div class="grow"><b class="r${a.rar}">${esc(dispName(a))}</b> <span class="stars">${'★'.repeat(a.stars)}</span><div class="sub">Lv ${a.lvl} · DPS ${fmt(stats(a).dps)}</div></div></div>`).join('')}`;
   return h;
 }
@@ -2358,6 +2407,8 @@ const NEWC = [
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
   {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time. He has three bandages per battle, more as the Barber-surgeon grows.'},
+  {id:'barrels', on:() => barrelsOn(), t:'Pitch barrels', tab:'battle', d:"Barrels of pitch now sit by the road in each battle. Tap one to blow it up when the French crowd round it, or leave it and it goes off by itself when enough of them gather. The ground burns for a few seconds afterwards."},
+  {id:'fire', on:() => fireOn(), t:'Fire arrows', tab:'battle', d:"Tap Fire arrows, under the Volleys counter, to light every arrow in the line for 8 seconds. Burning arrows splash nearby men and set them alight. Two pots of pitch per battle, three once the Fletcher reaches level 30. Fire pots for the trebuchet come with it."},
   {id:'camp', on:() => morOn(), t:'Camp life', tab:'company', d:"Your company has a mood now. Morale, on the Company page, rises with victories, ale, pay and kindness, and falls with deaths, defeats and the whip. High spirits add damage; low spirits cost it. Camp news brings new faces too: cooks, laundresses, a chaplain and others who join the baggage train for good."},
   {id:'captain', on:() => S.bestEver >= 15, t:'Your captain', tab:'captain', d:'Tap your rank at the top of the screen to see your captain: your rank, your reputation with the men, and your record. Every stage you clear earns experience towards the next rank, all the way to King.'},
   {id:'exped', on:() => S.seen.exped, t:'Expeditions', tab:'orders', d:'Send men away to forage or raid. They come back with spoils, if they come back.'},
@@ -2583,6 +2634,7 @@ function draw(){
     ctx.restore(); ctx.globalAlpha = 1;
   }
   if (dragU) b.slots.forEach((s, i) => { if (!slotOpen(i)) return; ctx.strokeStyle = i < 5 ? 'rgba(232,140,110,.8)' : 'rgba(255,240,200,.7)'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(s[0], s[1], 15, 0, 7); ctx.stroke(); ctx.setLineDash([]); });
+  drawFire(ctx, b);
   const list = [];
   b.units.forEach(u => list.push([u.y, 0, u])); b.en.forEach(e => list.push([e.y, 1, e]));
   if (b.bill) list.push([b.bill.y, 2, b.bill]); if (b.treb) list.push([b.treb.y, 3, b.treb]);
@@ -2623,6 +2675,7 @@ function draw(){
   if (b.phase === 'ready') { const cw = ctx.canvas.width / k, ch = ctx.canvas.height / k; ctx.fillStyle = 'rgba(8,10,7,.72)'; ctx.fillRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.font = '700 19px "Alegreya Sans",sans-serif'; ctx.fillText(`Stage ${b.N} in ${Math.ceil(b.readyT)}`, cw / 2, ch / 2 - 6); ctx.fillStyle = '#e8dcc0'; ctx.font = '12px "Alegreya Sans",sans-serif'; ctx.fillText('Upgrade and swap now, or tap to start', cw / 2, ch / 2 + 17); }
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
+  if (b.phase === 'fight' && fireOn()) { const fy = medicOn() ? 54 : 30; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, fy, 92, 20); ctx.strokeStyle = FIRE.c ? '#ff9a3a' : 'rgba(255,154,58,.3)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, fy + .5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = FIRE.c ? '#ffb46a' : '#8a7a6a'; ctx.fillText(`Fire arrows · ${FIRE.c}`, 11, fy + 14); }
   if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(docPick ? 'Doc: pick one' : MED.c ? `Doc · ${MED.c} left` : 'Doc · none left', 11, 44); if (docPick) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W / 2 - 110, H - 34, 220, 22); ctx.fillStyle = '#cfeecb'; ctx.textAlign = 'center'; ctx.fillText('Tap an archer, or a name below, to heal', W / 2, H - 19); } }
   if (paused) { ctx.fillStyle = 'rgba(8,10,7,.45)'; ctx.fillRect(0, 0, W, H); ctx.font = '400 30px "IM Fell English SC",serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#efe3c4'; ctx.fillText('Paused', W / 2, H / 2); }
   if (V.s > 1.01) { ctx.font = '600 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,220,192,.75)'; ctx.fillText('Double-tap to zoom out', W - 8, 18); }
@@ -2705,10 +2758,11 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.23","items":["Pitch barrels: from stage 12, two or three barrels of pitch sit by the road in every battle. Tap one to blow it up, or leave it and it goes off when a crowd of French gathers round it. The ground burns afterwards.","Fire arrows: from stage 22, tap Fire arrows under the Volleys counter to light every arrow in the line for 8 seconds. Burning arrows splash and set men alight, and burning men keep burning. Two per battle, three once the Fletcher reaches level 30.","The trebuchet throws fire pots now: every stone leaves the ground burning where it lands.","Explosions have their own sound.","The captain's record says Deadliest woman when she is one, and no longer counts friends recruited."]},
 {"v":"2.22","items":["Orders from the Constable: three small orders every day on the Orders tab, such as win battles, train archers or settle camp matters. Each pays a writ and medals, and finishing all three pays a bonus of 2 writs and three times the medals.","Every order can be done while your company is held at a wall, and if you miss a day nothing is lost. There are no streaks to break.","These replace the King's orders. Any King's order you had finished but not claimed has been paid out.","Your captain is easier to find: the rank at the top is now a Captain button, with a red dot when an order or a raid is ready.","Upgrade buttons tell you what happened: upgraded, work started (and how long), or which resource you are short of.","Volleys hit much harder: they now count front-rank and arrow bonuses, and plunging arrows half ignore armour."]},
 {"v":"2.21","items":["More ways to earn medals. Farming a stage you have already beaten pays a medal every 10 clears, offline too, so a company held at a wall still earns.","The forlorn hope, a new order: up to six spare Common and Uncommon men outside the line storm a breach. Each one pays medals, living or dead. Most do not come back; the few who do gain 5 levels and the name \"of the Breach\".","Promotions up to 3 stars now cost silver and iron only. Medals are needed from 4 stars.","Two more orders: Drill at dawn (a level for every man in the line) and Double rations (morale, at the cost of food).","Six new camp stories with clear Feared, Loved, Fair or Harsh choices, and the choice buttons now say which way each one leans.","The captain page shows the reward at every end of both reputation scales. There is no wrong way to lead.","Every pop-up has a close button in the corner.","Women in helmets and caps no longer look like bearded men. Sorry, Ellen.","Now and then a rider may arrive from headquarters with a purse of medals."]},
 {"v":"2.20.1","items":["After a loss the company now holds at the last stage it beat and stays there, farming, until you press Push on. No more waking up to a company that threw itself at the same wall all night.","A 10-second break between stages while you are watching, to upgrade and swap. Tap the field to skip it, or turn it off in Settings.","The Tavern opens at stage 5 instead of 8, so you can recruit reserves sooner.","Faces show the mood of the camp: smiles and grins when morale is high, long faces when it is low, and a green tinge for the hungover."]},
