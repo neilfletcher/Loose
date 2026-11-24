@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.25.3';
+const VERSION = '2.25.4';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1424,6 +1424,17 @@ const BONDNEAR = 34, BONDTXT = {f:['Friends', '+6%', '#8fe08a'], w:['Married', '
 function bondPairs(units){ const out = []; for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) { const a = units[i], b = units[j]; if (a.down || b.down) continue; const bd = S.bonds[bondKey(a.a.id, b.a.id)]; if (bd && bd.st) out.push({a, b, st:bd.st, near:dist(a.x, a.y, b.x, b.y) <= BONDNEAR}); } return out; }
 /* placement messages: one at a time, fading on the real clock so they do not pile up while paused */
 function placeMsg(u, txt, col){ BT.fx = BT.fx.filter(f => !f.place); BT.fx.push({t:0, x:u.x, y:u.y - 18, txt, col, place:1, born:performance.now()}); }
+/* drawn last, above every sprite: the dragged man, the enemy-side label and the bond hint */
+function drawDragTop(ctx, b){
+  if (!dragU) return; const focus = dragU.u, pairs = bondPairs(b.units);
+  ctx.save(); ctx.translate(focus.x, focus.y); ctx.scale(SPR, SPR); drawArcher(ctx, 0, 0, focus.face, focus.L || (focus.L = look(focus.a)), focus.drawAmt, {ring:true}); ctx.restore();
+  ctx.save(); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  const h = pathAt(b.path, b.path.total * MYHALF); ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 3; ctx.strokeText('Enemy side', h[0], h[1] - 10); ctx.fillStyle = '#f3c3b5'; ctx.fillText('Enemy side', h[0], h[1] - 10);
+  if (dragU) { const mine = pairs.filter(p => p.a === focus || p.b === focus);
+    if (mine.length) { const near = mine.filter(p => p.near), t = near.length ? near.map(p => BONDTXT[p.st][0] + ' ' + BONDTXT[p.st][1]).join(' · ') : mine.some(p => p.st !== 'g') ? 'Move next to a ringed man for a bonus' : 'Feud: keep apart';
+      ctx.globalAlpha = 1; ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; const y = focus.y - 24; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 3; ctx.strokeText(t, focus.x, y); ctx.fillStyle = near.length ? BONDTXT[near[0].st][2] : '#f2d07a'; ctx.fillText(t, focus.x, y); } }
+  ctx.restore();
+}
 function drawBonds(ctx, b){
   /* quiet by default: a faint line between bonded men standing together. Words only for the man you are dragging or have tapped */
   const pairs = bondPairs(b.units); if (!pairs.length) return;
@@ -1435,9 +1446,6 @@ function drawBonds(ctx, b){
     ctx.beginPath(); ctx.moveTo(p.a.x, p.a.y); ctx.lineTo(p.b.x, p.b.y); ctx.stroke(); ctx.setLineDash([]);
     if (mine) { const o = p.a === focus ? p.b : p.a; ctx.globalAlpha = .8 + .2 * Math.sin(b.t * 6); ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(o.x, o.y, 15, 0, 7); ctx.stroke(); }
   }
-  if (dragU) { const mine = pairs.filter(p => p.a === focus || p.b === focus);
-    if (mine.length) { const near = mine.filter(p => p.near), t = near.length ? near.map(p => BONDTXT[p.st][0] + ' ' + BONDTXT[p.st][1]).join(' · ') : mine.some(p => p.st !== 'g') ? 'Move next to a ringed man for a bonus' : 'Feud: keep apart';
-      ctx.globalAlpha = 1; ctx.font = '700 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; const y = focus.y - 26; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.lineWidth = 3; ctx.strokeText(t, focus.x, y); ctx.fillStyle = near.length ? BONDTXT[near[0].st][2] : '#f2d07a'; ctx.fillText(t, focus.x, y); } }
   ctx.restore();
 }
 function rerank(){ if (!BT) return; BT.units.forEach(o => { o.front = isFront(BT.path, o.x, o.y); }); const nf = BT.units.filter(o => o.front).length; BT.units.forEach(o => { o.rm = rankMultF(o.front, nf) * bondMultU(o, BT.units); }); }
@@ -2879,7 +2887,7 @@ function draw(){
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; tr2(); ctx.strokeStyle = 'rgba(232,182,76,.16)'; ctx.lineWidth = FRONTD * 2; ctx.stroke(); tr2(); ctx.strokeStyle = 'rgba(40,30,15,.25)'; ctx.lineWidth = ROADGAP * 2; ctx.stroke();
     const h = pathAt(p, p.total * MYHALF); ctx.strokeStyle = 'rgba(255,240,200,.7)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(h[0] - h[3] * 400, h[1] + h[2] * 400); ctx.lineTo(h[0] + h[3] * 400, h[1] - h[2] * 400); ctx.stroke(); ctx.setLineDash([]);
     ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 3; const a = pathAt(p, p.total * .72), tw = ctx.measureText('Front: +20%, charged').width / 2 + 6, lx = clamp(a[0] + a[2] * (FRONTD - 6), tw, W - tw), ly = a[1] + a[3] * (FRONTD - 6); 
-    ctx.strokeText('Enemy side', h[0], h[1] - 10); ctx.fillStyle = '#f3c3b5'; ctx.fillText('Enemy side', h[0], h[1] - 10); }
+  }
   drawFire(ctx, b);
   drawBonds(ctx, b);
   const list = [];
@@ -2918,6 +2926,7 @@ function draw(){
   }
   if (b.sp && b.sp.id === 'night') { ctx.fillStyle = 'rgba(6,10,30,.42)'; ctx.fillRect(0, 0, W, H); b.units.forEach(u => { const g = ctx.createRadialGradient(u.x, u.y, 2, u.x, u.y, 40); g.addColorStop(0, 'rgba(255,190,90,.18)'); g.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g; ctx.fillRect(u.x - 40, u.y - 40, 80, 80); }); }
   if (b.z.mud || (b.sp && (b.sp.id === 'rain' || b.sp.id === 'mud'))) { ctx.strokeStyle = 'rgba(200,210,220,.16)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 60; i++) { const x = (i * 53 + b.t * 30) % (W + 20), y = (i * 97 + b.t * 380) % (H + 20) - 10; ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9); } ctx.stroke(); }
+  drawDragTop(ctx, b);
   /* screen-space overlay: volley charges, zoom hint, archer tooltip */
   ctx.setTransform(k, 0, 0, k, 0, 0);
   if (b.phase === 'ready' && !dragU) { const cw = ctx.canvas.width / k, ch = ctx.canvas.height / k; ctx.fillStyle = 'rgba(8,10,7,.72)'; ctx.fillRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.font = '700 19px "Alegreya Sans",sans-serif'; ctx.fillText(`Stage ${b.N} in ${Math.ceil(b.readyT)}`, cw / 2, ch / 2 - 6); ctx.fillStyle = '#e8dcc0'; ctx.font = '12px "Alegreya Sans",sans-serif'; ctx.fillText('Upgrade and swap now, or tap to start', cw / 2, ch / 2 + 17); }
@@ -3011,7 +3020,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
-{"v":"2.25.3","items":["Moving men no longer piles up Front and Back messages, even while paused: one short message at a time, gone in a second."]},
+{"v":"2.25.4","items":["While you drag a man, he and the hints stay on top of everyone else, so nothing hides them. Moving men no longer piles up Front and Back messages, even while paused."]},
 {"v":"2.25.2","items":["Bonds on the battlefield are much quieter: just a faint coloured line between bonded men standing together. Drag or tap a man to see who he is tied to (they get a ring), with one short line of text."]},
 {"v":"2.25.1","items":["Bonds show on the battlefield. Friends (+6%), married couples (+10%) and feuding men (-6%) standing close together are joined by a coloured line with their bonus.","While you drag a man, dashed lines point to everyone he is tied to, so you can see who to put him next to and who to keep him away from.","Tap an archer to see his bonds and whether they count right now."]},
 {"v":"2.25","items":["Place your men anywhere on your half of the battlefield: drag an archer to a new spot, or drop him on another man to swap them. A shaded band shows the front while you drag.","Within 50 paces of the road counts as the front: +20% damage, but you get charged. The front has room for five; crowd more in and the bonus is shared between them.","Hold the road: if fewer than three men stand at the front, the French leave the road and hunt the rest of your company.","Bunching up has a price: a cavalry charge or a crossbow bolt now hurts the men standing next to the one it hits.","Your formation stays put from stage to stage, and keeps its shape when the road changes every ten stages. Reset to ranks on the Company page puts everyone back.","Friends and couples get their bonus when they stand close together, wherever that is. Best men forward fills the places nearest the road with your toughest men.","Time away is worked out as before, from your company's strength, so a clever formation helps while you watch but does not change overnight progress."]},
