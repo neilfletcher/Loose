@@ -173,7 +173,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 <body>
 <div id="app">
   <header>
-    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
+    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
     <div class="res" id="res"></div>
   </header>
   <main id="view"></main>
@@ -655,7 +655,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.13.1';
+const VERSION = '2.14';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -824,18 +824,35 @@ function notify(title, body){
 }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
 /* installed apps can sit on an old version for days: check for a newer one when the app opens or comes back */
+/* releases are offered, never forced: the player decides when to install. Release notes ride along in the page. */
+let updInfo = null;
 async function checkUpdate(){
   try {
     if (location.protocol !== 'https:') return;
     const r = await fetch('index.html?v=' + Date.now(), {cache:'no-store'}); if (!r.ok) return;
-    const m = (await r.text()).match(/const VERSION = '([^']+)'/); if (!m || m[1] === VERSION) return;
-    if (sessionStorage.getItem('loose-upd') === m[1]) return; sessionStorage.setItem('loose-upd', m[1]);
-    save(); if (fbUser) { try { await cloudSync(); } catch(e){} }
-    if (swReg) { try { await swReg.update(); } catch(e){} }
-    window.__skipSave = true; location.reload();
+    const t = await r.text(), m = t.match(/const VERSION = '([^']+)'/); if (!m || m[1] === VERSION) { updInfo = null; updBtnShow(); return; }
+    let notes = []; try { const n = t.match(/<script id="relnotes" type="application\/json">([\s\S]*?)<\/script>/); if (n) notes = JSON.parse(n[1]); } catch(e){}
+    updInfo = {v:m[1], notes}; updBtnShow();
+    if (notes.some(x => x.force && x.v === m[1])) applyUpdate();
   } catch(e){}
 }
+function updBtnShow(){ const b = $('#updBtn'); if (b) b.style.display = updInfo ? '' : 'none'; }
+function sheetUpdate(){
+  if (!updInfo) return; sheetFn = null;
+  const mine = updInfo.notes.filter(n => cmpV(n.v, VERSION) > 0);
+  openSheet(`<div class="fell" style="font-size:24px">Version ${esc(updInfo.v)} is ready</div><p class="sub">You're on ${VERSION}. Your save carries over, and is synced first if you're signed in.</p>
+  ${mine.length ? mine.map(n => `<div class="card"><b>${esc(n.v)}</b><ul style="margin:6px 0 0 18px;padding:0">${n.items.map(i => `<li class="sub" style="margin-bottom:3px">${esc(i)}</li>`).join('')}</ul></div>`).join('') : '<div class="card sub">Fixes and small improvements.</div>'}
+  <div style="margin-top:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px"><button class="btn gold big" data-act="doupdate">Update now</button><button class="btn big" data-act="close">Not now</button></div>`);
+}
+const cmpV = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
+async function applyUpdate(){
+  try { save(); if (fbUser) { try { await cloudSync(); } catch(e){} } } catch(e){}
+  const sw = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if (sw) { await new Promise(res => { const t = setTimeout(res, 8000); navigator.serviceWorker.addEventListener('message', ev => { if (ev.data === 'update-applied' || ev.data === 'update-failed') { clearTimeout(t); res(); } }, {once:true}); sw.postMessage('apply-update'); }); }
+  window.__skipSave = true; location.reload();
+}
 setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 600000);
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#updBtn')) sheetUpdate(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 function initPwa(){ try { if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname.endsWith('github.io')) navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {}); } catch(e){} }
 
@@ -1820,6 +1837,7 @@ document.addEventListener('click', e => {
     case 'signin': cloudMsg = ''; signIn(); return;
     case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
     case 'cloudsave': cloudSync().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
+    case 'doupdate': el.textContent = 'Updating...'; applyUpdate(); return;
     case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem('loose-backup')); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
@@ -2027,8 +2045,13 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
+<script id="relnotes" type="application/json">[
+{"v":"2.14","items":["New releases are now offered, not forced: tap Update when you're ready.","Release notes like these show what changed."]},
+{"v":"2.13.1","items":["Battle clock on screen; bosses get three minutes; running out says 'Out of time'.","Sound starts on your first tap after opening the game."]},
+{"v":"2.13","items":["Rebalanced: billmen and the trebuchet follow your archers' strength; enemies toughen faster past stage 100; fewer event tokens.","Pay off a whole rarity at once from the Company tab.","Tap the field to loose a volley; tap an archer for their card; pinch or scroll to zoom.","Duplicates past 7 stars give +3% damage each."]}
+]</script>
 </body>
 </html>
