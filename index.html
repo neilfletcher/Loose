@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.24.1';
+const VERSION = '2.24.2';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1713,8 +1713,10 @@ function render(){
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const v = $('#view');
   if (tab === 'battle') { if (!$('#battleView')) { v.innerHTML = viewBattle(); bindBattleView(); } battleHud(true); return; }
+  const keepV = $('#vcv');
   v.innerHTML = tab === 'captain' ? viewCaptain() : tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
-  if (tab === 'camp' && S.campView !== 'list') villageStart();
+  /* keep the village canvas between refreshes so it never flashes blank */
+  if (tab === 'camp' && S.campView !== 'list') { const nv = $('#vcv'); if (keepV && nv && keepV !== nv) nv.replaceWith(keepV); villageStart(); }
 }
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
@@ -2042,8 +2044,8 @@ function vDraw(){
   });
 }
 function villageStart(){
-  vcv = $('#vcv'); if (!vcv) return; const w = vcv.clientWidth || 360, dpr = Math.min(2, window.devicePixelRatio || 1);
-  vcv.style.height = Math.round(w * VH / VW) + 'px'; vcv.width = Math.round(w * dpr); vcv.height = Math.round(w * VH / VW * dpr); vbgKey = '';
+  vcv = $('#vcv'); if (!vcv) return; const w = vcv.clientWidth || 360, dpr = Math.min(2, window.devicePixelRatio || 1), pw = Math.round(w * dpr);
+  if (vcv.width !== pw) { vcv.style.height = Math.round(w * VH / VW) + 'px'; vcv.width = pw; vcv.height = Math.round(w * VH / VW * dpr); vbgKey = ''; }
   if (!vPeople.length || !vPeople.every(p => S.roster.includes(p.a)) || vGeese.length !== (B_('geese') ? 2 + vTier('geese') * 2 : 0)) vInitPeople();
   vcv.onclick = ev => { const r = vcv.getBoundingClientRect(), x = (ev.clientX - r.left) / r.width * VW, y = (ev.clientY - r.top) / r.height * VH; let best = null, bd = 30;
     for (const b in VPOS) { const d = dist(VPOS[b][0], VPOS[b][1] + 4, x, y); if (d < bd) { bd = d; best = b; } }
@@ -2935,6 +2937,7 @@ window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dl
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.24.2","items":["The village map no longer flickers every couple of seconds."]},
 {"v":"2.24.1","items":["The village is redrawn in the same style as the battlefield: the same grass, road, trees and shadows, buildings seen from above, and your own men wandering between them.","The camp is alive: the fire flickers, chimneys smoke, geese waddle round their pen, the river runs and arrows fly at the butts."]},
 {"v":"2.24","items":["The village: the Camp tab now shows your camp as a map. Every building is drawn and grows as you upgrade it, from a lone tent to a row of them, from one strip of field to many.","Tap any building on the map to see what it does and upgrade it. A gold arrow means you can afford an upgrade; a ring shows work in progress.","Plots for buildings you have not reached yet are marked with the stage they unlock at. Some camp followers show up too, if you have them.","Prefer the old way? The List button above the map brings it back."]},
 {"v":"2.23.2","items":["A tidy-up pass. The welcome and How to play text now mention the things you can do mid-fight, and holding after a defeat.","The Orders and Captain cards, the Centenar rank and the Orders tab describe what is really there now. Duke gives one more builder, not a fourth.","The Captain button appears once your captain does, at stage 15, instead of sitting there doing nothing."]},
