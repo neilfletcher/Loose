@@ -68,15 +68,15 @@ auth.onAuthStateChanged(async u => {
 const RULES = `match /loose_gifts/{id} {\n  allow read, delete: if true;\n  allow create, update: if request.auth != null && request.auth.token.email == '${ADMIN}';\n}`;
 document.addEventListener('click', async e => {
   const b = e.target.closest('button.gift'); if (!b) return;
-  const n = parseInt(prompt(`How many medals for ${b.dataset.cap}?`, '50'), 10); if (!n || n <= 0) return;
+  const n = parseInt(prompt(`How many medals for ${b.dataset.cap}? Use a minus number to take some away, for example -1500.`, '50'), 10); if (!n) return;
   const msg = prompt('A note to go with it (optional)', '') || '';
   try {
     const ref = db.collection('loose_gifts').doc(b.dataset.id), cur = await ref.get(), prev = cur.exists ? (cur.data().medals || 0) : 0;
     await ref.set({medals:prev + n, msg, gid:Math.random().toString(36).slice(2, 10), at:Date.now()});
-    b.textContent = `Sent ${prev + n}`; b.disabled = true;
+    b.textContent = prev + n < 0 ? `Taking ${-(prev + n)}` : `Sent ${prev + n}`; b.disabled = true;
   } catch (err) { alert(`The gift could not be sent: ${err.message}\n\nAdd this to your Firestore rules (Firebase console, Firestore Database, Rules), inside "match /databases/{database}/documents", then publish:\n\n${RULES}`); }
 });
-const giftBtn = x => `<button class="gift" data-id="${esc(x.id)}" data-cap="${esc((x.cap || 'this player') + ((x.slot || 1) > 1 ? ', save slot ' + x.slot : ''))}" style="padding:4px 8px">Gift medals</button>`;
+const giftBtn = x => `<button class="gift" data-id="${esc(x.id)}" data-cap="${esc((x.cap || 'this player') + ((x.slot || 1) > 1 ? ', save slot ' + x.slot : ''))}" style="padding:4px 8px">Medals</button>`;
 /* one row per person: saves from the same device (save slots) are merged, keeping the furthest-along save and summing feature use */
 function people(all){
   const by = {}; all.forEach(p => { const k = p.dev || p.id; (by[k] = by[k] || []).push(p); });

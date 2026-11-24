@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.26';
+const VERSION = '2.26.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1248,10 +1248,11 @@ async function checkGift(){
   try {
     const r = await fetch(url); if (!r.ok) return; const d = await r.json(), f = d.fields || {};
     const gid = f.gid && f.gid.stringValue, md = +(f.medals && (f.medals.integerValue || f.medals.doubleValue) || 0), msg = f.msg && f.msg.stringValue || '';
-    S.gifts = S.gifts || []; if (!gid || S.gifts.includes(gid) || md <= 0) return;
-    S.gifts.push(gid); S.gifts = S.gifts.slice(-30); S.res.medals += md; tr('gift'); chron(`Received a gift of ${md} medals.`); save();
+    S.gifts = S.gifts || []; if (!gid || S.gifts.includes(gid) || !md) return;
+    S.gifts.push(gid); S.gifts = S.gifts.slice(-30); const before = S.res.medals; S.res.medals = Math.max(0, S.res.medals + md); tr(md > 0 ? 'gift' : 'giftTaken'); if (md > 0) chron(`Received a gift of ${md} medals.`); save();
     fetch(url, {method:'DELETE'}).catch(() => {});
-    sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">A gift from the Constable</div><p class="ev">A rider brings a purse from headquarters: <b>${md} medals</b>.${msg ? `</p><p class="ev"><i>"${esc(msg)}"</i>` : ''}</p><button class="btn gold big" data-act="close">My thanks</button>`);
+    sheetFn = null; if (md < 0) { openSheet(`<div class="fell" style="font-size:24px">The Constable's clerk</div><p class="ev">A clerk arrives with a ledger and a very long face. The company's medals do not add up, and ${fmt(before - S.res.medals)} of them go back to headquarters.${msg ? `</p><p class="ev"><i>"${esc(msg)}"</i>` : ''}</p><button class="btn gold big" data-act="close">Fair enough</button>`); return; }
+    openSheet(`<div class="fell" style="font-size:24px">A gift from the Constable</div><p class="ev">A rider brings a purse from headquarters: <b>${md} medals</b>.${msg ? `</p><p class="ev"><i>"${esc(msg)}"</i>` : ''}</p><button class="btn gold big" data-act="close">My thanks</button>`);
   } catch (e) {}
 }
 setInterval(checkGift, 120000); setTimeout(checkGift, 8000);
@@ -3137,6 +3138,7 @@ window.__dbg = {chron, taleClose, taleInit, blowBarrel, useFire, get FIRE(){ ret
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.26.1","items":["Headquarters can now correct a company's medals as well as send them."]},
 {"v":"2.26","items":["The Tale of the Company: Riles writes a chapter of your company's story each time you beat a region's boss, and when a campaign ends. The weddings, hangings, nicknames and drinking matches, the deadliest man, the dead, and a few numbers he finds funny. Read it on the Captain page.","A Formation screen: tap Formation above the battlefield (or on the Company page) to arrange your men on a quiet copy of the map. Changes take effect at once during the break between stages, otherwise from the next fight.","Men can no longer be dragged on the live battlefield, so tapping near your archers always looses a volley. Tap right on a man to see his details.","When zoomed in, a Zoom out button replaces the double tap, so two quick taps are always two volleys.","A company held at a boss stage it already beats no longer prints medals: full boss medals come the first time you beat each boss in a campaign, and after that only the usual medal for every ten wins."]},
 {"v":"2.25.4","items":["While you drag a man, he and the hints stay on top of everyone else, so nothing hides them. Moving men no longer piles up Front and Back messages, even while paused."]},
 {"v":"2.25.2","items":["Bonds on the battlefield are much quieter: just a faint coloured line between bonded men standing together. Drag or tap a man to see who he is tied to (they get a ring), with one short line of text."]},
