@@ -668,7 +668,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18';
+const VERSION = '2.18.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1723,7 +1723,7 @@ function viewOrders(){
   if (S.seen.exped) {
     h += `<h3>EXPEDITIONS · ${S.exped.length}/3 OUT</h3><div class="sub" style="margin-bottom:8px">Send men who are not in the line. They come back with resources, stories, and sometimes a new habit.</div>`;
     S.exped.forEach((x, i) => { const left = (x.end - Date.now()) / 1000, E = EXPED[x.type]; h += `<div class="card row"><div class="grow"><b>${E.n}</b><div class="sub">${x.ids.map(id => esc((S.roster.find(a => a.id === id) || {name:'?'}).name.split(' ')[0])).join(', ')} · ${left > 0 ? fmtT(left) + ' left' : 'back in camp'}</div><div class="bar"><i style="width:${clamp(100 * (1 - left / E.t), 0, 100)}%"></i></div></div><button class="btn ${left <= 0 ? 'gold' : ''}" data-act="collect" data-i="${i}" ${left <= 0 ? '' : 'disabled'}>Collect</button></div>`; });
-    Object.keys(EXPED).forEach(k => { const E = EXPED[k], un = S.bestEver >= E.un; h += `<div class="card row ${un ? '' : 'lock'}"><div class="grow"><b>${E.n}</b> <span class="sub">${fmtT(E.t)}</span><div class="sub">${un ? E.d : 'Reach stage ' + E.un}</div></div>${un ? `<button class="btn" data-act="exped" data-id="${k}" ${S.exped.length < 3 ? '' : 'disabled'}>Send</button>` : ''}</div>`; });
+    Object.keys(EXPED).forEach(k => { const E = EXPED[k], un = S.bestEver >= E.un; h += `<div class="card row ${un ? '' : 'lock'}"><div class="grow"><b>${E.n}</b> <span class="sub">${fmtT(E.t)}</span><div class="sub">${un ? E.d : 'Reach stage ' + E.un}</div></div>${un ? (S.exped.some(x => x.type === k) ? '<span class="sub">Already out</span>' : `<button class="btn" data-act="exped" data-id="${k}" ${S.exped.length < 3 ? '' : 'disabled'}>Send</button>`) : ''}</div>`; });
   }
   return h;
 }
@@ -1973,9 +1973,9 @@ document.addEventListener('click', e => {
     case 'buywrit': { const p = writPrice(); if (S.res.silver < p) return; S.res.silver -= p; S.res.writs++; S.writBuys++; sfx('coin'); break; }
     case 'daily': { if (!dailyReady()) return; const r = dailyReward(S.daily.streak % 7); for (const k in r) addRes(k, r[k]); S.daily.day = dayKey(); S.daily.streak++; sfx('coin'); toast('Rations collected.', true); break; }
     case 'claimq': { const q = S.quests[+el.dataset.i]; if (!q || qProgress(q) < q.n) return; for (const k in q.rw) addRes(k, q.rw[k]); S.quests.splice(+el.dataset.i, 1); S.quests.push(newQuest()); sfx('coin'); break; }
-    case 'exped': expSel = []; sheetExped(id); return;
+    case 'exped': if (S.exped.some(x => x.type === id)) return toast('That expedition is already out.'); expSel = []; sheetExped(id); return;
     case 'expsel': { if (expSel.includes(id)) expSel = expSel.filter(x => x !== id); else if (expSel.length < 3) expSel.push(id); sheetExped(el.closest('#sheet').querySelector('[data-act=expgo]').dataset.id); return; }
-    case 'expgo': { if (!expSel.length || S.exped.length >= 3) return; S.exped.push({type:id, ids:[...expSel], end:Date.now() + EXPED[id].t * 1000}); expSel.forEach(i => { const m = S.roster.find(x => x.id === i); if (m) m.away = id; }); closeSheet(); toast('They set off down the road.', true); break; }
+    case 'expgo': { if (!expSel.length || S.exped.length >= 3 || S.exped.some(x => x.type === id)) return; S.exped.push({type:id, ids:[...expSel], end:Date.now() + EXPED[id].t * 1000}); expSel.forEach(i => { const m = S.roster.find(x => x.id === i); if (m) m.away = id; }); closeSheet(); toast('They set off down the road.', true); break; }
     case 'collect': { const x = S.exped[+el.dataset.i]; if (!x || x.end > Date.now()) return; collectExped(+el.dataset.i); return; }
     case 'perk': { const P = LEGACY[id], l = L(id), c = Math.ceil(P.c * Math.pow(P.g, l)); if (S.res.glory < c || (P.max && l >= P.max)) return; S.res.glory -= c; S.legacy[id] = l + 1; sfx('legend'); refreshLineStats(); break; }
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
@@ -2216,6 +2216,7 @@ window.__dbg = {friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ upd
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18.1","items":["Each kind of expedition can only be out once at a time."]},
 {"v":"2.18","items":["On a computer the game now uses the whole window: the battlefield stays on the left and keeps fighting while you run the Camp, Company and the rest on the right. Phones are unchanged."]},
 {"v":"2.17","items":["A new Legendary has joined the company: Alex, the Sleepless. Her special, Up till three, keeps the whole line loosing at three times the pace.","Friends of the company: thirteen named archers can now turn up at the Tavern as Rare or Epic recruits, each with their own story.","New faces around camp: Doc the medic, Grim the Master Pintsman, Gaz the Chapman, Scott on the drill yard, Ross Taylor and his trebuchet, and Riles keeping the Chronicle.","A new camp event: the Hermit."]},
 {"v":"2.16","items":["Building upgrades now take time, with a progress bar. Two builders work at once (three from stage 60), and medals finish a job straight away. Jobs carry on while you are away.","Fallen Legendaries can be brought back from the Roll of Honour for medals. They return wounded and a little weaker. Everyone else who falls stays fallen.","The medic: from stage 25, tap Medic on the battlefield to patch up the line and get downed men back up. It recharges slowly.","Boss fights have their own, angrier music.","Full-screen button above the battlefield hides everything but the fight."]},
