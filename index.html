@@ -161,6 +161,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 .gc span{filter:saturate(1.2)}
 .eqrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #22301f}
 .eqrow:last-child{border-bottom:0}
+.eqrow .gc{touch-action:none}.gc.dragsrc{opacity:.35}.gc.droptgt{outline:2px solid var(--gold);outline-offset:1px}#gdrag{position:fixed;z-index:99;pointer-events:none;transform:translate(-50%,-60%) scale(1.25)}
 .ic{width:1.1em;height:1.1em;vertical-align:-.2em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .ib .ic{width:18px;height:18px;vertical-align:0}
 .btn.gold .ic,.btn.red .ic,.days div.got .ic{color:inherit!important}
@@ -212,7 +213,7 @@ function fmt(n){
 function fmtT(s){ s = Math.max(0, Math.round(s)); if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's'; return Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm'; }
 
 /* ================= data ================= */
-const ICONS = {"coin": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4.5\"/>", "grain": "<path d=\"M12 21V6M12 10c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 10c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6zM12 16c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 16c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6z\"/>", "log": "<circle cx=\"7\" cy=\"16\" r=\"3.5\"/><circle cx=\"17\" cy=\"16\" r=\"3.5\"/><circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><circle cx=\"7\" cy=\"16\" r=\".6\"/><circle cx=\"17\" cy=\"16\" r=\".6\"/><circle cx=\"12\" cy=\"8.5\" r=\".6\"/>", "pick": "<path d=\"M5 19L15 9M10.8 4.8Q18 6 19.2 13.2\"/>", "feather": "<path d=\"M19 4C11 4 6 10 6 18M6 18c6 0 11-5 13-14M4 20l2-2M9 15l5-5\"/>", "bow": "<path d=\"M7 3c8 3 8 15 0 18M7 3v18M3 12h17M17 9l3 3-3 3\"/>", "scroll": "<path d=\"M8 4h10a2 2 0 0 1 0 4H8M8 4a2 2 0 0 0-2 2v12a2 2 0 0 0 4 0v-1h10v1a2 2 0 0 1-2 2H8M11 11h5M11 14h4\"/>", "medal": "<circle cx=\"12\" cy=\"15\" r=\"5\"/><path d=\"M8 3l4 7 4-7M12 13v4\"/>", "fleur": "<path d=\"M12 3c-2 3-2 6 0 9 2-3 2-6 0-9zM12 12c-3-3-7-2-7 1 0 2 3 3 5 1M12 12c3-3 7-2 7 1 0 2-3 3-5 1M8 15h8M12 15v6\"/>", "book": "<path d=\"M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z\"/>", "garter": "<circle cx=\"12\" cy=\"9\" r=\"5\"/><path d=\"M9 13l-2 8 5-3 5 3-2-8\"/>", "barn": "<path d=\"M3 10l9-6 9 6v10H3zM9 20v-6h6v6\"/>", "tent": "<path d=\"M3 20L12 4l9 16zM12 4v16M9 20l3-6 3 6\"/>", "target": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/><circle cx=\"12\" cy=\"12\" r=\".8\"/>", "scales": "<path d=\"M12 4v16M8 20h8M5 7h14M5 7l-3 6h6zM19 7l-3 6h6z\"/>", "tree": "<path d=\"M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4\"/>", "cross": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v8M8 12h8\"/>", "tankard": "<path d=\"M5 6h10v14H5zM15 9h3v7h-3M8 9v8M12 9v8\"/>", "axe": "<path d=\"M5 21L15 8M12 5c4-1 8 2 8 7l-4-1-3-3z\"/>", "shield": "<path d=\"M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z\"/>", "stone": "<path d=\"M5 16l2-7 6-4 5 3 2 8-6 3zM9 10l3 2\"/>", "beads": "<circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"7\" cy=\"9\" r=\"2\"/><circle cx=\"17\" cy=\"9\" r=\"2\"/><circle cx=\"12\" cy=\"18\" r=\"3\"/><path d=\"M8.5 10.5L11 15.5M15.5 10.5L13 15.5\"/>", "head": "<path d=\"M12 3l5 9-5-2-5 2zM12 10v11\"/>", "lock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"10\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>", "sound": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11\"/>", "mute": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1\"/><circle cx=\"12\" cy=\"12\" r=\"6.5\"/>", "ticket": "<path d=\"M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10\"/>"};
+const ICONS = {"coin": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4.5\"/>", "grain": "<path d=\"M12 21V6M12 10c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 10c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6zM12 16c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 16c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6z\"/>", "log": "<circle cx=\"7\" cy=\"16\" r=\"3.5\"/><circle cx=\"17\" cy=\"16\" r=\"3.5\"/><circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><circle cx=\"7\" cy=\"16\" r=\".6\"/><circle cx=\"17\" cy=\"16\" r=\".6\"/><circle cx=\"12\" cy=\"8.5\" r=\".6\"/>", "pick": "<path d=\"M5 19L15 9M10.8 4.8Q18 6 19.2 13.2\"/>", "feather": "<path d=\"M19 4C11 4 6 10 6 18M6 18c6 0 11-5 13-14M4 20l2-2M9 15l5-5\"/>", "bow": "<path d=\"M7 3c8 3 8 15 0 18M7 3v18M3 12h17M17 9l3 3-3 3\"/>", "scroll": "<path d=\"M8 4h10a2 2 0 0 1 0 4H8M8 4a2 2 0 0 0-2 2v12a2 2 0 0 0 4 0v-1h10v1a2 2 0 0 1-2 2H8M11 11h5M11 14h4\"/>", "medal": "<circle cx=\"12\" cy=\"15\" r=\"5\"/><path d=\"M8 3l4 7 4-7M12 13v4\"/>", "fleur": "<path d=\"M12 3c-2 3-2 6 0 9 2-3 2-6 0-9zM12 12c-3-3-7-2-7 1 0 2 3 3 5 1M12 12c3-3 7-2 7 1 0 2-3 3-5 1M8 15h8M12 15v6\"/>", "book": "<path d=\"M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z\"/>", "garter": "<circle cx=\"12\" cy=\"9\" r=\"5\"/><path d=\"M9 13l-2 8 5-3 5 3-2-8\"/>", "barn": "<path d=\"M3 10l9-6 9 6v10H3zM9 20v-6h6v6\"/>", "tent": "<path d=\"M3 20L12 4l9 16zM12 4v16M9 20l3-6 3 6\"/>", "target": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/><circle cx=\"12\" cy=\"12\" r=\".8\"/>", "scales": "<path d=\"M12 4v16M8 20h8M5 7h14M5 7l-3 6h6zM19 7l-3 6h6z\"/>", "tree": "<path d=\"M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4\"/>", "cross": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v8M8 12h8\"/>", "tankard": "<path d=\"M5 6h10v14H5zM15 9h3v7h-3M8 9v8M12 9v8\"/>", "axe": "<path d=\"M5 21L15 8M12 5c4-1 8 2 8 7l-4-1-3-3z\"/>", "shield": "<path d=\"M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z\"/>", "stone": "<path d=\"M5 16l2-7 6-4 5 3 2 8-6 3zM9 10l3 2\"/>", "beads": "<circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"7\" cy=\"9\" r=\"2\"/><circle cx=\"17\" cy=\"9\" r=\"2\"/><circle cx=\"12\" cy=\"18\" r=\"3\"/><path d=\"M8.5 10.5L11 15.5M15.5 10.5L13 15.5\"/>", "head": "<path d=\"M12 3l5 9-5-2-5 2zM12 10v11\"/>", "lock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"10\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>", "sound": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11\"/>", "mute": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1\"/><circle cx=\"12\" cy=\"12\" r=\"6.5\"/>", "ticket": "<path d=\"M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10\"/>", "pause": "<path d=\"M8 5v14M16 5v14\"/>", "play": "<path d=\"M7 5l12 7-12 7z\"/>"};
 const TINT = {"coin": "#e8b64c", "grain": "#d9b85c", "log": "#b98a5a", "pick": "#a9b4bd", "feather": "#e6e1d3", "bow": "#c9a070", "scroll": "#e3d3a8", "medal": "#d8584c", "fleur": "#e8b64c", "book": "#d8c79a", "garter": "#6f9be0", "ticket": "#d8c79a"};
 const IC = (k, c) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"${c || TINT[k] ? ` style="color:${c || TINT[k]}"` : ''}>${ICONS[k]}</svg>`;
 
@@ -271,18 +272,18 @@ const BLD = {
   woodcut:   {n:'Woodcutters', i:IC('log'), un:1, cost:{silver:20, food:15}, g:1.14, d:'Wood for every building.', prod:'wood', rate:1.2},
   store:     {n:'Storehouse', i:IC('barn'), un:4, cost:{silver:100, wood:150, iron:10}, g:1.3, d:'Raises the cap on food, wood, iron, feathers and arrows.'},
   mine:      {n:'Iron mine', i:IC('pick'), un:5, cost:{silver:80, wood:60}, g:1.15, d:'Iron for heavier buildings and promotions.', prod:'iron', rate:.6},
-  geese:     {n:'Goose pens', i:IC('feather'), un:5, cost:{silver:60, food:50, wood:20}, g:1.15, d:'Feathers for fletching. And goose.', prod:'feathers', rate:.8},
+  geese:     {n:'Goose pens', i:IC('feather'), un:6, cost:{silver:60, food:50, wood:20}, g:1.15, d:'Feathers for fletching. And goose.', prod:'feathers', rate:.8},
   fletcher:  {n:'Fletcher', i:IC('bow'), un:8, cost:{silver:150, wood:100, iron:40}, g:1.17, d:'Turns wood, feathers and iron into good arrows. While you have arrows, your men hit 50% harder.'},
   barracks:  {n:'Barracks', i:IC('tent'), un:10, cost:{silver:400, wood:300, iron:100}, g:2.1, max:7, d:'One more man in the battle line per level, and more room on the roll.'},
   drill:     {n:'Drill yard', i:IC('target'), un:12, cost:{silver:300, wood:150, iron:80, feathers:60}, g:1.32, max:15, d:'The Captain\'s volley: more arrows, more often.'},
-  market:    {n:'Market', i:IC('scales'), un:15, cost:{silver:500, wood:300}, g:1.22, d:'Sells anything over the storage cap, and brings in silver of its own.'},
-  bowyer:    {n:'Bowyer', i:IC('tree'), un:15, cost:{silver:600, wood:400, iron:150}, g:1.24, d:'Better bows for everyone. Damage doubles every ten levels.'},
-  surgeon:   {n:'Barber-surgeon', i:IC('cross'), un:20, cost:{silver:800, food:500, wood:300}, g:1.25, max:9, d:'Wounded men recover faster, and everyone is a bit tougher.'},
+  market:    {n:'Market', i:IC('scales'), un:17, cost:{silver:500, wood:300}, g:1.22, d:'Sells anything over the storage cap, and brings in silver of its own.'},
+  bowyer:    {n:'Bowyer', i:IC('tree'), un:19, cost:{silver:600, wood:400, iron:150}, g:1.24, d:'Better bows for everyone. Damage doubles every ten levels.'},
+  surgeon:   {n:'Barber-surgeon', i:IC('cross'), un:21, cost:{silver:800, food:500, wood:300}, g:1.25, max:9, d:'Wounded men recover faster, and everyone is a bit tougher.'},
   butts:     {n:'Practice butts', i:IC('target'), un:25, cost:{silver:1000, food:800, wood:600}, g:1.25, d:'Men in the line train on their own: a free level every so often.'},
-  tavern:    {n:'Tavern', i:IC('tankard'), un:30, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'},
-  scriptorium:{n:'Scriptorium', i:IC('book'), un:18, cost:{silver:700, wood:500, food:300}, g:1.25, d:'Clerks copying texts. Parchment for research in the Study.', prod:'parchment', rate:.05},
+  tavern:    {n:'Tavern', i:IC('tankard'), un:33, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'},
+  scriptorium:{n:'Scriptorium', i:IC('book'), un:30, cost:{silver:700, wood:500, food:300}, g:1.25, d:'Clerks copying texts. Parchment for research in the Study.', prod:'parchment', rate:.05},
   bill:      {n:'Billmen', i:IC('axe'), un:15, cost:{silver:500, food:400, iron:150}, g:1.22, d:'A knot of billmen who hold the road and stop whatever comes down it.'},
-  pavise:    {n:'Pavise-bearers', i:IC('shield'), un:25, cost:{silver:900, wood:600, iron:200}, g:1.22, d:'Big wooden shields: crossbow bolts do half damage, and the line is tougher.'},
+  pavise:    {n:'Pavise-bearers', i:IC('shield'), un:27, cost:{silver:900, wood:600, iron:200}, g:1.22, d:'Big wooden shields: crossbow bolts do half damage, and the line is tougher.'},
   treb:      {n:'Trebuchet', i:IC('stone'), un:45, cost:{silver:3000, wood:2000, iron:800}, g:1.24, d:'Lobs a stone into the thickest crowd every few seconds.'}
 };
 const LEGACY = {
@@ -308,15 +309,18 @@ const GLAST = ['Doria','Spinola','Grillo','Lomellini','Cattaneo','Fieschi'];
 const ORIGIN = ['Ex-poacher from Sherwood','Ploughman from Kent','Former novice monk','Tanner\'s son from Chester','Shepherd from the Pennines','Failed cooper from York','Fenland eel-catcher','Deserter from the Scottish wars','Lancashire stonemason','Charcoal burner from the Weald','Ferryman from Gloucester','Butcher\'s boy from Bristol'];
 const QUIRK = ['Owes money to three men.','Talks to his bow.','Had never seen the sea before Southampton.','Claims to have killed a bear. Has not.','Sends every penny home.','Snores like a siege engine.','Prays before every shot, and after most of them.','Cannot swim, and keeps mentioning it.','Has a wife in Kent and another in Wiltshire.','Keeps a list of every man he has killed. Spelling is a problem.','Signed up for the pay. Is beginning to doubt the pay.','Believes the French have tails.'];
 const EXPED = {
-  forage: {n:'Forage the villages', t:1800, un:20, d:'Food and wood. Try not to get shot by farmers.', risk:0},
-  fowl:   {n:'Fowling on the marsh', t:3600, un:20, d:'Feathers by the sackful, and food.', risk:0},
-  raid:   {n:'Raid a manor', t:7200, un:25, d:'Silver and iron, maybe a writ. Some resistance.', risk:.08},
+  forage: {n:'Forage the villages', t:1800, un:22, d:'Food and wood. Try not to get shot by farmers.', risk:0},
+  fowl:   {n:'Fowling on the marsh', t:3600, un:22, d:'Feathers by the sackful, and food.', risk:0},
+  raid:   {n:'Raid a manor', t:7200, un:26, d:'Silver and iron, maybe a writ. Some resistance.', risk:.08},
   patrol: {n:'Long patrol', t:21600, un:35, d:'Medals, a writ for certain, iron. Real danger.', risk:.2}
 };
 const RETURN_LINES = ['came back muddy, tired and pleased with themselves.','came back with more than they went with, and a story nobody believes.','came back one goose short of a triumph.','came back singing. Badly.','came back having argued the whole way. The haul is good though.'];
 
 /* ================= state ================= */
-const KEY = 'loose-idle-v1';
+/* save slots: slot 1 keeps the original keys so existing saves carry over; slots 2 and 3 add a suffix */
+const NSAVE = 3, SLOT = (() => { try { return Math.min(NSAVE, Math.max(1, +localStorage.getItem('loose-slot') || 1)); } catch(e) { return 1; } })();
+const skN = (name, n) => n === 1 ? name : name + '-s' + n, sk = name => skN(name, SLOT);
+const KEY = sk('loose-idle-v1');
 let S;
 function freshRun(){ return {silver:40, food:60, wood:60, iron:0, feathers:0, arrows:0}; }
 function defaultSave(){
@@ -326,7 +330,7 @@ function defaultSave(){
     seen:{}, newsT:420, news:false, fallen:[], autoRes:true, bossFirst:{}, welcomed:false, buttsT:0};
 }
 function load(){
-  let fresh = false; try { fresh = !!localStorage.getItem('loose-force'); } catch(e){}
+  let fresh = false; try { fresh = !!localStorage.getItem(sk('loose-force')); } catch(e){}
   try { const r = localStorage.getItem(KEY); if (r) { S = Object.assign(defaultSave(), JSON.parse(r)); if (fresh) S.epochAt = Date.now(); return true; } } catch(e){}
   S = defaultSave();
   const a = newArcher(1, 'yeoman'), b = newArcher(0, 'levy'), c = newArcher(0, 'levy');
@@ -354,7 +358,7 @@ function genBio(cls){
   return pick(ORIGIN) + '. ' + pick(QUIRK);
 }
 function newArcher(rar, cls, hero){
-  const a = {id:uid(), rar, cls, lvl:1, stars:RAR[rar].st, traits:[], kills:0, woundT:0, away:null, gear:{}, kt:{}};
+  const a = {id:uid(), rar, cls, lvl:1, stars:1, traits:[], kills:0, woundT:0, away:null, gear:{}, kt:{}};
   if (cls === 'hero') { a.hero = hero; a.name = HEROES[hero].n; a.bio = HEROES[hero].bio; a.traits = [pickTrait(1, [])]; a.traits.push(pickTrait(1, a.traits)); }
   else { a.name = genName(cls); a.bio = genBio(cls); const n = rar >= 2 ? 2 : 1; for (let i = 0; i < n; i++) a.traits.push(pickTrait(.45 + rar * .14, a.traits)); }
   return a;
@@ -655,7 +659,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.14';
+const VERSION = '2.15';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -714,7 +718,7 @@ function equipHtml(){
   if (!line.length) return '';
   const empties = line.reduce((n, [a]) => n + emptySlots(a).length, 0), fillable = line.reduce((n, [a]) => n + emptySlots(a).filter(s => spareFor(s).length).length, 0), spare = S.gear.filter(i => !gearOwner(i.id)).length;
   return `<h3>EQUIPMENT · THE LINE</h3><div class="card">
-  <div class="sub" style="margin-bottom:4px">${empties ? `<b style="color:${fillable ? 'var(--gold)' : '#e9988c'}">${empties} empty slot${empties > 1 ? 's' : ''}</b> in the line${fillable ? `, ${fillable} of them can be filled now` : ''}. ` : 'Everyone in the line is fully equipped. '}Tap a slot to change it. Gold slots have spare gear waiting.</div>
+  <div class="sub" style="margin-bottom:4px">${empties ? `<b style="color:${fillable ? 'var(--gold)' : '#e9988c'}">${empties} empty slot${empties > 1 ? 's' : ''}</b> in the line${fillable ? `, ${fillable} of them can be filled now` : ''}. ` : 'Everyone in the line is fully equipped. '}Tap a slot to change it, or drag gear from one archer to another. Gold slots have spare gear waiting.</div>
   ${line.map(([a, i]) => `<div class="eqrow"><img src="${portrait(a, 34)}" alt=""><div class="grow" style="min-width:0"><div class="nm r${a.rar}" style="font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name.split(' ')[0])} <span class="sub">${i < 5 ? 'front' : 'back'}</span></div>${gearChips(a, 'company')}</div></div>`).join('')}
   <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="eqbest" ${S.gear.length ? '' : 'disabled'}>Equip best for everyone</button><button class="btn" data-act="armoury">Armoury · ${spare} spare</button></div></div>`;
 }
@@ -865,7 +869,7 @@ function initCloud(){
 }
 function signIn(){ if (!fbAuth) return; fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => { cloudMsg = e.code === 'auth/popup-blocked' ? 'Your browser blocked the sign-in window. Allow pop-ups and try again.' : 'Sign-in did not work: ' + (e.message || e.code); refreshSheet(); }); }
 const DEV = (() => { try { let d = localStorage.getItem('loose-device'); if (!d) { d = uid(); localStorage.setItem('loose-device', d); } return d; } catch(e) { return uid(); } })();
-const syncAt = {get(){ try { return +localStorage.getItem('loose-sync') || 0; } catch(e) { return 0; } }, set(v){ try { localStorage.setItem('loose-sync', String(v)); } catch(e){} }};
+const syncAt = {get(){ try { return +localStorage.getItem(sk('loose-sync')) || 0; } catch(e) { return 0; } }, set(v){ try { localStorage.setItem(sk('loose-sync'), String(v)); } catch(e){} }};
 let lastInput = 0, cloudDoc = null, unsubCloud = null, syncing = false;
 ['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); if (S && S.sound && (!AC || AC.state !== 'running')) { try { ac(); } catch(e){} } }, true));
 const isActive = () => !document.hidden && Date.now() - lastInput < 120000;
@@ -875,8 +879,10 @@ const progOf = o => o && o.stats ? (o.stats.clears || 0) + (o.stats.kills || 0) 
 /* a is ahead of b if it began later (start over / save code), or same start and more progress */
 const ahead = (a, b) => { if (!a) return false; if (!b) return true; const ea = a.epochAt || 0, eb = b.epochAt || 0; return ea !== eb ? ea > eb : progOf(a) > progOf(b); };
 const docObj = d => { try { return JSON.parse(d.data); } catch(e) { return null; } };
+const slotRec = d => !d ? null : SLOT === 1 ? (d.data ? d : null) : (d.slots && d.slots['s' + SLOT]) || null;
+const slotPut = (t, ref, rec) => SLOT === 1 ? t.set(ref, rec, {merge:true}) : t.set(ref, {slots:{['s' + SLOT]:rec}}, {merge:true});
 const fromOther = d => d && d.device !== DEV && d.updated > syncAt.get();
-function keepBackup(o, why){ try { if (!o || !o.stats) return; const prev = JSON.parse(localStorage.getItem('loose-backup') || 'null'); if (prev && progOf(JSON.parse(prev.data)) > progOf(o) && Date.now() - prev.at < 7 * 864e5) return; localStorage.setItem('loose-backup', JSON.stringify({data:JSON.stringify(o), at:Date.now(), why, best:o.bestEver, stage:o.stage, clears:o.stats.clears || 0, kills:o.stats.kills || 0})); } catch(e){} }
+function keepBackup(o, why){ try { if (!o || !o.stats) return; const prev = JSON.parse(localStorage.getItem(sk('loose-backup')) || 'null'); if (prev && progOf(JSON.parse(prev.data)) > progOf(o) && Date.now() - prev.at < 7 * 864e5) return; localStorage.setItem(sk('loose-backup'), JSON.stringify({data:JSON.stringify(o), at:Date.now(), why, best:o.bestEver, stage:o.stage, clears:o.stats.clears || 0, kills:o.stats.kills || 0})); } catch(e){} }
 function adoptCloud(d, why){
   try {
     const data = docObj(d); if (!data) return; keepBackup(S, why || 'Replaced by a save from another device'); syncAt.set(d.updated);
@@ -895,14 +901,14 @@ async function cloudSync(force){
   try {
     save(); const ref = fbDb.collection('loose_saves').doc(fbUser.uid), mine = JSON.stringify(S), myP = progOf(S);
     const res = await fbDb.runTransaction(async t => {
-      const snap = await t.get(ref), d = snap.exists ? snap.data() : null, theirs = d ? docObj(d) : null, theirP = progOf(theirs);
+      const snap = await t.get(ref), d = snap.exists ? slotRec(snap.data()) : null, theirs = d ? docObj(d) : null, theirP = progOf(theirs);
       if (d && force !== 'override') {
         if (ahead(theirs, S)) return {adopt:d};
         if (!ahead(S, theirs)) return {same:d};
       }
       const now = Date.now(), rec = {data:mine, updated:now, device:DEV, best:S.bestEver, stage:S.stage, prestiges:S.prestiges, clears:S.stats.clears || 0, kills:S.stats.kills || 0, v:VERSION};
       rec.backup = d && d.device !== DEV && d.data ? d.data : d && d.backup ? d.backup : null;
-      t.set(ref, rec); return {now, rec};
+      slotPut(t, ref, rec); return {now, rec};
     });
     if (res.adopt) { cloudDoc = res.adopt; if (isActive() && force !== 'load') { pendingAdopt = res.adopt; } else adoptCloud(res.adopt); return; }
     if (res.same) { cloudDoc = res.same; syncAt.set(Math.max(syncAt.get(), res.same.updated)); return; }
@@ -914,11 +920,11 @@ const cloudUpload = f => cloudSync(f === 'override' ? 'override' : undefined);
 async function onSignedIn(){
   gtag('event', 'login'); cloudMsg = 'Syncing...'; refreshSheet();
   try {
-    let force; try { force = localStorage.getItem('loose-force') ? 'override' : 'load'; localStorage.removeItem('loose-force'); } catch(e) { force = 'load'; }
+    let force; try { force = localStorage.getItem(sk('loose-force')) ? 'override' : 'load'; localStorage.removeItem(sk('loose-force')); } catch(e) { force = 'load'; }
     await cloudSync(force);
     const ref = fbDb.collection('loose_saves').doc(fbUser.uid);
     if (unsubCloud) unsubCloud();
-    unsubCloud = ref.onSnapshot(sn => { if (!sn.exists) return; const d = sn.data(); cloudDoc = d; if (d.device !== DEV && ahead(docObj(d), S)) { if (isActive()) pendingAdopt = d; else adoptCloud(d); } }, () => {});
+    unsubCloud = ref.onSnapshot(sn => { if (!sn.exists) return; const d = slotRec(sn.data()); if (!d) return; cloudDoc = d; window.__cloudAll = sn.data(); if (d.device !== DEV && ahead(docObj(d), S)) { if (isActive()) pendingAdopt = d; else adoptCloud(d); } }, () => {});
     cloudMsg = 'Synced. This account keeps every signed-in device up to date.';
   } catch(e) { cloudMsg = e.code === 'permission-denied' ? 'Signed in, but the cloud database is not open yet. Your game is still saved on this device.' : 'Could not reach the cloud: ' + (e.message || e.code); }
   refreshSheet();
@@ -944,9 +950,19 @@ setInterval(pushStats, 180000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pushStats(); });
 
 /* ---------- settings ---------- */
+function slotInfo(n){ try { const r = localStorage.getItem(skN('loose-idle-v1', n)); if (r) { const o = JSON.parse(r); return {stage:o.stage, best:o.bestEver, prest:o.prestiges || 0, last:o.last, name:o.company || ''}; } } catch(e){}
+  const c = window.__cloudAll, rec = !c ? null : n === 1 ? (c.data ? c : null) : c.slots && c.slots['s' + n]; return rec ? {stage:rec.stage, best:rec.best, prest:rec.prestiges || 0, last:rec.updated, cloud:true} : null; }
+function slotsCard(){
+  const any = [2, 3].some(n => slotInfo(n)); if (!any && S.prestiges < 1 && S.bestEver < 40) return '';
+  const when = t => t ? new Date(t).toLocaleString('en-GB', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+  let h = `<h3>SAVE SLOTS</h3><div class="sub" style="margin-bottom:6px">Three separate games. Each one is saved and synced on its own.</div>`;
+  for (let n = 1; n <= NSAVE; n++) { const i = n === SLOT ? {stage:S.stage, best:S.bestEver, prest:S.prestiges, last:Date.now()} : slotInfo(n);
+    h += `<div class="card row"><div class="grow"><b>Slot ${n}</b>${n === SLOT ? ' <span class="tag" style="color:var(--gold)">PLAYING</span>' : ''}<div class="sub">${i ? `Stage ${i.stage} · best ${i.best} · ${i.prest} campaigns ended${i.cloud ? ' · in your account' : ''}${n !== SLOT && i.last ? `<br>Last played ${when(i.last)}` : ''}` : 'Empty'}</div></div>${n === SLOT ? '' : `<button class="btn ${i ? '' : 'gold'}" data-act="saveslot" data-n="${n}">${i ? 'Play' : 'New game'}</button>`}</div>`; }
+  return h;
+}
 function backupCard(){
   let h = '';
-  try { const b = JSON.parse(localStorage.getItem('loose-backup') || 'null'); if (b) h += `<div class="card"><b>Previous save on this device</b><div class="sub">${esc(b.why || '')}, ${new Date(b.at).toLocaleString('en-GB', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}<br>Stage ${b.stage} · best ${b.best} · <b>${fmt(b.clears || 0)} stages cleared</b>, ${fmt(b.kills || 0)} kills<br>(you have ${fmt(S.stats.clears || 0)} cleared now)</div><button class="btn big" style="margin-top:8px" data-act="restorebak">Restore this save</button></div>`; } catch(e){}
+  try { const b = JSON.parse(localStorage.getItem(sk('loose-backup')) || 'null'); if (b) h += `<div class="card"><b>Previous save on this device</b><div class="sub">${esc(b.why || '')}, ${new Date(b.at).toLocaleString('en-GB', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}<br>Stage ${b.stage} · best ${b.best} · <b>${fmt(b.clears || 0)} stages cleared</b>, ${fmt(b.kills || 0)} kills<br>(you have ${fmt(S.stats.clears || 0)} cleared now)</div><button class="btn big" style="margin-top:8px" data-act="restorebak">Restore this save</button></div>`; } catch(e){}
   try { if (cloudDoc && cloudDoc.backup) { const o = JSON.parse(cloudDoc.backup); h += `<div class="card"><b>Previous save in your account</b><div class="sub">The save another device replaced<br>Stage ${o.stage} · best ${o.bestEver} · <b>${fmt(o.stats.clears || 0)} stages cleared</b>, ${fmt(o.stats.kills || 0)} kills<br>(you have ${fmt(S.stats.clears || 0)} cleared now)</div><button class="btn big" style="margin-top:8px" data-act="restorecloudbak">Restore this save</button></div>`; } } catch(e){}
   return h ? `<h3>BACKUPS</h3>${h}` : '';
 }
@@ -957,7 +973,7 @@ function sheetSettings(){
     : `<div class="sub">Sign in to keep your company safe and carry on from any phone or computer.</div><button class="btn gold big" style="margin-top:8px" data-act="signin">Sign in with Google</button>`;
   openSheet(`<div class="fell" style="font-size:26px">Settings</div>
   <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
-  ${backupCard()}
+  ${slotsCard()}${backupCard()}
   <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:2px;font-size:12.5px;padding:6px"></textarea>
   <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
   <h3>YOUR COMPANY</h3><div class="card"><div class="sub">Captain's name, for the league</div><input class="nmin" id="capname" value="${esc(S.captain || '')}" maxlength="24" placeholder="${esc(captainName())}">
@@ -997,7 +1013,7 @@ const curEvent = () => EVENTS[weekNo() % EVENTS.length];
 const featuredHero = () => { const k = Object.keys(HEROES); return k[weekNo() % k.length]; };
 function weekEnds(){ const d = new Date(), day = d.getDay() || 7, end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (8 - day)); return (end - d) / 1000; }
 function evState(){ const w = weekNo(); if (!S.ev || S.ev.wk !== w) S.ev = {wk:w, stage:1, best:0, ms:{}, tokens:(S.ev && S.ev.tokens) || 0}; return S.ev; }
-const evOpen = () => S.bestEver >= 20;
+const evOpen = () => S.bestEver >= 28;
 const evN = k => Math.max(5, Math.floor(S.bestEver * .55)) + k * 2;
 const EV_MS = [[5, {writs:2}], [10, {medals:10}], [15, {gear:3}], [20, {writs:5}], [25, {gear:4}], [30, {hero:1}]];
 function grantHero(k){
@@ -1063,10 +1079,8 @@ const TUT = [null,
   {t:'battle', x:'Your archers fight on their own. Watch them clear a stage.', ok:() => S.stats.clears >= 1},
   {t:'company', x:'Open the Company tab and press Train on one of your archers.', ok:() => (S.qp.levels || 0) >= 1},
   {t:'camp', x:'Now open Camp and upgrade your Farms. Food and silver pay for training.', ok:() => (S.qp.builds || 0) >= 1},
-  {t:'battle', x:'On the battlefield, drag an archer onto another place to swap them. The front rank hits harder but takes the charges.', ok:() => S.tutSwap},
-  {t:'battle', x:'Push on. Reach stage 3 to open the Tavern.', ok:() => S.bestEver >= 3},
-  {t:'tavern', x:'Spend a writ at the Tavern to recruit a new man.', ok:() => S.stats.recruits >= 1},
-  {t:'company', x:'In Company, press "Best men forward" to put your strongest men in the line.', ok:() => S.tutFill}
+  {t:'battle', x:'Tap the battlefield to loose a volley of your own. Charges build up again on their own.', ok:() => S.tutVolley},
+  {t:'battle', x:'Drag an archer onto another place to swap them. The front rank hits harder but takes the charges.', ok:() => S.tutSwap}
 ];
 function tutTick(){
   if (!(S.tut >= 1 && S.tut < TUT.length)) { if ($('#tut')) tutBar(); return; }
@@ -1413,7 +1427,7 @@ function renderRes(){
 }
 function navBadges(){
   const tu = S.tut >= 1 && S.tut < 99 ? S.tut : 99;
-  const show = {battle:1, camp:tu >= 3, company:tu >= 2, tavern:S.seen.tavern, orders:S.seen.orders, study:S.bestEver >= 18 || Object.keys(S.research.done).length, legacy:S.seen.legacy};
+  const show = {battle:1, camp:tu >= 3, company:tu >= 2, tavern:S.seen.tavern, orders:S.seen.orders, study:S.bestEver >= 32 || Object.keys(S.research.done).length, legacy:S.seen.legacy};
   document.querySelectorAll('nav button').forEach(b => {
     b.classList.toggle('on', b.dataset.tab === tab); b.classList.toggle('hide', !show[b.dataset.tab]);
     let bd = false;
@@ -1435,7 +1449,7 @@ function render(){
   v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
 }
 function viewBattle(){
-  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="spd">1×</button></div>
+  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
   <div id="stage"><canvas id="cv"></canvas><div id="bMsg"></div></div>
   <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
@@ -1454,15 +1468,16 @@ function playerVolley(x, y){
   BT.volleys.push({x, y, t:.25, n:30, r:42, src:live, dmg:avg * 1.1, mine:1}); BT.fx.push({t:0, x, y:y - 20, txt:'Loose!', col:'#f2d07a', big:1}); sfx('volley'); S.tutVolley = 1; return true;
 }
 function volleyTick(dt){
-  if (!BT || BT.phase !== 'fight') return;
+  if (!BT || BT.phase !== 'fight' || paused) return;
   if (VOL.c < VOL.max) { VOL.t += dt; if (VOL.t >= VOL.every) { VOL.t = 0; VOL.c++; } } else VOL.t = 0;
   if (VOL.c >= VOL.max && Date.now() - lastInput > 45000 && BT.en.length) { const t = densest(); if (t) playerVolley(t.x, t.y); }
 }
-let tipU = null, tipT = 0;
+let tipU = null, tipT = 0, paused = false;
 function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
-  $('#spd').addEventListener('click', () => { const max = L('swift') ? 3 : 2; S.speed = S.speed >= max ? 1 : S.speed + 1; battleHud(true); });
+  $('#pause').addEventListener('click', () => { paused = !paused; battleHud(true); });
+  $('#spd').addEventListener('click', () => { const steps = S.mode === 'event' ? [1, 2, 3, 5] : L('swift') ? [1, 2, 3] : [1, 2]; const i = steps.indexOf(S.speed); S.speed = steps[(i + 1) % steps.length] || 1; battleHud(true); });
   $('#newsBtn').addEventListener('click', () => campEvent());
   $('#modeBtn').addEventListener('click', () => { S.mode = S.mode === 'event' ? 'main' : 'event'; newBattle(); battleHud(true); save(); });
   /* screen -> field coordinates, through the camera */
@@ -1507,10 +1522,10 @@ function battleHud(full){
   if (tab !== 'battle' || !BT || !$('#bT')) return;
   const b = BT, N = b.N;
   if (full) {
-    $('#bT').textContent = b.ev ? `Event stage ${evState().stage}${b.spawns.some(s => s.type === 'boss') ? ' · Champion' : ''}` : `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
+    $('#bT').textContent = b.ev ? `Event stage ${evState().stage} (like stage ${evN(evState().stage)})${b.spawns.some(s => s.type === 'boss') ? ' · Champion' : ''}` : `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
     $('#modeBtn').style.display = evOpen() ? '' : 'none'; $('#modeBtn').textContent = S.mode === 'event' ? 'Campaign' : 'Event';
     $('#bS').textContent = b.ev ? `${b.ev.n} · ${evState().tokens} tokens · best ${evState().best}` : b.sp ? `Set piece: ${b.sp.n} · best ${S.runMax}` : `${stageName(N)} · ${b.z.th} · best ${S.runMax}`;
-    $('#adv').classList.toggle('on', S.autoAdv); $('#adv').closest('label').style.visibility = b.ev ? 'hidden' : ''; $('#spd').textContent = S.speed + '×';
+    $('#adv').classList.toggle('on', S.autoAdv); $('#adv').closest('label').style.visibility = b.ev ? 'hidden' : ''; { const mx = S.mode === 'event' ? 5 : L('swift') ? 3 : 2; if (S.speed > mx) S.speed = mx; } $('#spd').textContent = S.speed + '×'; $('#pause').innerHTML = IC(paused ? 'play' : 'pause', 'currentColor'); $('#pause').classList.toggle('gold', paused);
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
   const left = b.spawns.length - b.spawnI + b.en.length;
@@ -1561,6 +1576,20 @@ function archerCard(a){
   `<button class="btn ${canPay(c) ? 'gold' : ''} grow" data-act="lvl" data-id="${a.id}" data-n="1" ${canPay(c) ? '' : 'disabled'}>Train<small>${costHtml(c)}</small></button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="10" ${canPay(lvlCost(a, Math.min(10, cap(a) - a.lvl))) ? '' : 'disabled'}>×10</button><button class="btn" data-act="lvl" data-id="${a.id}" data-n="max">Max</button>`}</div></div>`;
 }
 let pickSlot = null;
+/* drag a piece of gear from one archer to another in the Equipment list (same slot only; swaps if the target has one) */
+(() => {
+  let g = null, swallow = false;
+  const over = (x, y) => { const el = document.elementFromPoint(x, y); const t = el && el.closest && el.closest('.eqrow .gc'); return t && t !== g.el && t.dataset.s === g.el.dataset.s && t.dataset.id !== g.el.dataset.id ? t : null; };
+  document.addEventListener('pointerdown', e => { const el = e.target.closest && e.target.closest('.eqrow .gc'); if (!el || !el.style.borderColor || el.classList.contains('e')) return; const a = S.roster.find(x => x.id === el.dataset.id); if (!a || !a.gear || !a.gear[el.dataset.s]) return; g = {el, x:e.clientX, y:e.clientY, on:false, tgt:null}; });
+  document.addEventListener('pointermove', e => { if (!g) return; if (!g.on && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 8) { g.on = true; g.ghost = g.el.cloneNode(true); g.ghost.id = 'gdrag'; document.body.appendChild(g.ghost); g.el.classList.add('dragsrc'); }
+    if (!g.on) return; e.preventDefault(); g.ghost.style.left = e.clientX + 'px'; g.ghost.style.top = e.clientY + 'px'; const t = over(e.clientX, e.clientY); if (g.tgt !== t) { if (g.tgt) g.tgt.classList.remove('droptgt'); g.tgt = t; if (t) t.classList.add('droptgt'); } }, {passive:false});
+  const end = () => { if (!g) return; const d = g; g = null; if (!d.on) return; swallow = true; setTimeout(() => swallow = false, 50); d.el.classList.remove('dragsrc'); if (d.ghost) d.ghost.remove(); if (d.tgt) d.tgt.classList.remove('droptgt');
+    if (!d.tgt) return; const sl = d.el.dataset.s, A = S.roster.find(x => x.id === d.el.dataset.id), B = S.roster.find(x => x.id === d.tgt.dataset.id); if (!A || !B) return;
+    const ia = A.gear[sl], ib = B.gear && B.gear[sl]; B.gear = B.gear || {}; B.gear[sl] = ia; if (ib) A.gear[sl] = ib; else delete A.gear[sl];
+    const it = S.gear.find(i => i.id === ia); toast(`${it ? itemName(it) : 'Gear'} moved to ${B.name.split(' ')[0]}${ib ? ', swapped' : ''}.`); sfx('coin'); refreshLineStats(); save(); render(); };
+  document.addEventListener('pointerup', end); document.addEventListener('pointercancel', () => { if (g) { g.on = false; end(); } });
+  document.addEventListener('click', e => { if (swallow && e.target.closest && e.target.closest('.gc')) { e.stopPropagation(); e.preventDefault(); } }, true);
+})();
 /* bulk pay-off: never touches the line, nicknamed or befriended men, or the six strongest */
 function bulkKeep(){ const top = new Set([...S.roster].sort((p, q) => power(q) - power(p)).slice(0, 6).map(a => a.id)); return a => S.form.includes(a.id) || a.nick || a.hero || top.has(a.id) || Object.keys(S.bonds).some(k => S.bonds[k].st === 'f' && k.split('|').includes(a.id)); }
 const payOf = a => [1, 2, 4, 8, 20][a.rar] * a.stars;
@@ -1741,13 +1770,37 @@ function campEvent(){
 }
 
 /* ================= actions ================= */
+/* NEW CARDS: every feature announces itself once, one card at a time, with a line on what it's for */
+const NEWC = [
+  {id:'tavern', on:() => S.seen.tavern, t:'The Tavern', tab:'tavern', d:'Spend writs here to recruit new archers. Better men turn up the more you recruit.'},
+  {id:'orders', on:() => S.seen.orders, t:'Orders', tab:'orders', d:"Daily rations to collect, and the King's orders: small goals that pay out."},
+  {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
+  {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
+  {id:'exped', on:() => S.seen.exped, t:'Expeditions', tab:'orders', d:'Send men away to forage or raid. They come back with spoils, if they come back.'},
+  {id:'event', on:() => evOpen(), t:'Weekly events', tab:null, d:'A separate tournament each week, with its own token shop. Switch to it with the Event button above the battlefield.'},
+  {id:'study', on:() => S.bestEver >= 32, t:'The Study', tab:'study', d:'Parchment from the Scriptorium buys research: lasting upgrades for the whole company.'},
+  {id:'legacy', on:() => S.seen.legacy, t:'Legacy', tab:'legacy', d:'From stage 40 you can end a campaign and come home with glory. Glory buys upgrades that last for ever.'},
+  {id:'slots', on:() => S.prestiges >= 1, t:'Save slots', tab:null, d:'You can now keep up to three separate games. Find them in Settings.'}
+];
+function newCards(){
+  S.cards = S.cards || {};
+  if (!S.cardsInit) { S.cardsInit = 1; NEWC.forEach(c => { if (c.on()) S.cards[c.id] = 1; }); return; }
+  NEWC.forEach(c => { if (!S.cards[c.id] && c.on() && !(S.cardQ || []).includes(c.id)) (S.cardQ = S.cardQ || []).push(c.id); });
+  showCard();
+}
+function showCard(){
+  if (!S.cardQ || !S.cardQ.length || $('#modal').classList.contains('show') || (S.tut >= 1 && S.tut < 99)) return;
+  const c = NEWC.find(x => x.id === S.cardQ[0]); S.cardQ.shift(); if (!c) return; S.cards[c.id] = 1; save(); sheetFn = null;
+  openSheet(`<div class="sub" style="color:var(--gold);letter-spacing:.04em">NEW</div><div class="fell" style="font-size:26px">${c.t}</div><p class="ev">${c.d}</p><div style="display:grid;grid-template-columns:repeat(${c.tab ? 2 : 1},minmax(0,1fr));gap:8px">${c.tab ? `<button class="btn gold big" data-act="cardgo" data-tab="${c.tab}">Show me</button>` : ''}<button class="btn big ${c.tab ? '' : 'gold'}" data-act="close">Got it</button></div>`);
+}
 function checkUnlocks(){
   const msgs = [];
   Object.keys(BLD).forEach(k => { if (!S.seen['b_' + k] && bUnlocked(k)) { S.seen['b_' + k] = 1; if (BLD[k].un > 1) msgs.push(`New building: ${BLD[k].n}`); if (k === 'mine') S.seen.mine = 1; } if (k === 'fletcher' && bUnlocked(k)) S.seen.fletcher = 1; });
-  if (!S.seen.tavern && S.bestEver >= 3) { S.seen.tavern = 1; msgs.push('The Tavern is open. You have writs to spend.'); }
-  if (!S.seen.orders && S.bestEver >= 7) { S.seen.orders = 1; msgs.push('Orders from the King, and daily rations.'); }
-  if (!S.seen.exped && S.bestEver >= 20) { S.seen.exped = 1; msgs.push('Expeditions unlocked in Orders.'); }
-  if (!S.seen.legacy && S.bestEver >= 30) { S.seen.legacy = 1; msgs.push('Legacy unlocked. Glory awaits from stage 40.'); }
+  if (!S.seen.tavern && S.bestEver >= 8) S.seen.tavern = 1;
+  if (!S.seen.orders && S.bestEver >= 14) S.seen.orders = 1;
+  if (!S.seen.exped && S.bestEver >= 22) S.seen.exped = 1;
+  if (!S.seen.legacy && S.bestEver >= 35) S.seen.legacy = 1;
+  newCards();
   if (S.res.medals > 0) S.seen.medals = 1;
   while (S.seen.orders && S.quests.length < 3) S.quests.push(newQuest());
   if (msgs.length) { toast(msgs.join(' · '), true); render(); }
@@ -1837,14 +1890,16 @@ document.addEventListener('click', e => {
     case 'signin': cloudMsg = ''; signIn(); return;
     case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
     case 'cloudsave': cloudSync().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
+    case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
+    case 'cardgo': closeSheet(); tab = el.dataset.tab; render(); return;
     case 'doupdate': el.textContent = 'Updating...'; applyUpdate(); return;
-    case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem('loose-backup')); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
+    case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem(sk('loose-backup'))); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
-    case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; keepBackup(S, 'Before loading a save code'); d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); try { localStorage.setItem('loose-force', '1'); } catch(e){} window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
+    case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; keepBackup(S, 'Before loading a save code'); d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); try { localStorage.setItem(sk('loose-force'), '1'); } catch(e){} window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
     case 'notify': { if (!S.notify && 'Notification' in window) Notification.requestPermission().then(p => { S.notify = p === 'granted'; if (!S.notify) toast('Notifications are blocked in your browser settings.'); save(); refreshSheet(); }); else { S.notify = false; save(); refreshSheet(); } return; }
     case 'install': if (installEvt) { installEvt.prompt(); installEvt = null; refreshSheet(); } return;
-    case 'startover': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Really? All of it'; return; } keepBackup(S, 'Before starting over'); try { localStorage.removeItem(KEY); } catch(e){} try { localStorage.setItem('loose-force', '1'); } catch(e){} window.__skipSave = true; location.reload(); return; }
+    case 'startover': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Really? All of it'; return; } keepBackup(S, 'Before starting over'); try { localStorage.removeItem(KEY); } catch(e){} try { localStorage.setItem(sk('loose-force'), '1'); } catch(e){} window.__skipSave = true; location.reload(); return; }
   }
   save(); render(); refreshSheet();
 });
@@ -1965,6 +2020,7 @@ function draw(){
   ctx.setTransform(k, 0, 0, k, 0, 0);
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
+  if (paused) { ctx.fillStyle = 'rgba(8,10,7,.45)'; ctx.fillRect(0, 0, W, H); ctx.font = '400 30px "IM Fell English SC",serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#efe3c4'; ctx.fillText('Paused', W / 2, H / 2); }
   if (V.s > 1.01) { ctx.font = '600 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,220,192,.75)'; ctx.fillText('Double-tap to zoom out', W - 8, 18); }
   if (tipU && tipT > 0 && b.units.includes(tipU)) { const u = tipU, a = u.a, sx = (u.x - V.x) * V.s, sy = (u.y - V.y) * V.s, bb = base(a), ab = bb.abN || '';
     const lines = [dispName(a), `Lv ${a.lvl} · ${'★'.repeat(a.stars)} · ${u.front ? 'front' : 'back'} rank`, `HP ${fmt(Math.max(0, u.hp))}/${fmt(u.max)} · ${u.fk || 0} kills this fight`]; if (ab) lines.push('Special: ' + ab);
@@ -2005,13 +2061,13 @@ function frame(dtReal){
   if (dtReal > 30) { const rep = offlineSim(dtReal); newBattle(); render(); if (rep.clears || dtReal > 120) welcome(rep); return; }
   S.stats.playSec += dtReal;
   econTick(dtReal);
-  if (!document.hidden) { S.newsT -= dtReal; if (S.newsT <= 0 && !S.news && S.roster.length >= 2) { S.news = true; battleHud(true); } }
+  if (!document.hidden) { S.newsT -= dtReal; if (S.newsT <= 0 && !S.news && S.roster.length >= 2 && S.bestEver >= 18) { S.news = true; battleHud(true); } }
   volleyTick(dtReal); if (tipT > 0) tipT -= dtReal;
-  let dt = dtReal * S.speed;
+  let dt = paused ? 0 : dtReal * S.speed;
   while (dt > 0) { const s = Math.min(.025, dt); bstep(s); dt -= s; }
   if (BT && BT.pendingRebuild && BT.phase !== 'fight') BT.pendingRebuild = false;
   uiT += dtReal; saveT += dtReal;
-  if (uiT > .5) { uiT = 0; renderRes(); battleHud(false); navBadges(); liveRefresh(); tutTick(); musicTick(); }
+  if (uiT > .5) { uiT = 0; renderRes(); battleHud(false); navBadges(); liveRefresh(); tutTick(); musicTick(); showCard(); }
   if (saveT > 5) { saveT = 0; save(); }
 }
 let lastRefresh = 0;
@@ -2049,6 +2105,7 @@ window.__dbg = {setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, H
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.15","items":["Three save slots: keep your current game and start fresh alongside it (Settings, after your first campaign).","New recruits all start at 1 star; rarity sets how high they can climb.","Event stages show which main stage they match, and events can run at 5x speed.","Pause button above the battlefield.","Drag gear straight from one archer to another in the Equipment list.","Features now open one at a time, each with a short card explaining it."]},
 {"v":"2.14","items":["New releases are now offered, not forced: tap Update when you're ready.","Release notes like these show what changed."]},
 {"v":"2.13.1","items":["Battle clock on screen; bosses get three minutes; running out says 'Out of time'.","Sound starts on your first tap after opening the game."]},
 {"v":"2.13","items":["Rebalanced: billmen and the trebuchet follow your archers' strength; enemies toughen faster past stage 100; fewer event tokens.","Pay off a whole rarity at once from the Company tab.","Tap the field to loose a volley; tap an archer for their card; pinch or scroll to zoom.","Duplicates past 7 stars give +3% damage each."]}
