@@ -649,7 +649,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.10';
+const VERSION = '2.11';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -817,6 +817,20 @@ function notify(title, body){
   try { if (!S.notify || !document.hidden || !('Notification' in window) || Notification.permission !== 'granted') return; if (swReg) swReg.showNotification(title, {body, icon:'icon-192.png', tag:title}); else new Notification(title, {body, icon:'icon-192.png'}); } catch(e){}
 }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; });
+/* installed apps can sit on an old version for days: check for a newer one when the app opens or comes back */
+async function checkUpdate(){
+  try {
+    if (location.protocol !== 'https:') return;
+    const r = await fetch('index.html?v=' + Date.now(), {cache:'no-store'}); if (!r.ok) return;
+    const m = (await r.text()).match(/const VERSION = '([^']+)'/); if (!m || m[1] === VERSION) return;
+    if (sessionStorage.getItem('loose-upd') === m[1]) return; sessionStorage.setItem('loose-upd', m[1]);
+    save(); if (fbUser) { try { await cloudSync(); } catch(e){} }
+    if (swReg) { try { await swReg.update(); } catch(e){} }
+    window.__skipSave = true; location.reload();
+  } catch(e){}
+}
+setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 600000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 function initPwa(){ try { if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname.endsWith('github.io')) navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {}); } catch(e){} }
 
 /* ---------- cloud save ---------- */
