@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.24.2';
+const VERSION = '2.25';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -920,7 +920,8 @@ function adjacentSlots(i){ const out = [], col = i % 5, row = i < 5 ? 0 : 1; if 
 function bondMult(i, ln){ let m = 1; adjacentSlots(i).forEach(j => { const a = ln[i], b = ln[j]; if (!a || !b) return; const bd = S.bonds[bondKey(a.id, b.id)]; if (bd && bd.st === 'f') m += .06; if (bd && bd.st === 'w') m += .1; if (bd && bd.st === 'g') m -= .06; }); return m; }
 function growBonds(units){
   const bySlot = {}; units.forEach(u => bySlot[u.i] = u.a);
-  units.forEach(u => adjacentSlots(u.i).forEach(j => { const b = bySlot[j]; if (!b || b.id < u.a.id) return; const k = bondKey(u.a.id, b.id), bd = S.bonds[k] || (S.bonds[k] = {p:0}); bd.p++;
+  /* neighbours are whoever stood within a couple of paces in this fight */
+  units.forEach(u => units.filter(o => o !== u && dist(o.x, o.y, u.x, u.y) < 34).map(o => o.i).forEach(j => { const b = bySlot[j]; if (!b || b.id < u.a.id) return; const k = bondKey(u.a.id, b.id), bd = S.bonds[k] || (S.bonds[k] = {p:0}); bd.p++;
     if (!bd.st && bd.p >= 20) { bd.st = Math.random() < .82 ? 'f' : 'g'; chron(bd.st === 'f' ? `${u.a.name} and ${b.name} have stood side by side long enough to be friends.` : `${u.a.name} and ${b.name} cannot stand each other. It shows in their shooting.`); } }));
 }
 function bondHtml(a){
@@ -1186,7 +1187,7 @@ function sheetSettings(){
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
+  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (drag them anywhere on your half of the battlefield), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
 }
@@ -1286,7 +1287,7 @@ const TUT = [null,
   {t:'company', x:'Open the Company tab and press Train on one of your archers.', ok:() => (S.qp.levels || 0) >= 1},
   {t:'camp', x:'Now open Camp and upgrade your Farms. Food and silver pay for training.', ok:() => (S.qp.builds || 0) >= 1},
   {t:'battle', x:'Tap the battlefield to loose a volley of your own. Charges build up again on their own.', ok:() => S.tutVolley},
-  {t:'battle', x:'Drag an archer onto another place to swap them. The front rank hits harder but takes the charges.', ok:() => S.tutSwap}
+  {t:'battle', x:'Drag an archer anywhere on your side of the road. Close to the road they hit harder but get charged.', ok:() => S.tutSwap}
 ];
 function tutTick(){
   if (!(S.tut >= 1 && S.tut < TUT.length)) { if ($('#tut')) tutBar(); return; }
@@ -1391,6 +1392,36 @@ const SLOTS = PATHS.map(p => {
   });
   return out;
 });
+/* ================= free placement (2.25) =================
+   each place in the line can be moved anywhere on your half of the field. Positions are kept relative to the road
+   (how far along it, how far to which side), so a formation keeps its shape when the road changes every ten stages.
+   Within FRONTD of the road counts as the front: +20% damage, but you get charged. */
+const FRONTD = 50, MINGAP = 20, MYHALF = .4, ROADGAP = 16;
+function projPath(p, x, y){
+  let best = {d:1e9, s:0, side:1};
+  for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy || 1, t = clamp(((x - a[0]) * vx + (y - a[1]) * vy) / l2, 0, 1), px = a[0] + vx * t, py = a[1] + vy * t, d = dist(px, py, x, y);
+    if (d < best.d) { const l = Math.sqrt(l2); best = {d, s:p.len[i - 1] + l * t, side:((x - px) * (-vy / l) + (y - py) * (vx / l)) >= 0 ? 1 : -1}; } }
+  best.f = best.s / p.total; best.o = best.d * best.side; return best;
+}
+function placeAt(p, pl){ const a = pathAt(p, p.total * pl.f); return [clamp(a[0] + a[2] * pl.o, 14, W - 14), clamp(a[1] + a[3] * pl.o, 40, H - 16)]; }
+/* where every place in the line stands on this map, nudged apart so nobody stacks after a bend */
+function formPositions(p, slots){
+  const pos = slots.map((q, i) => S.place && S.place[i] ? placeAt(p, S.place[i]) : q.slice());
+  for (let it = 0; it < 8; it++) for (let i = 0; i < 10; i++) {
+    for (let j = i + 1; j < 10; j++) { const [ax, ay] = pos[i], [bx, by] = pos[j], d = dist(ax, ay, bx, by); if (d < MINGAP) { const ux = d ? (bx - ax) / d : 1, uy = d ? (by - ay) / d : 0, m = (MINGAP - d) / 2 + .1; pos[i] = [ax - ux * m, ay - uy * m]; pos[j] = [bx + ux * m, by + uy * m]; } }
+    const pr = projPath(p, pos[i][0], pos[i][1]); if (pr.d < ROADGAP) { const a = pathAt(p, pr.s); pos[i] = [a[0] + a[2] * ROADGAP * pr.side, a[1] + a[3] * ROADGAP * pr.side]; }
+    pos[i] = [clamp(pos[i][0], 14, W - 14), clamp(pos[i][1], 40, H - 16)];
+  }
+  return pos;
+}
+const isFront = (p, x, y) => projPath(p, x, y).d < FRONTD;
+/* room at the front for five: crowd more in and the +20% is shared out, so the total matches the old front rank */
+function rankMultF(front, nf){ return (front ? 1 + .2 * Math.min(1, 5 / Math.max(5, nf || 5)) : 1) * (!front && R('a3a') ? 1.3 : 1) * (R('c3b') ? 1.1 : 1); }
+/* friends and couples help each other when they stand within a couple of paces, wherever that is */
+function bondMultU(u, units){ let m = 1; units.forEach(o => { if (o === u || dist(o.x, o.y, u.x, u.y) > 34) return; const bd = S.bonds[bondKey(u.a.id, o.a.id)]; if (!bd) return; if (bd.st === 'f') m += .06; else if (bd.st === 'w') m += .1; else if (bd.st === 'g') m -= .06; }); return m; }
+function rerank(){ if (!BT) return; BT.units.forEach(o => { o.front = isFront(BT.path, o.x, o.y); }); const nf = BT.units.filter(o => o.front).length; BT.units.forEach(o => { o.rm = rankMultF(o.front, nf) * bondMultU(o, BT.units); }); }
+/* which places count as front on the current map, for Best men forward and the Company page */
+function slotFront(i){ const li = BT ? BT.li : 0, p = PATHS[li], pos = formPositions(p, SLOTS[li]); return isFront(p, pos[i][0], pos[i][1]); }
 function newBattle(){
   MED.c = docMax(); docPick = false;
   const evOn = S.mode === 'event' && evOpen(), ev = evOn ? curEvent() : null, N = evOn ? evN(evState().stage) : S.stage, zi = Math.floor((N - 1) / 10), li = (zi + (evOn ? 2 : 0)) % LAYOUTS.length, sp = evOn ? null : SP(N);
@@ -1398,8 +1429,10 @@ function newBattle(){
   BT = {N, z:zoneOf(N), sp, li, path:PATHS[li], slots:SLOTS[li], t:0, phase:'fight', units:[], en:[], arrows:[], fx:[], decals:BT && BT.li === li ? BT.decals.filter(d => !d.arrow).slice(-40) : [],
     ev, spawns:genStage(N, ev), spawnI:0, camp:100, volleyCD:6, volleys:[], streaks:[], stones:[], kills:0, endT:0, shake:0, noArrows:false, silver:0};
   const pav = B_('pavise') * supMult();
-  ln.forEach((a, i) => { if (!a) return; const s = stats(a); const [x, y] = BT.slots[i], front = i < 5, max = s.hp * (1 + .05 * pav) * (front && R('c3a') ? 1.4 : 1);
-    BT.units.push({a, s, x, y, i, front, rm:rankMult(i) * bondMult(i, ln), hp:max * (sp && sp.id === 'flux' ? .5 : 1), max, cd:rnd(.1, 1), face:-Math.PI / 2, drawAmt:0, down:false, charge:rnd(0, 6), chargeMax:R('c2') ? 10.5 : 14, rapidT:0, fireT:0, bodkinT:0, rally:0, hurtT:0}); });
+  const fpos = formPositions(BT.path, BT.slots);
+  ln.forEach((a, i) => { if (!a) return; const s = stats(a); const [x, y] = fpos[i], front = isFront(BT.path, x, y), max = s.hp * (1 + .05 * pav) * (front && R('c3a') ? 1.4 : 1);
+    BT.units.push({a, s, x, y, i, front, rm:rankMultF(front), hp:max * (sp && sp.id === 'flux' ? .5 : 1), max, cd:rnd(.1, 1), face:-Math.PI / 2, drawAmt:0, down:false, charge:rnd(0, 6), chargeMax:R('c2') ? 10.5 : 14, rapidT:0, fireT:0, bodkinT:0, rally:0, hurtT:0}); });
+  rerank();
   const hu = HU(N) * supMult(), avg = (() => { const l = BT.units; return l.length ? l.reduce((t, u) => t + u.s.dps, 0) / l.length : 0; })() * supMult(); BT.supAvg = avg;
   if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), max:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), dps:avg * (.5 + .15 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
   if (B_('treb')) { const end = BT.path.pts[BT.path.pts.length - 1]; BT.treb = {x:end[0] < W / 2 ? end[0] + 64 : end[0] - 64, y:Math.min(end[1], H - 26) - 4, cd:4, arm:0}; }
@@ -1496,7 +1529,7 @@ function bstep(dt){
     if (u.cd <= 0) { if (t) { shoot(u, t); u.cd = u.rally > 0 ? .18 : u.s.int * rnd(.9, 1.1) * (b.sp && b.sp.id === 'rain' ? 1.3 : 1); if (u.rally > 0) { u.rally--; u.drawAmt = 1; } } else u.cd = .15; }
   }
   for (const a of b.arrows) {
-    if (a.enemy) { a.t += dt; if (a.t >= a.T && !a.done) { a.done = 1; if (!a.u.down && Math.random() < .7 && !(b.shieldT > 0)) { a.u.hp -= a.dmg; a.u.hurtT = .15; if (a.u.hp <= 0) downUnit(a.u); } } continue; }
+    if (a.enemy) { a.t += dt; if (a.t >= a.T && !a.done) { a.done = 1; if (!a.u.down && Math.random() < .7 && !(b.shieldT > 0)) { a.u.hp -= a.dmg; a.u.hurtT = .15; if (a.u.hp <= 0) downUnit(a.u); b.units.forEach(o => { if (o !== a.u && !o.down && dist(o.x, o.y, a.u.x, a.u.y) < 26) { o.hp -= a.dmg * .5; if (o.hp <= 0) downUnit(o); } }); } } continue; }
     a.t += dt;
     if (a.t >= a.T && !a.done) {
       a.done = 1;
@@ -1518,6 +1551,7 @@ function bstep(dt){
   b.stones = b.stones.filter(s => !s.done);
   fireStep(b, dt);
   const live = b.units.filter(u => !u.down), mud = b.sp && b.sp.id === 'mud' ? .5 : b.z.mud || 1, du = DU(b.N), night = b.sp && b.sp.id === 'night';
+  b.roadOpen = b.units.filter(u => !u.down && u.front).length < Math.min(3, b.units.filter(u => !u.down).length);
   let nBlock = 0; if (b.bill && !b.bill.down) b.en.forEach(e => { if (!e.dead && !e.tg && !e.d.ranged && e.s >= b.bill.s - 16 && e.s <= b.bill.s + 2) nBlock++; });
   for (const e of b.en) {
     if (e.dead) continue;
@@ -1525,7 +1559,8 @@ function bstep(dt){
     let spd = e.d.spd * mud, moving = true;
     if (e.scan <= 0) { e.scan = .3;
       if (e.d.ranged) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.range).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null;
-      else if (!e.tg || e.tg.down) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.aggro * (night && !u.front ? 3 : 1)).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null; }
+      /* if fewer than three men hold the road, it is open: the French leave it and hunt whoever is out there */
+      else if (!e.tg || e.tg.down) e.tg = live.filter(u => dist(u.x, u.y, e.x, e.y) < e.d.aggro * (night && !u.front ? 3 : 1) * (b.roadOpen ? 2.6 : 1)).sort((p, q) => dist(p.x, p.y, e.x, e.y) - dist(q.x, q.y, e.x, e.y))[0] || null; }
     if (e.tg && e.tg.down) e.tg = null;
     if (e.tg && e.d.ranged) {
       moving = false; e.shooting = true; e.ang = Math.atan2(e.tg.y - e.y, e.tg.x - e.x);
@@ -1534,7 +1569,7 @@ function bstep(dt){
       e.shooting = false; const u = e.tg, dd = dist(u.x, u.y, e.x, e.y); e.ang = Math.atan2(u.y - e.y, u.x - e.x);
       if (dd > e.d.r + 9) { const sp = spd * (e.d.cav && !e.charged ? 1.35 : 1); e.x += Math.cos(e.ang) * sp * dt; e.y += Math.sin(e.ang) * sp * dt; }
       else { moving = false;
-        if (e.d.charge && !e.charged) { e.charged = true; if (!(b.shieldT > 0)) u.hp -= e.d.charge * du; b.shake = 5; sfx('clash'); b.fx.push({t:0, x:u.x, y:u.y, ring:1, col:'#ff6a5a'}); }
+        if (e.d.charge && !e.charged) { e.charged = true; if (!(b.shieldT > 0)) { u.hp -= e.d.charge * du; b.units.forEach(o => { if (o !== u && !o.down && dist(o.x, o.y, u.x, u.y) < 30) { o.hp -= e.d.charge * du * .6; o.hurtT = .15; if (o.hp <= 0) downUnit(o); } }); } b.shake = 5; sfx('clash'); b.fx.push({t:0, x:u.x, y:u.y, ring:1, col:'#ff6a5a'}); }
         if (!(b.shieldT > 0)) u.hp -= e.d.dps * du * dt; u.hurtT = .15; if (Math.random() < dt * 2) sfx('clash');
         if (u.hp <= 0) downUnit(u); }
     } else {
@@ -1757,8 +1792,9 @@ const fireMax = () => 2 + (B_('fletcher') >= 30 ? 1 : 0);
 function placeBarrels(){
   BT.barrels = []; BT.fires = []; FIRE.c = fireMax(); if (!barrelsOn() || !BT.path) return;
   const n = 2 + (BT.N >= 40 ? 1 : 0), tot = BT.path.total;
-  for (let i = 0; i < n; i++) { const s0 = tot * (.3 + .5 * (i + Math.random() * .6) / n), a = pathAt(BT.path, s0), side = Math.random() < .5 ? -1 : 1, off = rnd(12, 18);
-    BT.barrels.push({x:a[0] + a[2] * off * side, y:a[1] + a[3] * off * side, lit:false}); }
+  for (let i = 0; i < n; i++) { const s0 = tot * (.3 + .5 * (i + Math.random() * .6) / n), a = pathAt(BT.path, s0), off = rnd(12, 18); let side = Math.random() < .5 ? -1 : 1;
+    let bx = a[0] + a[2] * off * side, by = a[1] + a[3] * off * side; if (BT.units.some(u => dist(u.x, u.y, bx, by) < 20)) { side = -side; bx = a[0] + a[2] * off * side; by = a[1] + a[3] * off * side; } if (BT.units.some(u => dist(u.x, u.y, bx, by) < 20)) continue;
+    BT.barrels.push({x:bx, y:by, lit:false}); }
 }
 function burnGround(x, y, r, t, dps){ BT.fires.push({x, y, r, t, T:t, dps}); }
 function blowBarrel(br, byHand){
@@ -1827,14 +1863,21 @@ function bindBattleView(){
   const toL = ev => { const [x, y] = toS(ev); return [V.x + x / V.s, V.y + y / V.s]; };
   cv.style.touchAction = 'none';
   const pts = new Map(); let pinch = null, pan = null, lastTap = 0;
-  const drop = () => { if (!dragU || !BT) { dragU = null; return; } const u = dragU.u; let j = -1, bd = 36; BT.slots.forEach((s, i) => { if (!slotOpen(i)) return; const d = dist(s[0], s[1], u.x, u.y); if (d < bd) { bd = d; j = i; } });
-    if (j < 0 || j === u.i) { u.x = dragU.ox; u.y = dragU.oy; dragU = null; return; }
-    const other = BT.units.find(o => o !== u && o.i === j), fi = S.form[u.i], fj = S.form[j];
-    S.form[u.i] = other ? other.a.id : (fj && fj !== u.a.id ? fj : null); S.form[j] = u.a.id; if (fi && fi !== u.a.id && !other) S.form[u.i] = fi;
-    const oi = u.i; u.i = j; u.front = j < 5; [u.x, u.y] = BT.slots[j];
-    if (other) { other.i = oi; other.front = oi < 5; [other.x, other.y] = BT.slots[oi]; }
-    const ln = BT.units.reduce((m, o) => (m[o.i] = o.a, m), []); BT.units.forEach(o => o.rm = rankMult(o.i) * bondMult(o.i, ln));
-    BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; S.tutSwap = 1; save(); };
+  const drop = () => { if (!dragU || !BT) { dragU = null; return; } const u = dragU.u, back = msg => { u.x = dragU.ox; u.y = dragU.oy; BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:msg, col:'#e9988c'}); dragU = null; };
+    S.place = S.place || {};
+    const other = BT.units.find(o => o !== u && !o.down && dist(o.x, o.y, u.x, u.y) < 14);
+    if (other) { /* dropped on a man: they swap places */
+      const fi = S.form[u.i], fj = S.form[other.i]; S.form[u.i] = fj; S.form[other.i] = fi; const oi = u.i; u.i = other.i; other.i = oi;
+      u.x = other.x; u.y = other.y; other.x = dragU.ox; other.y = dragU.oy; tr('placeSwap');
+    } else {
+      const pr = projPath(BT.path, u.x, u.y);
+      if (pr.f < MYHALF) return back('Keep to your half of the field');
+      if (pr.d < ROADGAP) return back('Not on the road');
+      if (BT.units.some(o => o !== u && !o.down && dist(o.x, o.y, u.x, u.y) < MINGAP)) return back('Too close to another man');
+      if ((BT.barrels || []).some(br => !br.lit && dist(br.x, br.y, u.x, u.y) < 16) || (BT.treb && dist(BT.treb.x, BT.treb.y, u.x, u.y) < 28) || (BT.bill && dist(BT.bill.x, BT.bill.y, u.x, u.y) < 18)) return back('Something is in the way');
+      S.place[u.i] = {f:+pr.f.toFixed(4), o:+pr.o.toFixed(1)}; tr('placeMove');
+    }
+    rerank(); const nf = BT.units.filter(o => o.front).length; BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? (nf > 5 ? `Front is crowded: +${Math.round(20 * 5 / nf)}% each` : 'Front: +20%, but charged') : 'Back: safer', col:'#f2d07a'}); dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); cv.setPointerCapture(ev.pointerId); pts.set(ev.pointerId, toS(ev));
     if (pts.size === 2) { if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } pan = null; const [a, b] = [...pts.values()]; tr('zoom'); pinch = {d:dist(a[0], a[1], b[0], b[1]) || 1, s:V.s, cx:V.x + (a[0] + b[0]) / 2 / V.s, cy:V.y + (a[1] + b[1]) / 2 / V.s}; return; }
     const [x, y] = toL(ev), [sx, sy] = toS(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24 / Math.sqrt(V.s));
@@ -2117,11 +2160,12 @@ function bulkHtml(){
 }
 function viewCompany(){
   const ln = lineUp();
-  let h = `<h2>The Company</h2><div class="sub">Who stands where decides the fight. The front rank shoots 20% harder but takes the charges. The back rank is safe from all but horsemen.</div>
-  <h3>THE LINE · ${slotsOpen()} OF 10 PLACES</h3><div class="sub" style="margin-bottom:6px">Front rank</div><div class="form">${[0,1,2,3,4].map(i => slotHtml(i, ln)).join('')}</div>
-  <div class="sub" style="margin:8px 0 6px">Back rank</div><div class="form">${[5,6,7,8,9].map(i => slotHtml(i, ln)).join('')}</div>
+  const fr = [0,1,2,3,4,5,6,7,8,9].filter(i => slotOpen(i) && slotFront(i)).length;
+  let h = `<h2>The Company</h2><div class="sub">Who stands where decides the fight. Men within 50 paces of the road shoot 20% harder but take the charges; further back is safer, except from horsemen. Drag your men anywhere on your half of the battlefield.</div>
+  <h3>THE LINE · ${slotsOpen()} OF 10 PLACES</h3><div class="sub" style="margin-bottom:6px">Places 1 to 5 · ${fr} of your places are at the front on this map</div><div class="form">${[0,1,2,3,4].map(i => slotHtml(i, ln)).join('')}</div>
+  <div class="sub" style="margin:8px 0 6px">Places 6 to 10</div><div class="form">${[5,6,7,8,9].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="row" style="margin-top:10px"><button class="btn grow" data-act="autofill">Best men forward</button><label class="tog" data-act="autores"><span class="sw ${S.autoRes ? 'on' : ''}"></span>Reserves step in</label></div>
-  <div class="sub" style="margin-top:6px">You can also drag archers on the battlefield to swap places.</div>
+  <div class="row" style="margin-top:6px"><span class="sub grow">Drag archers on the battlefield to move them, or onto each other to swap.</span>${S.place && Object.keys(S.place).length ? '<button class="btn" data-act="resetplace">Reset to ranks</button>' : ''}</div>
   ${S.gear.length ? equipHtml() : S.bestEver >= 10 ? '<h3>EQUIPMENT</h3><div class="card sub">No gear yet. Bosses, set pieces and expeditions drop bows, arrowheads, armour and charms.</div>' : ''}
   ${campHtml()}
   <h3>MUSTER ROLL · ${S.roster.length}/${rosterCap()}</h3>${bulkHtml()}`;
@@ -2579,6 +2623,7 @@ const NEWC = [
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
   {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time. He has three bandages per battle, more as the Barber-surgeon grows.'},
+  {id:'place', on:() => S.tut >= 99 && S.bestEver >= 3, t:'Your men, your field', tab:'battle', d:"Drag any archer anywhere on your half of the battlefield; drop one on another to swap them. Within 50 paces of the road they shoot 20% harder but get charged, and the front only has room for five before the bonus is shared out. Keep at least three men on the road, or the French leave it and come hunting. Your formation keeps its shape when the road changes. Reset to ranks is on the Company page."},
   {id:'barrels', on:() => barrelsOn(), t:'Pitch barrels', tab:'battle', d:"Barrels of pitch now sit by the road in each battle. Tap one to blow it up when the French crowd round it, or leave it and it goes off by itself when enough of them gather. The ground burns for a few seconds afterwards."},
   {id:'fire', on:() => fireOn(), t:'Fire arrows', tab:'battle', d:"Tap Fire arrows, under the Volleys counter, to light every arrow in the line for 8 seconds. Burning arrows splash nearby men and set them alight. Two pots of pitch per battle, three once the Fletcher reaches level 30. Fire pots for the trebuchet come with it."},
   {id:'camp', on:() => morOn(), t:'Camp life', tab:'company', d:"Your company has a mood now. Morale, on the Company page, rises with victories, ale, pay and kindness, and falls with deaths, defeats and the whip. High spirits add damage; low spirits cost it. Camp news brings new faces too: cooks, laundresses, a chaplain and others who join the baggage train for good."},
@@ -2620,7 +2665,7 @@ function levelUp(a, n){
 function autofill(){
   const fitM = S.roster.filter(fit).sort((p, q) => power(q) - power(p)); const order = [0,5,1,6,2,7,3,8,4,9].filter(slotOpen);
   S.form = Array(10).fill(null);
-  const front = order.filter(i => i < 5), back = order.filter(i => i >= 5), chosen = fitM.slice(0, order.length);
+  const front = order.filter(i => slotFront(i)), back = order.filter(i => !slotFront(i)), chosen = fitM.slice(0, order.length);
   const byHp = [...chosen].sort((p, q) => stats(q).hp - stats(p).hp);
   byHp.slice(0, front.length).forEach((a, j) => S.form[front[j]] = a.id);
   byHp.slice(front.length).forEach((a, j) => S.form[back[j]] = a.id);
@@ -2674,6 +2719,7 @@ document.addEventListener('click', e => {
     case 'setslot': { const i = +el.dataset.i; if (id) { const j = S.form.indexOf(id); if (j >= 0) S.form[j] = S.form[i]; } S.form[i] = id || null; closeSheet(); refreshLineStats(); break; }
     case 'autofill': autofill(); S.tutFill = 1; refreshLineStats(); toast('Best men forward.', true); break;
     case 'autores': S.autoRes = !S.autoRes; refreshLineStats(); break;
+    case 'resetplace': S.place = {}; tr('placeReset'); if (BT && BT.units.length) { const pos = formPositions(BT.path, BT.slots); BT.units.forEach(u => { [u.x, u.y] = pos[u.i]; }); rerank(); } toast('Back in their ranks.', true); break;
     case 'pushon': S.autoAdv = true; S.farmN = 0; tr('pushOn'); S.stage = Math.min(S.stage + 1, S.runMax); newBattle(); battleHud(true); save(); return;
     case 'brk': S.brk = S.brk === false; tr('breakToggle'); save(); refreshSheet(); return;
     case 'pull': pull(+el.dataset.n); return;
@@ -2808,7 +2854,11 @@ function draw(){
     else { ctx.fillStyle = d.type === 'maa' || d.type === 'boss' ? '#5c636c' : '#3c4458'; ctx.beginPath(); ctx.ellipse(0, 0, 8.5, 4.6, 0, 0, 7); ctx.fill(); ctx.fillStyle = '#6a6a66'; ctx.beginPath(); ctx.arc(9, 0, 3, 0, 7); ctx.fill(); }
     ctx.restore(); ctx.globalAlpha = 1;
   }
-  if (dragU) b.slots.forEach((s, i) => { if (!slotOpen(i)) return; ctx.strokeStyle = i < 5 ? 'rgba(232,140,110,.8)' : 'rgba(255,240,200,.7)'; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(s[0], s[1], 15, 0, 7); ctx.stroke(); ctx.setLineDash([]); });
+  if (dragU) { const p = b.path, tr2 = () => { ctx.beginPath(); p.pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); };
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; tr2(); ctx.strokeStyle = 'rgba(232,182,76,.16)'; ctx.lineWidth = FRONTD * 2; ctx.stroke(); tr2(); ctx.strokeStyle = 'rgba(40,30,15,.25)'; ctx.lineWidth = ROADGAP * 2; ctx.stroke();
+    const h = pathAt(p, p.total * MYHALF); ctx.strokeStyle = 'rgba(255,240,200,.7)'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(h[0] - h[3] * 400, h[1] + h[2] * 400); ctx.lineTo(h[0] + h[3] * 400, h[1] - h[2] * 400); ctx.stroke(); ctx.setLineDash([]);
+    ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.strokeStyle = 'rgba(0,0,0,.7)'; ctx.lineWidth = 3; const a = pathAt(p, p.total * .72), lx = a[0] + a[2] * (FRONTD - 6), ly = a[1] + a[3] * (FRONTD - 6); ctx.strokeText('Front: +20%, charged', lx, ly); ctx.fillText('Front: +20%, charged', lx, ly);
+    ctx.strokeText('Enemy side', h[0], h[1] - 10); ctx.fillStyle = '#f3c3b5'; ctx.fillText('Enemy side', h[0], h[1] - 10); }
   drawFire(ctx, b);
   const list = [];
   b.units.forEach(u => list.push([u.y, 0, u])); b.en.forEach(e => list.push([e.y, 1, e]));
@@ -2855,7 +2905,7 @@ function draw(){
   if (paused) { ctx.fillStyle = 'rgba(8,10,7,.45)'; ctx.fillRect(0, 0, W, H); ctx.font = '400 30px "IM Fell English SC",serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#efe3c4'; ctx.fillText('Paused', W / 2, H / 2); }
   if (V.s > 1.01) { ctx.font = '600 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,220,192,.75)'; ctx.fillText('Double-tap to zoom out', W - 8, 18); }
   if (tipU && tipT > 0 && b.units.includes(tipU)) { const u = tipU, a = u.a, sx = (u.x - V.x) * V.s, sy = (u.y - V.y) * V.s, bb = base(a), ab = bb.abN || '';
-    const lines = [dispName(a), `Lv ${a.lvl} · ${'★'.repeat(a.stars)} · ${u.front ? 'front' : 'back'} rank`, `HP ${fmt(Math.max(0, u.hp))}/${fmt(u.max)} · ${u.fk || 0} kills this fight`]; if (ab) lines.push('Special: ' + ab);
+    const lines = [dispName(a), `Lv ${a.lvl} · ${'★'.repeat(a.stars)} · ${u.front ? 'front, +20%' : 'back'}`, `HP ${fmt(Math.max(0, u.hp))}/${fmt(u.max)} · ${u.fk || 0} kills this fight`]; if (ab) lines.push('Special: ' + ab);
     ctx.font = '700 11px "Alegreya Sans",sans-serif'; const w = Math.max(...lines.map(t => ctx.measureText(t).width)) + 14, h = lines.length * 14 + 8, x = clamp(sx - w / 2, 4, W - w - 4), y = sy - 34 - h < 4 ? sy + 26 : sy - 30 - h;
     ctx.fillStyle = 'rgba(10,12,9,.9)'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = RAR[a.rar].c; ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, w - 1, h - 1); ctx.textAlign = 'left';
     lines.forEach((t, i) => { ctx.font = `${i ? 500 : 700} 11px "Alegreya Sans",sans-serif`; ctx.fillStyle = i ? '#d8ccb0' : RAR[a.rar].c; ctx.fillText(t, x + 7, y + 15 + i * 14); }); }
@@ -2931,12 +2981,13 @@ migrate();
 checkUnlocks();
 if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
 newBattle(); render(); save();
-if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You can lend a hand in a fight with volleys, and later with Doc, pitch barrels and fire arrows, but your real job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
+if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You can lend a hand in a fight with volleys, and later with Doc, pitch barrels and fire arrows, but your real job is everything else: who stands in the line and where (drag them anywhere on your half of the battlefield), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
 window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle, render};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.25","items":["Place your men anywhere on your half of the battlefield: drag an archer to a new spot, or drop him on another man to swap them. A shaded band shows the front while you drag.","Within 50 paces of the road counts as the front: +20% damage, but you get charged. The front has room for five; crowd more in and the bonus is shared between them.","Hold the road: if fewer than three men stand at the front, the French leave the road and hunt the rest of your company.","Bunching up has a price: a cavalry charge or a crossbow bolt now hurts the men standing next to the one it hits.","Your formation stays put from stage to stage, and keeps its shape when the road changes every ten stages. Reset to ranks on the Company page puts everyone back.","Friends and couples get their bonus when they stand close together, wherever that is. Best men forward fills the places nearest the road with your toughest men.","Time away is worked out as before, from your company's strength, so a clever formation helps while you watch but does not change overnight progress."]},
 {"v":"2.24.2","items":["The village map no longer flickers every couple of seconds."]},
 {"v":"2.24.1","items":["The village is redrawn in the same style as the battlefield: the same grass, road, trees and shadows, buildings seen from above, and your own men wandering between them.","The camp is alive: the fire flickers, chimneys smoke, geese waddle round their pen, the river runs and arrows fly at the butts."]},
 {"v":"2.24","items":["The village: the Camp tab now shows your camp as a map. Every building is drawn and grows as you upgrade it, from a lone tent to a row of them, from one strip of field to many.","Tap any building on the map to see what it does and upgrade it. A gold arrow means you can afford an upgrade; a ring shows work in progress.","Plots for buildings you have not reached yet are marked with the stage they unlock at. Some camp followers show up too, if you have them.","Prefer the old way? The List button above the map brings it back."]},
