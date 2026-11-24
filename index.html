@@ -1457,7 +1457,7 @@ function battleHud(full){
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
   const left = b.spawns.length - b.spawnI + b.en.length;
-  $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} enemies left · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · out of arrows, no bonus' : arrowsOn() ? ' · good arrows +50%' : '');
+  $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} left · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · no arrows' : arrowsOn() ? ' · arrows +50%' : '');
   $('#bD').textContent = `Line DPS ${fmt(squadDps(N))}`;
   $('#bBar').style.width = (100 * (1 - left / Math.max(1, b.spawns.length))) + '%';
   $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? 'Drag archers to swap places' : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
