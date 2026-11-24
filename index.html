@@ -649,8 +649,10 @@ function faceOf(a){
   return fcache[key] = F;
 }
 function shade(hex, k){ const n = parseInt(hex.slice(1), 16), c = v => Math.max(0, Math.min(255, Math.round(v * k))); return `rgb(${c(n >> 16)},${c((n >> 8) & 255)},${c(n & 255)})`; }
+const moodOf = a => !a.id || !S || !S.roster || !morOn() ? '' : hungover(a) ? 'sick' : a.woundT ? 'hurt' : morState().m >= 80 ? 'grin' : morState().m >= 65 ? 'smile' : morState().m < 35 ? 'glum' : '';
 function drawFace(g, a){
-  const F = faceOf(a), L = base(a).look || {}, nick = (a.nick || a.name || '') + '', head = L.head || 'bare';
+  const mood = moodOf(a), F = Object.assign({}, faceOf(a)); if (mood === 'smile' || mood === 'grin') F.mouth = 1; else if (mood) F.mouth = 2;
+  const L = base(a).look || {}, nick = (a.nick || a.name || '') + '', head = L.head || 'bare';
   const oneEye = /One-Eye/.test(nick), halfEar = /Half-Ear/.test(nick), drunk = (a.traits || []).includes('drunk'), tough = (a.traits || []).includes('tough');
   const sk = F.sk, skd = shade(sk, .82), hc = F.hc, hcd = shade(hc, .75);
   const tunic = L.tunic || '#5a4a32', trim = L.trim || '#c9b48a', hood = L.cape || shade(tunic, .8);
@@ -696,7 +698,7 @@ function drawFace(g, a){
   g.strokeStyle = hcd; g.lineWidth = F.brow; g.lineCap = 'round';
   g.beginPath(); g.moveTo(36, 42 - (F.mouth === 3 ? -1 : 0)); g.lineTo(46, 41 + (F.mouth === 3 ? 1.5 : 0)); g.moveTo(54, 41 + (F.mouth === 3 ? 1.5 : 0)); g.lineTo(64, 42); g.stroke();
   // eyes
-  const eh = [2.4, 1.5, 2.9][F.eye];
+  const eh = mood === 'sick' ? 1.1 : [2.4, 1.5, 2.9][F.eye];
   [41, 59].forEach((x, i) => { if (oneEye && i === 1) return; ell(x, 48, 3.6, eh, '#f3ede0'); ell(x + .4, 48, 1.8, Math.min(1.8, eh), '#1e1a16'); });
   if (oneEye) { ell(59, 48, 5.5, 4.5, '#141210'); g.strokeStyle = '#141210'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(50 - rx, 40); g.lineTo(50 + rx, 44); g.stroke(); }
   if (F.old) { g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = .9; g.beginPath(); g.moveTo(31, 49); g.lineTo(34, 51); g.moveTo(69, 49); g.lineTo(66, 51); g.moveTo(42, 35); g.lineTo(58, 35); g.stroke(); }
@@ -713,15 +715,18 @@ function drawFace(g, a){
   if (F.beard === 5) ell(50, 74, 5, 6, hc);
   // mouth
   g.strokeStyle = shade(sk, .55); g.lineWidth = 1.8; g.beginPath();
-  if (F.mouth === 1) { g.moveTo(44, 67); g.quadraticCurveTo(50, 71, 56, 67); } else if (F.mouth === 2) { g.moveTo(44, 69); g.quadraticCurveTo(50, 65.5, 56, 69); } else { g.moveTo(44, 68); g.lineTo(56, 68); }
+  if (mood === 'grin') { g.stroke(); g.fillStyle = '#3a1a14'; g.beginPath(); g.moveTo(43, 66); g.quadraticCurveTo(50, 75, 57, 66); g.closePath(); g.fill(); g.fillStyle = '#efe8d8'; g.fillRect(45, 66, 10, 2.2); g.beginPath(); }
+  else if (F.mouth === 1) { g.moveTo(44, 67); g.quadraticCurveTo(50, 71.5, 56, 67); } else if (F.mouth === 2) { g.moveTo(44, 69); g.quadraticCurveTo(50, 65.5, 56, 69); } else { g.moveTo(44, 68); g.lineTo(56, 68); }
   g.stroke();
   if (F.f) { g.strokeStyle = 'rgba(160,60,60,.35)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(46, 68); g.lineTo(54, 68); g.stroke(); }
+  if (mood === 'sick') { ell(50, 52, rx, ry, 'rgba(120,170,60,.18)'); }
+  if (mood === 'grin' || mood === 'smile') { ell(37, 60, 5, 3, 'rgba(220,110,90,.18)'); ell(63, 60, 5, 3, 'rgba(220,110,90,.18)'); }
   // scars
   if (F.scar || tough) { g.strokeStyle = 'rgba(240,190,180,.85)'; g.lineWidth = 1.3; g.beginPath(); g.moveTo(63, 40); g.lineTo(68, 58); for (let y = 44; y < 58; y += 4.5) { g.moveTo(63.5 + (y - 40) * .28 - 1.6, y); g.lineTo(63.5 + (y - 40) * .28 + 1.6, y + .4); } g.stroke(); }
 }
 const pcache = {};
 function portrait(a, size){
-  const key = (a.id || a.hero || a.cls) + '|' + a.rar + '|' + size + '|' + (a.stars || 0) + '|' + (a.nick || '') + '|' + (a.traits || []).join(',');
+  const key = (a.id || a.hero || a.cls) + '|' + moodOf(a) + '|' + a.rar + '|' + size + '|' + (a.stars || 0) + '|' + (a.nick || '') + '|' + (a.traits || []).join(',');
   if (pcache[key]) return pcache[key];
   const c = document.createElement('canvas'), k = 2; c.width = c.height = size * k; const g = c.getContext('2d'); g.scale(k, k);
   g.save(); g.beginPath(); g.roundRect ? g.roundRect(0, 0, size, size, 2) : g.rect(0, 0, size, size); g.fillStyle = '#26301f'; g.fill(); g.clip();
@@ -783,7 +788,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.20';
+const VERSION = '2.20.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1119,6 +1124,7 @@ function sheetSettings(){
   <div class="sub" style="margin-top:8px">Company name</div><input class="nmin" id="coname" value="${esc(S.company || '')}" maxlength="40" placeholder="The Northampton Company">
   <div class="sub" style="margin-top:8px">Banner colours: ${banner()[2]}</div><div>${BANNERS.map((b, i) => `<span class="sw2 ${(S.banner || 0) === i ? 'on' : ''}" data-act="banner" data-i="${i}" style="background:linear-gradient(135deg,${b[0]} 55%,${b[1]} 55%)"></span>`).join('')}</div></div>
   <h3>SOUND</h3><div class="card"><label class="tog" data-act="music"><span class="sw ${S.music ? 'on' : ''}"></span>Music</label><div class="sub" style="margin-top:4px">The speaker button at the top turns all sound on or off.</div></div>
+  <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
@@ -1409,6 +1415,7 @@ function useAbility(u){
 function downUnit(u){ if (u.down) return; u.down = true; u.hp = 0; BT.shake = 4; BT.fx.push({t:0, x:u.x, y:u.y - 14, txt:u.a.name.split(' ')[0] + ' is down', col:'#ff9a8a', big:1}); BT.en.forEach(e => { if (e.tg === u) e.tg = null; }); }
 function bstep(dt){
   const b = BT; if (!b) return;
+  if (b.phase === 'ready') { b.readyT -= dt / (S.speed || 1); if (b.readyT <= 0) b.phase = 'fight'; return; }
   if (b.phase === 'won' || b.phase === 'lost' || b.phase === 'empty') { b.endT -= dt; b.fx.forEach(f => f.t += dt); b.fx = b.fx.filter(f => f.t < 1.3); if (b.endT <= 0) afterBattle(); return; }
   b.t += dt;
   while (b.spawnI < b.spawns.length && b.spawns[b.spawnI].t <= b.t) spawnEnemy(b.spawns[b.spawnI++].type);
@@ -1514,13 +1521,15 @@ function endBattle(win){
     }
     if (b.sp) { S.codex.setpieces[b.sp.id] = 1; if (!S.spFirst[N]) { S.spFirst[N] = 1; const it = dropItem(N, 2); if (it) sub += ` · ${itemName(it)}`; chron(`Won ${b.sp.n} at stage ${N}.`); gtag('event', 'set_piece', {id:b.sp.id, stage:N}); } }
     bmsg(b.sp ? b.sp.n + ' won!' : boss ? (b.ev ? 'Champion beaten!' : 'Boss defeated!') : 'Stage cleared', sub); sfx('win');
-  } else { morMove(-2); bmsg(b.camp <= 0 ? 'The camp is overrun' : b.t > battleLimit(b) ? 'Out of time' : 'Driven back', b.ev ? 'Back one event stage' : S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
+  } else { morMove(-2); bmsg(b.camp <= 0 ? 'The camp is overrun' : b.t > battleLimit(b) ? 'Out of time' : 'Driven back', b.ev ? 'Back one event stage' : S.stage > 1 ? 'Holding the last stage you beat. Push on when ready' : 'Strengthen the company'); sfx('lose'); }
   if (dead.length) setTimeout(() => toast(`${dead.map(a => a.name).join(' and ')} fell in the fighting. See the Roll of Honour.`), 900);
   b.won = win;
 }
 /* early on wounds heal in seconds; full 90-second wounds only from stage 50 */
 const earlyHeal = () => clamp((S.runMax - 10) / 40, .15, 1);
 function woundTime(){ return earlyHeal() * 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1) / (S.rep ? repFx().heal : 1) / (fol('laund') ? 1.15 : 1); }
+/* a short break between stages, only while someone is watching, so they can upgrade and swap without pausing */
+const brkOn = () => S.brk !== false && bOn() && !document.hidden && BT && !BT.ev && BT.phase === 'fight' && !(S.tut >= 1 && S.tut < 99);
 function afterBattle(){
   const b = BT;
   if (b.phase === 'empty') { newBattle(); return; }
@@ -1528,11 +1537,11 @@ function afterBattle(){
   if (b.won) {
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
-    else { S.farmN++; if (S.farmN >= 10 && S.stage < S.runMax) { S.autoAdv = true; S.farmN = 0; } }
+    else S.farmN++;
     const newBest = S.stage > S.bestEver; S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest(); capXP(1 + (newBest ? 3 : 0) + (isBoss(b.N) ? 8 : 0));
     if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
-  checkUnlocks(); newBattle(); if (bOn()) battleHud(true);
+  checkUnlocks(); newBattle(); if (brkOn()) { BT.phase = 'ready'; BT.readyT = 10; } if (bOn()) battleHud(true);
 }
 
 /* ================= offline ================= */
@@ -1556,7 +1565,6 @@ function offlineSim(sec){
     if (isBoss(N)) { S.res.medals += 1 + Math.floor(N / 20); if (!S.bossFirst[N]) { S.bossFirst[N] = 1; S.res.writs += 1 + Math.floor(N / 50); } }
     if (arrowsOn()) S.res.arrows = Math.max(0, S.res.arrows - lineUp().filter(Boolean).length * 12);
     if (S.autoAdv && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.stage++; S.runMax = Math.max(S.runMax, S.stage); }
-    else if (!S.autoAdv) { S.farmN++; if (S.farmN >= 10 && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.autoAdv = true; S.farmN = 0; S.stage++; S.runMax = Math.max(S.runMax, S.stage); } }
   }
   S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
   rep.endStage = S.stage; capXP(Math.floor(rep.clears / 2)); return rep;
@@ -1728,6 +1736,7 @@ function bindBattleView(){
       if (docPick) { docPick = false; stripTick(true); return; }
       if (p.sx >= 6 && p.sx <= 98 && p.sy >= 6 && p.sy <= 26) return;
       if (now - lastTap < 300 && V.s > 1) { V.s = 1; clampView(); lastTap = 0; return; } lastTap = now;
+      if (BT.phase === 'ready') { BT.phase = 'fight'; tr('breakSkip'); return; }
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', ev => { pts.delete(ev.pointerId); pinch = null; pan = null; if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } });
   cv.addEventListener('wheel', ev => { ev.preventDefault(); if (V.s === 1) tr('zoom'); const [sx, sy] = toS(ev), cx = V.x + sx / V.s, cy = V.y + sy / V.s; V.s *= ev.deltaY < 0 ? 1.15 : 1 / 1.15; clampView(); V.x = cx - sx / V.s; V.y = cy - sy / V.s; clampView(); }, {passive:false});
@@ -1755,7 +1764,8 @@ function battleHud(full){
   $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} left · ${clockTxt(b)} · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · no arrows' : arrowsOn() ? ' · arrows +50%' : '');
   $('#bD').textContent = `Line DPS ${fmt(squadDps(N))}`;
   $('#bBar').style.width = (100 * (1 - left / Math.max(1, b.spawns.length))) + '%';
-  $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? (S.tutVolley ? 'Pinch to zoom · tap an archer' : 'Tap the field to loose a volley') : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
+  $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? (S.tutVolley ? 'Pinch to zoom · tap an archer' : 'Tap the field to loose a volley') : 'Holding at the last stage you beat';
+  { let pb = $('#pushOn'); if (!pb) { pb = document.createElement('button'); pb.id = 'pushOn'; pb.className = 'btn gold'; pb.dataset.act = 'pushon'; pb.textContent = 'Push on'; pb.style.marginLeft = '8px'; $('#bA').after(pb); } pb.style.display = !S.autoAdv && !b.ev ? '' : 'none'; if (!S.autoAdv && !b.ev) $('#bA').textContent = ''; }
 }
 function viewCamp(){
   const nb = (S.builds || []).length;
@@ -2278,7 +2288,7 @@ function showCard(){
 function checkUnlocks(){
   const msgs = [];
   Object.keys(BLD).forEach(k => { if (!S.seen['b_' + k] && bUnlocked(k)) { S.seen['b_' + k] = 1; if (BLD[k].un > 1) msgs.push(`New building: ${BLD[k].n}`); if (k === 'mine') S.seen.mine = 1; } if (k === 'fletcher' && bUnlocked(k)) S.seen.fletcher = 1; });
-  if (!S.seen.tavern && S.bestEver >= 8) S.seen.tavern = 1;
+  if (!S.seen.tavern && S.bestEver >= 5) S.seen.tavern = 1;
   if (!S.seen.orders && S.bestEver >= 14) S.seen.orders = 1;
   if (!S.seen.exped && S.bestEver >= 22) S.seen.exped = 1;
   if (!S.seen.legacy && S.bestEver >= 35) S.seen.legacy = 1;
@@ -2343,6 +2353,8 @@ document.addEventListener('click', e => {
     case 'setslot': { const i = +el.dataset.i; if (id) { const j = S.form.indexOf(id); if (j >= 0) S.form[j] = S.form[i]; } S.form[i] = id || null; closeSheet(); refreshLineStats(); break; }
     case 'autofill': autofill(); S.tutFill = 1; refreshLineStats(); toast('Best men forward.', true); break;
     case 'autores': S.autoRes = !S.autoRes; refreshLineStats(); break;
+    case 'pushon': S.autoAdv = true; S.farmN = 0; tr('pushOn'); S.stage = Math.min(S.stage + 1, S.runMax); newBattle(); battleHud(true); save(); return;
+    case 'brk': S.brk = S.brk === false; tr('breakToggle'); save(); refreshSheet(); return;
     case 'pull': pull(+el.dataset.n); return;
     case 'buywrit': { const p = writPrice(); if (S.res.silver < p) return; S.res.silver -= p; S.res.writs++; S.writBuys++; sfx('coin'); break; }
     case 'daily': { if (!dailyReady()) return; const r = dailyReward(S.daily.streak % 7); for (const k in r) addRes(k, r[k]); S.daily.day = dayKey(); S.daily.streak++; sfx('coin'); toast('Rations collected.', true); break; }
@@ -2397,7 +2409,7 @@ document.addEventListener('click', e => {
   save(); render(); refreshSheet();
 });
 function refreshLineStats(){ if (BT) BT.units.forEach(u => { if (u.down) return; const s = stats(u.a); const f = u.hp / u.max; u.s = s; u.max = s.hp; u.hp = s.hp * f; }); newBattleIfIdle(); }
-function newBattleIfIdle(){ if (BT && (BT.phase === 'empty' || (BT.phase === 'fight' && BT.t < 1.5))) newBattle(); else if (BT && BT.phase === 'fight') { const ids = new Set(BT.units.map(u => u.a.id)); if (lineUp().some(a => a && !ids.has(a.id))) BT.pendingRebuild = true; } }
+function newBattleIfIdle(){ if (BT && BT.phase === 'ready') { const r = BT.readyT; newBattle(); if (BT.phase === 'fight') { BT.phase = 'ready'; BT.readyT = r; } return; } if (BT && (BT.phase === 'empty' || (BT.phase === 'fight' && BT.t < 1.5))) newBattle(); else if (BT && BT.phase === 'fight') { const ids = new Set(BT.units.map(u => u.a.id)); if (lineUp().some(a => a && !ids.has(a.id))) BT.pendingRebuild = true; } }
 function collectExped(i){
   capXP(3); const x = S.exped[i], E = EXPED[x.type], r = expedReward(x), men = x.ids.map(id => S.roster.find(a => a.id === id)).filter(Boolean);
   for (const k in r) if (k !== 'items') addRes(k, r[k]);
@@ -2511,6 +2523,7 @@ function draw(){
   if (b.z.mud || (b.sp && (b.sp.id === 'rain' || b.sp.id === 'mud'))) { ctx.strokeStyle = 'rgba(200,210,220,.16)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 0; i < 60; i++) { const x = (i * 53 + b.t * 30) % (W + 20), y = (i * 97 + b.t * 380) % (H + 20) - 10; ctx.moveTo(x, y); ctx.lineTo(x - 2, y + 9); } ctx.stroke(); }
   /* screen-space overlay: volley charges, zoom hint, archer tooltip */
   ctx.setTransform(k, 0, 0, k, 0, 0);
+  if (b.phase === 'ready') { const cw = ctx.canvas.width / k, ch = ctx.canvas.height / k; ctx.fillStyle = 'rgba(8,10,7,.72)'; ctx.fillRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.font = '700 19px "Alegreya Sans",sans-serif'; ctx.fillText(`Stage ${b.N} in ${Math.ceil(b.readyT)}`, cw / 2, ch / 2 - 6); ctx.fillStyle = '#e8dcc0'; ctx.font = '12px "Alegreya Sans",sans-serif'; ctx.fillText('Upgrade and swap now, or tap to start', cw / 2, ch / 2 + 17); }
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
   if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(docPick ? 'Doc: pick one' : MED.c ? `Doc · ${MED.c} left` : 'Doc · none left', 11, 44); if (docPick) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W / 2 - 110, H - 34, 220, 22); ctx.fillStyle = '#cfeecb'; ctx.textAlign = 'center'; ctx.fillText('Tap an archer, or a name below, to heal', W / 2, H - 19); } }
@@ -2599,6 +2612,7 @@ window.__dbg = {bDur, checkUnlocks, portrait, faceOf, campLife, morState, morMov
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.20.1","items":["After a loss the company now holds at the last stage it beat and stays there, farming, until you press Push on. No more waking up to a company that threw itself at the same wall all night.","A 10-second break between stages while you are watching, to upgrade and swap. Tap the field to skip it, or turn it off in Settings.","The Tavern opens at stage 5 instead of 8, so you can recruit reserves sooner.","Faces show the mood of the camp: smiles and grins when morale is high, long faces when it is low, and a green tinge for the hungover."]},
 {"v":"2.20","items":["Camp life: your company has a mood. Morale, on the Company page, rises with victories, ale, pay and kindness and falls with deaths, defeats and the whip. High spirits add up to 10% damage; a mutinous company loses 15%.","Twenty-seven new camp events, and most of them leave a mark: weddings, feuds, friendships, ballads, deserters, an outlaw, a drinking match, the pledge, a feast and, if you let things slide, mutiny.","Drink and hangovers: a hungover archer shoots 20% worse until it wears off. Drunkards who take the pledge can become Teetotal.","Camp followers: seven people can join the baggage train for good, each with a lasting benefit. A cook, a laundress, a herbwife, an alewife, a sutler, a chaplain and a fletcher's boy.","Women in the company: about one recruit in five is now a woman, and one may turn up at the muster.","A faster start: wounds early on heal in seconds (full length only from stage 50), nobody can be killed outright before stage 30, and if the company drops below three men a local volunteers.","Early upgrades are instant again: every building's first 15 levels (the first level of capped buildings like the Barracks) finish straight away. Timers only start once buildings get bigger.","Every archer now has a face of their own, built from parts: hair, beards, scars, broken noses, eye patches and a drinker's red nose."]},
 {"v":"2.19","items":["Eight new regions past stage 120, from Cravant and Patay to Castillon, then the old soldiers' tales of Crécy and Poitiers: new stages up to 200 before the war starts round again.","Your captain: tap your rank at the top of the screen. Earn experience from every fight and decision and rise from Vintenar to King, with a reward at each rank. Experience is never lost.","Reputation: your choices make the men see you as Harsh or Fair, Feared or Loved, and each has its upside.","From Centenar, give orders: flog the slackers, a day off, a night at the tavern, or a bonus.","From Captain of Archers, lead raids through the French countryside for rich loot, at a cost to your good name.","Your record and best men on the captain page, and tap a name in the King's League to see their captain and army."]},
 {"v":"2.18.5","items":["Doc now has three heals per battle instead of a recharge timer, so choose who gets them. The Barber-surgeon adds one more every three levels, up to six."]},
