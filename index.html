@@ -671,7 +671,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18.4';
+const VERSION = '2.18.5';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1212,6 +1212,7 @@ const SLOTS = PATHS.map(p => {
   return out;
 });
 function newBattle(){
+  MED.c = docMax(); docPick = false;
   const evOn = S.mode === 'event' && evOpen(), ev = evOn ? curEvent() : null, N = evOn ? evN(evState().stage) : S.stage, zi = Math.floor((N - 1) / 10), li = (zi + (evOn ? 2 : 0)) % LAYOUTS.length, sp = evOn ? null : SP(N);
   const ln = lineUp();
   BT = {N, z:zoneOf(N), sp, li, path:PATHS[li], slots:SLOTS[li], t:0, phase:'fight', units:[], en:[], arrows:[], fx:[], decals:BT && BT.li === li ? BT.decals.filter(d => !d.arrow).slice(-40) : [],
@@ -1543,18 +1544,18 @@ function playerVolley(x, y, auto){
 }
 function volleyTick(dt){
   if (!BT || BT.phase !== 'fight' || paused) return;
-  if (medicOn() && MED.c < MED.max) { MED.t += dt; if (MED.t >= MED.every) { MED.t = 0; MED.c++; } }
   if (VOL.c < VOL.max) { VOL.t += dt; if (VOL.t >= VOL.every) { VOL.t = 0; VOL.c++; } } else VOL.t = 0;
   if (VOL.c >= VOL.max && Date.now() - lastInput > 45000 && BT.en.length) { const t = densest(); if (t) playerVolley(t.x, t.y, true); }
 }
 let tipU = null, tipT = 0, paused = false;
 /* the medic: tap the cross to patch up the line and get downed men back on their feet. Manual only. */
-const MED = {c:1, t:0, max:2, every:30};
+const MED = {c:3};
+const docMax = () => 3 + Math.floor(B_('surgeon') / 3);
 const medicOn = () => S.bestEver >= 25;
 let docPick = false;
 function useMedic(){
   if (!BT || BT.phase !== 'fight' || !medicOn()) return;
-  if (MED.c < 1) { BT.fx.push({t:0, x:50, y:52, txt:'Doc is not ready', col:'#cbbd9f'}); return; }
+  if (MED.c < 1) { BT.fx.push({t:0, x:60, y:60, txt:'Doc is out of bandages this fight', col:'#cbbd9f'}); return; }
   docPick = !docPick; stripTick(true);
 }
 function healOne(u){
@@ -1668,7 +1669,7 @@ function bEffect(k){
     case 'drill': return `${BLD[k].d} ${l ? `<b>${14 + l * 3} arrows every ${Math.max(6, 20 - l)}s</b>` : ''}`;
     case 'market': return `${BLD[k].d} ${l ? `<b>+${fmt(marketRate())}/s</b>` : ''}`;
     case 'bowyer': return `${BLD[k].d} <b>×${((1 + .1 * l) * Math.pow(2, Math.floor(l / 10))).toFixed(2)}</b>`;
-    case 'surgeon': return `${BLD[k].d} Wounds heal in <b>${fmtT(woundTime())}</b>.`;
+    case 'surgeon': return `${BLD[k].d} Wounds heal in <b>${fmtT(woundTime())}</b>.${medicOn() ? ` Doc has <b>${docMax()} heals</b> per battle${B_(k) < 9 ? ' (one more every 3 levels)' : ''}.` : ''}`;
     case 'butts': return `${BLD[k].d} ${l ? `<b>One level every ${fmtT(240 / l)}</b>` : ''}`;
     case 'tavern': return `${BLD[k].d}`;
   }
@@ -1908,7 +1909,7 @@ const NEWC = [
   {id:'orders', on:() => S.seen.orders, t:'Orders', tab:'orders', d:"Daily rations to collect, and the King's orders: small goals that pay out."},
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
-  {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time.'},
+  {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time. He has three bandages per battle, more as the Barber-surgeon grows.'},
   {id:'exped', on:() => S.seen.exped, t:'Expeditions', tab:'orders', d:'Send men away to forage or raid. They come back with spoils, if they come back.'},
   {id:'event', on:() => evOpen(), t:'Weekly events', tab:null, d:'A separate tournament each week, with its own token shop. Switch to it with the Event button above the battlefield.'},
   {id:'study', on:() => S.bestEver >= 32, t:'The Study', tab:'study', d:'Parchment from the Scriptorium buys research: lasting upgrades for the whole company.'},
@@ -2159,7 +2160,7 @@ function draw(){
   ctx.setTransform(k, 0, 0, k, 0, 0);
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
-  if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(docPick ? 'Doc: pick one' : `Doc ${'+'.repeat(MED.c)}${MED.c < MED.max ? ' ' + Math.ceil(MED.every - MED.t) + 's' : ''}`, 11, 44); if (docPick) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W / 2 - 110, H - 34, 220, 22); ctx.fillStyle = '#cfeecb'; ctx.textAlign = 'center'; ctx.fillText('Tap an archer, or a name below, to heal', W / 2, H - 19); } }
+  if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(docPick ? 'Doc: pick one' : MED.c ? `Doc · ${MED.c} left` : 'Doc · none left', 11, 44); if (docPick) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W / 2 - 110, H - 34, 220, 22); ctx.fillStyle = '#cfeecb'; ctx.textAlign = 'center'; ctx.fillText('Tap an archer, or a name below, to heal', W / 2, H - 19); } }
   if (paused) { ctx.fillStyle = 'rgba(8,10,7,.45)'; ctx.fillRect(0, 0, W, H); ctx.font = '400 30px "IM Fell English SC",serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#efe3c4'; ctx.fillText('Paused', W / 2, H / 2); }
   if (V.s > 1.01) { ctx.font = '600 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,220,192,.75)'; ctx.fillText('Double-tap to zoom out', W - 8, 18); }
   if (tipU && tipT > 0 && b.units.includes(tipU)) { const u = tipU, a = u.a, sx = (u.x - V.x) * V.s, sy = (u.y - V.y) * V.s, bb = base(a), ab = bb.abN || '';
@@ -2245,6 +2246,7 @@ window.__dbg = {bDur, get BTs(){ return BT; }, friendRecruit, killArcher, startB
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18.5","items":["Doc now has three heals per battle instead of a recharge timer, so choose who gets them. The Barber-surgeon adds one more every three levels, up to six."]},
 {"v":"2.18.4","items":["A row under the battlefield shows every archer in the line with their health, so you can see who is in trouble even in a crowd. Tap a name to see their card.","Doc now treats one archer at a time: tap Doc, then tap who needs him. He recharges faster to make up for it."]},
 {"v":"2.18.3","items":["A banner now tells you when a new version is ready, and Settings shows your version with a Check now button."]},
 {"v":"2.18.2","items":["Buildings with a top level (Barracks, Tavern, Drill yard, Barber-surgeon) now take longer the nearer they get to it. The last Barracks level takes eight hours."]},
