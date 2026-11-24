@@ -654,7 +654,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.12.2';
+const VERSION = '2.12.3';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -869,8 +869,10 @@ function adoptCloud(d, why){
   } catch(e) {}
 }
 /* one sync step: compare with the cloud and move whichever way is forward. force:'override' always uploads. */
+let queuedOverride = false;
 async function cloudSync(force){
-  if (!fbUser || !fbDb || syncing) return;
+  if (!fbUser || !fbDb) return;
+  if (syncing) { if (force === 'override') queuedOverride = true; return; }
   syncing = true;
   try {
     save(); const ref = fbDb.collection('loose_saves').doc(fbUser.uid), mine = JSON.stringify(S), myP = progOf(S);
@@ -887,7 +889,7 @@ async function cloudSync(force){
     if (res.adopt) { cloudDoc = res.adopt; if (isActive() && force !== 'load') { pendingAdopt = res.adopt; } else adoptCloud(res.adopt); return; }
     if (res.same) { cloudDoc = res.same; syncAt.set(Math.max(syncAt.get(), res.same.updated)); return; }
     syncAt.set(res.now); S.cloudAt = res.now; cloudDoc = res.rec;
-  } finally { syncing = false; }
+  } finally { syncing = false; if (queuedOverride) { queuedOverride = false; cloudSync('override').catch(() => {}); } }
 }
 let pendingAdopt = null;
 const cloudUpload = f => cloudSync(f === 'override' ? 'override' : undefined);
@@ -1772,8 +1774,8 @@ document.addEventListener('click', e => {
     case 'signin': cloudMsg = ''; signIn(); return;
     case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
     case 'cloudsave': cloudSync().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
-    case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem('loose-backup')); const o = JSON.parse(b.data); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
-    case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
+    case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem('loose-backup')); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
+    case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
     case 'importcode': { try { const d = JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim())))); if (!d.roster || !d.res) throw 0; keepBackup(S, 'Before loading a save code'); d.last = Date.now(); localStorage.setItem(KEY, JSON.stringify(d)); try { localStorage.setItem('loose-force', '1'); } catch(e){} window.__skipSave = true; location.reload(); } catch(e) { toast('That code does not look right.'); } return; }
     case 'notify': { if (!S.notify && 'Notification' in window) Notification.requestPermission().then(p => { S.notify = p === 'granted'; if (!S.notify) toast('Notifications are blocked in your browser settings.'); save(); refreshSheet(); }); else { S.notify = false; save(); refreshSheet(); } return; }
