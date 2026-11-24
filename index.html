@@ -150,6 +150,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 .days div.got{background:#2a2614;border-color:var(--gold);color:var(--gold)}
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
+#updBar{position:fixed;left:0;right:0;top:0;z-index:85;background:#2b2410;border-bottom:2px solid var(--gold);color:#f3e6c0;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:15px}#updBar.on{display:flex}
 #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:14.5px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
 #tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:14.5px;line-height:1.35}
@@ -178,6 +179,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 </style>
 </head>
 <body>
+<div id="updBar" role="status"><span class="grow">A new version of Loose! is ready.</span><button class="btn gold" data-act="updopen">See what's new</button><button class="btn" data-act="upddismiss" aria-label="Later">Later</button></div>
 <div id="app">
   <header>
     <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
@@ -668,7 +670,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18.2';
+const VERSION = '2.18.3';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -859,7 +861,10 @@ async function checkUpdate(){
     if (notes.some(x => x.force && x.v === m[1])) applyUpdate();
   } catch(e){}
 }
-function updBtnShow(){ const b = $('#updBtn'); if (b) b.style.display = updInfo ? '' : 'none'; }
+function updBtnShow(){ const b = $('#updBtn'); if (b) b.style.display = updInfo ? '' : 'none';
+  const bar = $('#updBar'); if (!bar) return; let later = ''; try { later = localStorage.getItem('loose-upd-later') || ''; } catch(e){}
+  const on = !!updInfo && later !== updInfo.v; bar.classList.toggle('on', on); if (on) bar.querySelector('span').textContent = `Loose! ${updInfo.v} is ready. You're on ${VERSION}.`;
+  if (updInfo && document.hidden && S.notify && 'Notification' in window && Notification.permission === 'granted' && later !== updInfo.v && !window.__updNotified) { window.__updNotified = 1; try { new Notification('Loose! update ready', {body:`Version ${updInfo.v} is ready to install.`, icon:'icon-192.png'}); } catch(e){} } }
 function sheetUpdate(){
   if (!updInfo) return; sheetFn = null;
   const mine = updInfo.notes.filter(n => cmpV(n.v, VERSION) > 0);
@@ -874,7 +879,7 @@ async function applyUpdate(){
   if (sw) { await new Promise(res => { const t = setTimeout(res, 8000); navigator.serviceWorker.addEventListener('message', ev => { if (ev.data === 'update-applied' || ev.data === 'update-failed') { clearTimeout(t); res(); } }, {once:true}); sw.postMessage('apply-update'); }); }
   window.__skipSave = true; location.reload();
 }
-setTimeout(checkUpdate, 4000); setInterval(checkUpdate, 600000);
+setTimeout(checkUpdate, 3000); setInterval(checkUpdate, 300000); window.addEventListener('focus', checkUpdate);
 document.addEventListener('click', e => { if (e.target.closest && e.target.closest('#updBtn')) sheetUpdate(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 function initPwa(){ try { if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname.endsWith('github.io')) navigator.serviceWorker.register('sw.js').then(r => swReg = r).catch(() => {}); } catch(e){} }
@@ -1004,7 +1009,7 @@ function sheetSettings(){
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You do not aim or place anything mid-fight. The game is everything around it: who stands in the line and where (drag them on the battlefield to swap places), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
-  <div class="sub" style="text-align:center;margin-top:12px">Loose! version ${VERSION}</div>`);
+  <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
 }
 
 /* ================= 2.1: more legendaries ================= */
@@ -2004,6 +2009,9 @@ document.addEventListener('click', e => {
     case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; tr('slotSwitch'); (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
     case 'revive': revive(el.dataset.id); return;
     case 'cardgo': tr('cardShow'); closeSheet(); tab = el.dataset.tab; render(); return;
+    case 'updopen': $('#updBar').classList.remove('on'); sheetUpdate(); return;
+    case 'upddismiss': try { localStorage.setItem('loose-upd-later', updInfo ? updInfo.v : ''); } catch(e){} $('#updBar').classList.remove('on'); toast('The Update button stays at the top whenever you want it.'); return;
+    case 'updcheck': el.textContent = 'Checking...'; checkUpdate().then(() => { if (!updInfo) toast(`You're on the latest version, ${VERSION}.`, true); refreshSheet(); }); return;
     case 'doupdate': tr('update'); el.textContent = 'Updating...'; applyUpdate(); return;
     case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem(sk('loose-backup'))); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
@@ -2218,6 +2226,7 @@ window.__dbg = {bDur, friendRecruit, killArcher, startBuild, buildTick, setUpd(i
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18.3","items":["A banner now tells you when a new version is ready, and Settings shows your version with a Check now button."]},
 {"v":"2.18.2","items":["Buildings with a top level (Barracks, Tavern, Drill yard, Barber-surgeon) now take longer the nearer they get to it. The last Barracks level takes eight hours."]},
 {"v":"2.18.1","items":["Each kind of expedition can only be out once at a time."]},
 {"v":"2.18","items":["On a computer the game now uses the whole window: the battlefield stays on the left and keeps fighting while you run the Camp, Company and the rest on the right. Phones are unchanged."]},
