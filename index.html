@@ -161,6 +161,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 .eqrow:last-child{border-bottom:0}
 .ic{width:1.1em;height:1.1em;vertical-align:-.2em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .ib .ic{width:18px;height:18px;vertical-align:0}
+.btn.gold .ic,.btn.red .ic,.days div.got .ic{color:inherit!important}
 .bico .ic{width:24px;height:24px}
 .gc .ic{width:18px;height:18px}
 .eqrow img{width:34px;height:34px;border-radius:2px}
@@ -323,10 +324,12 @@ function defaultSave(){
     seen:{}, newsT:420, news:false, fallen:[], autoRes:true, bossFirst:{}, welcomed:false, buttsT:0};
 }
 function load(){
-  try { const r = localStorage.getItem(KEY); if (r) { S = Object.assign(defaultSave(), JSON.parse(r)); return true; } } catch(e){}
+  let fresh = false; try { fresh = !!localStorage.getItem('loose-force'); } catch(e){}
+  try { const r = localStorage.getItem(KEY); if (r) { S = Object.assign(defaultSave(), JSON.parse(r)); if (fresh) S.epochAt = Date.now(); return true; } } catch(e){}
   S = defaultSave();
   const a = newArcher(1, 'yeoman'), b = newArcher(0, 'levy'), c = newArcher(0, 'levy');
   S.roster.push(a, b, c); S.form[0] = a.id; S.form[1] = b.id; S.form[5] = c.id;
+  if (fresh) S.epochAt = Date.now();
   return false;
 }
 function save(){ if (window.__skipSave) return; S.last = Date.now(); if (typeof lastInput === 'number' && lastInput > (S.played || 0) && lastInput <= Date.now()) S.played = lastInput; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
@@ -649,7 +652,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.11';
+const VERSION = '2.12';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -849,6 +852,8 @@ const isActive = () => !document.hidden && Date.now() - lastInput < 120000;
 /* SYNC RULE: the save that is further along always wins. Progress = stages cleared (live and offline), kills break ties.
    Both only ever go up, so whichever is higher has been played more. The losing save is always kept as a backup. */
 const progOf = o => o && o.stats ? (o.stats.clears || 0) + (o.stats.kills || 0) / 1e9 : 0;
+/* a is ahead of b if it began later (start over / save code), or same start and more progress */
+const ahead = (a, b) => { if (!a) return false; if (!b) return true; const ea = a.epochAt || 0, eb = b.epochAt || 0; return ea !== eb ? ea > eb : progOf(a) > progOf(b); };
 const docObj = d => { try { return JSON.parse(d.data); } catch(e) { return null; } };
 const fromOther = d => d && d.device !== DEV && d.updated > syncAt.get();
 function keepBackup(o, why){ try { if (!o || !o.stats) return; const prev = JSON.parse(localStorage.getItem('loose-backup') || 'null'); if (prev && progOf(JSON.parse(prev.data)) > progOf(o) && Date.now() - prev.at < 7 * 864e5) return; localStorage.setItem('loose-backup', JSON.stringify({data:JSON.stringify(o), at:Date.now(), why, best:o.bestEver, stage:o.stage, clears:o.stats.clears || 0, kills:o.stats.kills || 0})); } catch(e){} }
@@ -870,8 +875,8 @@ async function cloudSync(force){
     const res = await fbDb.runTransaction(async t => {
       const snap = await t.get(ref), d = snap.exists ? snap.data() : null, theirs = d ? docObj(d) : null, theirP = progOf(theirs);
       if (d && force !== 'override') {
-        if (theirP > myP) return {adopt:d};
-        if (theirP === myP) return {same:d};
+        if (ahead(theirs, S)) return {adopt:d};
+        if (!ahead(S, theirs)) return {same:d};
       }
       const now = Date.now(), rec = {data:mine, updated:now, device:DEV, best:S.bestEver, stage:S.stage, prestiges:S.prestiges, clears:S.stats.clears || 0, kills:S.stats.kills || 0, v:VERSION};
       rec.backup = d && d.device !== DEV && d.data ? d.data : d && d.backup ? d.backup : null;
@@ -891,13 +896,13 @@ async function onSignedIn(){
     await cloudSync(force);
     const ref = fbDb.collection('loose_saves').doc(fbUser.uid);
     if (unsubCloud) unsubCloud();
-    unsubCloud = ref.onSnapshot(sn => { if (!sn.exists) return; const d = sn.data(); cloudDoc = d; if (d.device !== DEV && progOf(docObj(d)) > progOf(S)) { if (isActive()) pendingAdopt = d; else adoptCloud(d); } }, () => {});
+    unsubCloud = ref.onSnapshot(sn => { if (!sn.exists) return; const d = sn.data(); cloudDoc = d; if (d.device !== DEV && ahead(docObj(d), S)) { if (isActive()) pendingAdopt = d; else adoptCloud(d); } }, () => {});
     cloudMsg = 'Synced. This account keeps every signed-in device up to date.';
   } catch(e) { cloudMsg = e.code === 'permission-denied' ? 'Signed in, but the cloud database is not open yet. Your game is still saved on this device.' : 'Could not reach the cloud: ' + (e.message || e.code); }
   refreshSheet();
 }
 /* idle games make progress with nobody touching the screen, so sync on a timer whenever the page is open, not just when tapped */
-setInterval(() => { if (fbUser && cloudState === 'ready' && !document.hidden) { if (pendingAdopt && !isActive() && progOf(docObj(pendingAdopt)) > progOf(S)) { adoptCloud(pendingAdopt); pendingAdopt = null; } else cloudSync().catch(() => {}); } }, 30000);
+setInterval(() => { if (fbUser && cloudState === 'ready' && !document.hidden) { if (pendingAdopt && !isActive() && ahead(docObj(pendingAdopt), S)) { adoptCloud(pendingAdopt); pendingAdopt = null; } else cloudSync().catch(() => {}); } }, 30000);
 document.addEventListener('visibilitychange', () => { if (fbUser) cloudSync(document.hidden ? undefined : 'load').catch(() => {}); });
 window.addEventListener('pagehide', () => { if (fbUser) cloudSync().catch(() => {}); });
 window.addEventListener('beforeunload', () => { if (fbUser) cloudSync().catch(() => {}); });
