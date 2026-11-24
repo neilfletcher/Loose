@@ -14,20 +14,20 @@
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 /*
 VOICE: gritty campaign ledger, gallows humour, idle-game snap
 IDEA: a captain's muster book in a soaked camp in 1415, numbers always going up
 PICTURE: the top-down battlefield running on its own; portraits drawn from the same sprites
-COLOUR and TYPE: deep field green, St George red, gilt for rarity; IM Fell for titles, Inter for the rest
+COLOUR and TYPE: deep field green, St George red, gilt for rarity; IM Fell for titles, Alegreya Sans for the rest
 LAYOUT: phone column, resource strip at the top, tabs at the bottom
 */
 :root{--bg:#10140f;--p:#192117;--p2:#212b1e;--line:#2f3b2b;--ink:#ece6d6;--mut:#98a391;--red:#c8372d;--gold:#e8b64c;
 --r0:#aeaca2;--r1:#72c35d;--r2:#55a2ea;--r3:#b874ea;--r4:#f2b233}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;min-width:0}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,sans-serif;overflow:hidden}
-body{background:radial-gradient(ellipse at 50% 0%,#24301f 0%,var(--bg) 70%)}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.4 "Alegreya Sans",system-ui,sans-serif;overflow:hidden}
+body{background:var(--bg)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .fell{font-family:"IM Fell English SC",Georgia,serif}
 #app{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative}
@@ -36,9 +36,9 @@ header{padding:8px 12px 6px;border-bottom:1px solid var(--line);background:#0d11
 .logo{font-family:"IM Fell English SC",serif;font-size:22px;line-height:1}
 .logo b{color:var(--red)}
 .rank{font-size:11px;color:var(--mut);flex:1}
-.ib{width:32px;height:32px;border-radius:9px;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;font-size:14px}
+.ib{width:32px;height:32px;border-radius:2px;background:var(--p2);border:1px solid var(--line);display:grid;place-items:center;font-size:14px}
 .res{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin-top:7px}
-.rc{background:var(--p);border:1px solid var(--line);border-radius:8px;padding:3px 6px 4px;line-height:1.2;overflow:hidden}
+.rc{background:var(--p);border:1px solid var(--line);border-radius:2px;padding:3px 6px 4px;line-height:1.2;overflow:hidden}
 .rc b{display:block;font-size:12.5px;white-space:nowrap;letter-spacing:-.01em}
 .rc span{display:block;color:var(--mut);font-size:9.5px;white-space:nowrap}
 .rc i{display:block;height:3px;border-radius:2px;background:#2a3426;margin-top:3px;overflow:hidden}
@@ -52,52 +52,52 @@ nav button{flex:1;padding:7px 0 8px;font-size:10.5px;font-weight:600;color:var(-
 nav svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav button.on{color:var(--gold)}
 nav button.hide{display:none}
-.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:9px;height:9px;border-radius:9px;background:var(--red);box-shadow:0 0 0 2px #0c100b}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:9px;height:9px;border-radius:2px;background:var(--red);box-shadow:0 0 0 2px #0c100b}
 h2{font-family:"IM Fell English SC",serif;font-weight:400;font-size:24px;margin:12px 0 2px}
-h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-weight:700}
+h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400;color:#c9b88f;margin:16px 0 6px;border-bottom:1px solid var(--line);padding-bottom:3px}
 .sub{color:var(--mut);font-size:12.5px}
 .sub b{color:var(--ink)}
-.card{background:var(--p);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:8px}
+.card{background:var(--p);border:1px solid var(--line);border-radius:2px;padding:11px;margin-bottom:8px}
 .row{display:flex;gap:10px;align-items:center}
 .grow{flex:1}
-.btn{background:var(--p2);border:1px solid #3d4b38;border-radius:10px;padding:7px 11px;font-weight:700;white-space:nowrap;min-height:38px;font-size:13px;line-height:1.15}
+.btn{background:var(--p2);border:1px solid #3d4b38;border-radius:2px;padding:7px 11px;font-weight:700;white-space:nowrap;min-height:38px;font-size:13px;line-height:1.15}
 .btn small{display:block;font-weight:600;font-size:10.5px;opacity:.85}
-.btn.gold{background:linear-gradient(#f0c35c,#c08a26);color:#22170a;border-color:#f0c35c}
-.btn.red{background:linear-gradient(#d4473b,#9a2a22);color:#fff;border-color:#d4473b}
+.btn.gold{background:#d29f3b;color:#1d1408;border-color:#a77a24}
+.btn.red{background:#b3342a;color:#fff;border-color:#86251d}
 .btn.ghost{color:#e9988c;border-color:#5a2a24}
 .btn:disabled{opacity:.38;cursor:default}
 .big{width:100%;padding:13px;font-size:16px}
-.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;border:1px solid var(--line);margin:3px 3px 0 0;color:var(--mut)}
+.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:2px;border:1px solid var(--line);margin:3px 3px 0 0;color:var(--mut)}
 .pill.g{color:#a8dd8e;border-color:#3e6a2e;background:#18240f}
 .pill.b{color:#e9988c;border-color:#5a2a24;background:#24120f}
 .stars{color:var(--gold);font-size:11px;letter-spacing:-1px}
-.pt{width:50px;height:50px;border-radius:12px;flex:none;display:block}
+.pt{width:50px;height:50px;border-radius:2px;flex:none;display:block}
 .nm{font-weight:700}
 .r0{color:var(--r0)}.r1{color:var(--r1)}.r2{color:var(--r2)}.r3{color:var(--r3)}.r4{color:var(--r4)}
-.bar{height:5px;border-radius:4px;background:#2a3426;overflow:hidden;margin-top:4px}
+.bar{height:5px;border-radius:2px;background:#2a3426;overflow:hidden;margin-top:4px}
 .bar i{display:block;height:100%;background:var(--gold)}
 .lock{opacity:.45}
-.tag{font-size:10px;font-weight:800;letter-spacing:.06em;padding:1px 6px;border-radius:4px;background:#2a3526;color:var(--mut)}
+.tag{font-size:10px;font-weight:800;letter-spacing:.06em;padding:1px 6px;border-radius:2px;background:#2a3526;color:var(--mut)}
 /* battle */
 .bhead{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d110c;border-bottom:1px solid var(--line)}
 .bhead .t{font-family:"IM Fell English SC",serif;font-size:19px;line-height:1.05}
 #stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:200px}
-#cv{display:block;border-radius:4px}
-#bMsg{position:absolute;top:28%;left:0;right:0;text-align:center;pointer-events:none;font-family:"IM Fell English SC",serif;font-size:28px;color:#fff3d6;text-shadow:0 3px 14px #000,0 0 2px #000;opacity:0;transition:opacity .3s,transform .3s;transform:scale(.92)}
+#cv{display:block;border-radius:2px}
+#bMsg{position:absolute;top:28%;left:0;right:0;text-align:center;pointer-events:none;font-family:"IM Fell English SC",serif;font-size:28px;color:#fff3d6;text-shadow:0 2px 0 #000;opacity:0;transition:opacity .3s,transform .3s;transform:scale(.92)}
 #bMsg.on{opacity:1;transform:scale(1)}
-#bMsg small{display:block;font-family:Inter;font-size:13px;color:#e8dcc0}
+#bMsg small{display:block;font-family:"Alegreya Sans";font-size:13px;color:#e8dcc0}
 .bfoot{background:#0d110c;border-top:1px solid var(--line);padding:8px 12px}
-.prog{height:7px;border-radius:5px;background:#2a1a14;overflow:hidden;margin:4px 0 8px}
-.prog i{display:block;height:100%;background:linear-gradient(90deg,#c8372d,#e8b64c)}
+.prog{height:7px;border-radius:2px;background:#2a1a14;overflow:hidden;margin:4px 0 8px}
+.prog i{display:block;height:100%;background:var(--red)}
 .tog{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--mut)}
-.sw{width:38px;height:22px;border-radius:20px;background:#3a3022;position:relative;transition:.2s;flex:none}
-.sw:after{content:"";position:absolute;width:16px;height:16px;border-radius:50%;background:#cbbd9f;top:3px;left:3px;transition:.2s}
-.sw.on{background:#a8741f}.sw.on:after{left:19px;background:#fff3d6}
-.news{animation:pulse 1.2s infinite}
+.sw{width:18px;height:18px;border:2px solid #7a6640;background:transparent;position:relative;flex:none}
+.sw:after{content:"";position:absolute;display:none;left:4px;top:0;width:5px;height:10px;border:solid #1d1408;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.sw.on{background:var(--gold);border-color:var(--gold)}.sw.on:after{display:block}
+.news{outline:2px solid var(--gold);outline-offset:-2px}
 @keyframes pulse{50%{box-shadow:0 0 0 5px rgba(232,182,76,.35)}}
 /* formation */
 .form{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.slot{aspect-ratio:1;border-radius:12px;border:2px dashed #3d4b38;display:grid;place-items:center;position:relative;cursor:pointer;background:#141a12;overflow:hidden}
+.slot{aspect-ratio:1;border-radius:2px;border:2px dashed #3d4b38;display:grid;place-items:center;position:relative;cursor:pointer;background:#141a12;overflow:hidden}
 .slot img{width:100%;height:100%;display:block}
 .slot.f{border-color:#6e3326}
 .slot.x{opacity:.3;cursor:default}
@@ -105,7 +105,7 @@ h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-w
 .slot .w{position:absolute;inset:0;background:rgba(80,10,5,.55);display:grid;place-items:center;font-size:10px;font-weight:800}
 .slot.pick{border-style:solid;border-color:var(--gold)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
-.pk{background:var(--p);border:2px solid var(--line);border-radius:12px;padding:6px;text-align:center;cursor:pointer;position:relative}
+.pk{background:var(--p);border:2px solid var(--line);border-radius:2px;padding:6px;text-align:center;cursor:pointer;position:relative}
 .pk .pt{margin:0 auto 4px;width:58px;height:58px}
 .pk small{display:block;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pk.off{opacity:.35;cursor:default}
@@ -113,60 +113,64 @@ h3{font-size:11px;letter-spacing:.12em;color:var(--mut);margin:16px 0 8px;font-w
 /* sheet */
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;z-index:40}
 #modal.show{display:block}
-#sheet{position:absolute;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;max-height:90%;overflow-y:auto;background:#151c13;border:1px solid var(--line);border-radius:18px 18px 0 0;padding:8px 16px 22px}
-.handle{width:42px;height:4px;border-radius:4px;background:#3d4b38;margin:4px auto 10px}
+#sheet{position:absolute;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;max-height:90%;overflow-y:auto;background:#151c13;border:1px solid var(--line);border-radius:4px 4px 0 0;padding:8px 16px 22px}
+.handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
-.stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:10px;padding:6px;text-align:center}
+.stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
 .stat4 b{display:block;font-size:15px}.stat4 span{font-size:9.5px;color:var(--mut);letter-spacing:.05em}
 .bio{font-family:Georgia,serif;font-style:italic;color:#c7c0ad;font-size:14px;margin:8px 0}
 .ev{font-family:Georgia,serif;font-size:15px;line-height:1.55;color:#ddd5c2}
-.tav{border-radius:14px;padding:14px;background:linear-gradient(170deg,#3a2614,#1a120a);border:1px solid #5a3d1e;margin-top:8px}
+.tav{border-radius:2px;padding:14px;background:#2a1d10;border:1px solid #5a3d1e;margin-top:8px}
 .odds{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
-.odds span{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(0,0,0,.3)}
+.odds span{font-size:11px;font-weight:700;padding:2px 7px;border-radius:2px;background:rgba(0,0,0,.3)}
 .reveal{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:10px}
 .cd{perspective:600px;height:132px}
 .cd .in{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d}
 .cd.open .in{transform:rotateY(180deg)}
-.cd .fc,.cd .bk{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;text-align:center}
+.cd .fc,.cd .bk{position:absolute;inset:0;border-radius:2px;backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;text-align:center}
 .cd .bk{background:repeating-linear-gradient(45deg,#3a2614 0 6px,#2c1c0e 6px 12px);border:2px solid #6a4a24;font-family:"IM Fell English SC",serif;font-size:28px;color:#8a6a3a}
 .cd .fc{transform:rotateY(180deg);background:#151c13;border:2px solid}
 .cd .fc .pt{width:56px;height:56px;margin-bottom:4px}
 .cd .fc small{font-size:11px;line-height:1.2}
-.cd.r4 .fc{box-shadow:0 0 22px rgba(242,178,51,.6)}
-.cd.r3 .fc{box-shadow:0 0 14px rgba(184,116,234,.45)}
-.bico{width:44px;height:44px;border-radius:12px;background:#0f140e;border:1px solid var(--line);display:grid;place-items:center;flex:none;font-size:20px}
+.cd.r4 .fc{border-width:3px}
+.cd.r3 .fc{border-width:3px}
+.bico{width:44px;height:44px;border-radius:2px;background:#0f140e;border:1px solid var(--line);display:grid;place-items:center;flex:none;font-size:20px}
 .cost{font-size:11px;color:var(--mut)}
 .cost .no{color:#e9988c}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
-.days div{border:1px solid var(--line);border-radius:8px;padding:5px 2px;text-align:center;font-size:10px;color:var(--mut)}
+.days div{border:1px solid var(--line);border-radius:2px;padding:5px 2px;text-align:center;font-size:10px;color:var(--mut)}
 .days div.got{background:#2a2614;border-color:var(--gold);color:var(--gold)}
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
-#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:10px;font-size:13px;z-index:80;display:none;max-width:90%;text-align:center}
+#toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:13px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
 #tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:13px;line-height:1.35}
 #tut b{color:var(--gold)}
-nav button.tutp{color:var(--gold);animation:pulse 1s infinite;border-radius:10px}
-.nmin{width:100%;padding:7px 9px;border-radius:8px;background:#0f140e;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700}
-.sw2{display:inline-block;width:30px;height:30px;border-radius:8px;border:2px solid var(--line);cursor:pointer;margin:2px}
-.sw2.on{border-color:var(--gold);box-shadow:0 0 0 2px rgba(232,182,76,.4)}
+nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-radius:2px}
+.nmin{width:100%;padding:7px 9px;border-radius:2px;background:#0f140e;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:16px;font-weight:700}
+.sw2{display:inline-block;width:30px;height:30px;border-radius:2px;border:2px solid var(--line);cursor:pointer;margin:2px}
+.sw2.on{border-color:var(--gold);outline:2px solid var(--gold);outline-offset:1px}
 .gearrow{display:flex;gap:5px;margin-top:6px;align-items:center}
-.gc{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:16px;background:#0f140e;border:2px solid var(--line);cursor:pointer;position:relative}
+.gc{width:34px;height:34px;border-radius:2px;display:grid;place-items:center;font-size:16px;background:#0f140e;border:2px solid var(--line);cursor:pointer;position:relative}
 .gc.e{border-style:dashed;border-color:#6e3326;opacity:.8}
-.gc.e.can{border-color:var(--gold);opacity:1;animation:pulse 1.4s infinite}
+.gc.e.can{border-color:var(--gold);opacity:1}
 .gc.e:after{content:"+";position:absolute;font-size:13px;font-weight:800;color:#e9988c}
 .gc.e.can:after{color:var(--gold)}
 .gc span{filter:saturate(1.2)}
 .eqrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #22301f}
 .eqrow:last-child{border-bottom:0}
-.eqrow img{width:34px;height:34px;border-radius:9px}
+.ic{width:1.1em;height:1.1em;vertical-align:-.2em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ib .ic{width:18px;height:18px;vertical-align:0}
+.bico .ic{width:24px;height:24px}
+.gc .ic{width:18px;height:18px}
+.eqrow img{width:34px;height:34px;border-radius:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="ib" id="snd" aria-label="Sound">🔊</button><button class="ib" id="setBtn" aria-label="Settings">⚙️</button></div>
+    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
     <div class="res" id="res"></div>
   </header>
   <main id="view"></main>
@@ -205,6 +209,10 @@ function fmt(n){
 function fmtT(s){ s = Math.max(0, Math.round(s)); if (s < 60) return s + 's'; if (s < 3600) return Math.floor(s / 60) + 'm ' + (s % 60) + 's'; return Math.floor(s / 3600) + 'h ' + Math.floor(s % 3600 / 60) + 'm'; }
 
 /* ================= data ================= */
+const ICONS = {"coin": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4.5\"/>", "grain": "<path d=\"M12 21V6M12 10c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 10c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6zM12 16c-3-1-4.5-3-4.5-6 3 0 4.5 2 4.5 6zM12 16c3-1 4.5-3 4.5-6-3 0-4.5 2-4.5 6z\"/>", "log": "<circle cx=\"7\" cy=\"16\" r=\"3.5\"/><circle cx=\"17\" cy=\"16\" r=\"3.5\"/><circle cx=\"12\" cy=\"8.5\" r=\"3.5\"/><circle cx=\"7\" cy=\"16\" r=\".6\"/><circle cx=\"17\" cy=\"16\" r=\".6\"/><circle cx=\"12\" cy=\"8.5\" r=\".6\"/>", "pick": "<path d=\"M5 19L15 9M10.8 4.8Q18 6 19.2 13.2\"/>", "feather": "<path d=\"M19 4C11 4 6 10 6 18M6 18c6 0 11-5 13-14M4 20l2-2M9 15l5-5\"/>", "bow": "<path d=\"M7 3c8 3 8 15 0 18M7 3v18M3 12h17M17 9l3 3-3 3\"/>", "scroll": "<path d=\"M8 4h10a2 2 0 0 1 0 4H8M8 4a2 2 0 0 0-2 2v12a2 2 0 0 0 4 0v-1h10v1a2 2 0 0 1-2 2H8M11 11h5M11 14h4\"/>", "medal": "<circle cx=\"12\" cy=\"15\" r=\"5\"/><path d=\"M8 3l4 7 4-7M12 13v4\"/>", "fleur": "<path d=\"M12 3c-2 3-2 6 0 9 2-3 2-6 0-9zM12 12c-3-3-7-2-7 1 0 2 3 3 5 1M12 12c3-3 7-2 7 1 0 2-3 3-5 1M8 15h8M12 15v6\"/>", "book": "<path d=\"M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3zM21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z\"/>", "garter": "<circle cx=\"12\" cy=\"9\" r=\"5\"/><path d=\"M9 13l-2 8 5-3 5 3-2-8\"/>", "barn": "<path d=\"M3 10l9-6 9 6v10H3zM9 20v-6h6v6\"/>", "tent": "<path d=\"M3 20L12 4l9 16zM12 4v16M9 20l3-6 3 6\"/>", "target": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><circle cx=\"12\" cy=\"12\" r=\"4\"/><circle cx=\"12\" cy=\"12\" r=\".8\"/>", "scales": "<path d=\"M12 4v16M8 20h8M5 7h14M5 7l-3 6h6zM19 7l-3 6h6z\"/>", "tree": "<path d=\"M12 3l6 8h-3l4 6H5l4-6H6zM12 17v4\"/>", "cross": "<circle cx=\"12\" cy=\"12\" r=\"8\"/><path d=\"M12 8v8M8 12h8\"/>", "tankard": "<path d=\"M5 6h10v14H5zM15 9h3v7h-3M8 9v8M12 9v8\"/>", "axe": "<path d=\"M5 21L15 8M12 5c4-1 8 2 8 7l-4-1-3-3z\"/>", "shield": "<path d=\"M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z\"/>", "stone": "<path d=\"M5 16l2-7 6-4 5 3 2 8-6 3zM9 10l3 2\"/>", "beads": "<circle cx=\"12\" cy=\"5\" r=\"2\"/><circle cx=\"7\" cy=\"9\" r=\"2\"/><circle cx=\"17\" cy=\"9\" r=\"2\"/><circle cx=\"12\" cy=\"18\" r=\"3\"/><path d=\"M8.5 10.5L11 15.5M15.5 10.5L13 15.5\"/>", "head": "<path d=\"M12 3l5 9-5-2-5 2zM12 10v11\"/>", "lock": "<rect x=\"5\" y=\"11\" width=\"14\" height=\"10\"/><path d=\"M8 11V8a4 4 0 0 1 8 0v3\"/>", "sound": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11\"/>", "mute": "<path d=\"M4 9h4l5-4v14l-5-4H4zM16 9l5 6M21 9l-5 6\"/>", "gear": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1\"/><circle cx=\"12\" cy=\"12\" r=\"6.5\"/>", "ticket": "<path d=\"M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10\"/>"};
+const TINT = {"coin": "#e8b64c", "grain": "#d9b85c", "log": "#b98a5a", "pick": "#a9b4bd", "feather": "#e6e1d3", "bow": "#c9a070", "scroll": "#e3d3a8", "medal": "#d8584c", "fleur": "#e8b64c", "book": "#d8c79a", "garter": "#6f9be0", "ticket": "#d8c79a"};
+const IC = (k, c) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"${c || TINT[k] ? ` style="color:${c || TINT[k]}"` : ''}>${ICONS[k]}</svg>`;
+
 const RAR = [{n:'Common',c:'#aeaca2',st:1},{n:'Uncommon',c:'#72c35d',st:1},{n:'Rare',c:'#55a2ea',st:2},{n:'Epic',c:'#b874ea',st:3},{n:'Legendary',c:'#f2b233',st:4}];
 const CLS = {
   levy:    {n:'Levy Bowman', rar:0, dmg:4, int:1.1, hp:50, range:165, ab:'rally', abN:'Rally', abD:'Four shots, as fast as he can nock them.', look:{tunic:'#b39b70', trim:'#7a6440', head:'hood'}},
@@ -253,26 +261,26 @@ const LAYOUTS = [
   [[.86,-.04],[.8,.3],[.28,.5],[.42,.94]],
   [[.14,-.04],[.2,.3],[.72,.5],[.58,.94]]
 ];
-const RES = {silver:{i:'🪙',n:'Silver'}, food:{i:'🌾',n:'Food'}, wood:{i:'🪵',n:'Wood'}, iron:{i:'⛏️',n:'Iron'}, feathers:{i:'🪶',n:'Feathers'}, arrows:{i:'🏹',n:'Arrows'}, writs:{i:'📜',n:'Writs'}, medals:{i:'🎖️',n:'Medals'}, glory:{i:'⚜️',n:'Glory'}, parchment:{i:'📖',n:'Parchment'}, garter:{i:'🎗️',n:'Garter stars'}};
+const RES = {silver:{i:IC('coin'),n:'Silver'}, food:{i:IC('grain'),n:'Food'}, wood:{i:IC('log'),n:'Wood'}, iron:{i:IC('pick'),n:'Iron'}, feathers:{i:IC('feather'),n:'Feathers'}, arrows:{i:IC('bow'),n:'Arrows'}, writs:{i:IC('scroll'),n:'Writs'}, medals:{i:IC('medal'),n:'Medals'}, glory:{i:IC('fleur'),n:'Glory'}, parchment:{i:IC('book'),n:'Parchment'}, garter:{i:IC('garter'),n:'Garter stars'}};
 const CAPPED = ['food','wood','iron','feathers','arrows','parchment'];
 const BLD = {
-  farm:      {n:'Farms', i:'🌾', un:1, cost:{silver:20, wood:15}, g:1.14, d:'Food for training archers.', prod:'food', rate:1.5},
-  woodcut:   {n:'Woodcutters', i:'🪵', un:1, cost:{silver:20, food:15}, g:1.14, d:'Wood for every building.', prod:'wood', rate:1.2},
-  store:     {n:'Storehouse', i:'🏚️', un:4, cost:{silver:100, wood:150, iron:10}, g:1.3, d:'Raises the cap on food, wood, iron, feathers and arrows.'},
-  mine:      {n:'Iron mine', i:'⛏️', un:5, cost:{silver:80, wood:60}, g:1.15, d:'Iron for heavier buildings and promotions.', prod:'iron', rate:.6},
-  geese:     {n:'Goose pens', i:'🪶', un:5, cost:{silver:60, food:50, wood:20}, g:1.15, d:'Feathers for fletching. And goose.', prod:'feathers', rate:.8},
-  fletcher:  {n:'Fletcher', i:'🏹', un:8, cost:{silver:150, wood:100, iron:40}, g:1.17, d:'Turns wood, feathers and iron into good arrows. While you have arrows, your men hit 50% harder.'},
-  barracks:  {n:'Barracks', i:'⛺', un:10, cost:{silver:400, wood:300, iron:100}, g:2.1, max:7, d:'One more man in the battle line per level, and more room on the roll.'},
-  drill:     {n:'Drill yard', i:'🎯', un:12, cost:{silver:300, wood:150, iron:80, feathers:60}, g:1.32, max:15, d:'The Captain\'s volley: more arrows, more often.'},
-  market:    {n:'Market', i:'⚖️', un:15, cost:{silver:500, wood:300}, g:1.22, d:'Sells anything over the storage cap, and brings in silver of its own.'},
-  bowyer:    {n:'Bowyer', i:'🌲', un:15, cost:{silver:600, wood:400, iron:150}, g:1.24, d:'Better bows for everyone. Damage doubles every ten levels.'},
-  surgeon:   {n:'Barber-surgeon', i:'🩸', un:20, cost:{silver:800, food:500, wood:300}, g:1.25, max:9, d:'Wounded men recover faster, and everyone is a bit tougher.'},
-  butts:     {n:'Practice butts', i:'🎯', un:25, cost:{silver:1000, food:800, wood:600}, g:1.25, d:'Men in the line train on their own: a free level every so often.'},
-  tavern:    {n:'Tavern', i:'🍺', un:30, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'},
-  scriptorium:{n:'Scriptorium', i:'📖', un:18, cost:{silver:700, wood:500, food:300}, g:1.25, d:'Clerks copying texts. Parchment for research in the Study.', prod:'parchment', rate:.05},
-  bill:      {n:'Billmen', i:'🪓', un:15, cost:{silver:500, food:400, iron:150}, g:1.22, d:'A knot of billmen who hold the road and stop whatever comes down it.'},
-  pavise:    {n:'Pavise-bearers', i:'🛡️', un:25, cost:{silver:900, wood:600, iron:200}, g:1.22, d:'Big wooden shields: crossbow bolts do half damage, and the line is tougher.'},
-  treb:      {n:'Trebuchet', i:'🪨', un:45, cost:{silver:3000, wood:2000, iron:800}, g:1.24, d:'Lobs a stone into the thickest crowd every few seconds.'}
+  farm:      {n:'Farms', i:IC('grain'), un:1, cost:{silver:20, wood:15}, g:1.14, d:'Food for training archers.', prod:'food', rate:1.5},
+  woodcut:   {n:'Woodcutters', i:IC('log'), un:1, cost:{silver:20, food:15}, g:1.14, d:'Wood for every building.', prod:'wood', rate:1.2},
+  store:     {n:'Storehouse', i:IC('barn'), un:4, cost:{silver:100, wood:150, iron:10}, g:1.3, d:'Raises the cap on food, wood, iron, feathers and arrows.'},
+  mine:      {n:'Iron mine', i:IC('pick'), un:5, cost:{silver:80, wood:60}, g:1.15, d:'Iron for heavier buildings and promotions.', prod:'iron', rate:.6},
+  geese:     {n:'Goose pens', i:IC('feather'), un:5, cost:{silver:60, food:50, wood:20}, g:1.15, d:'Feathers for fletching. And goose.', prod:'feathers', rate:.8},
+  fletcher:  {n:'Fletcher', i:IC('bow'), un:8, cost:{silver:150, wood:100, iron:40}, g:1.17, d:'Turns wood, feathers and iron into good arrows. While you have arrows, your men hit 50% harder.'},
+  barracks:  {n:'Barracks', i:IC('tent'), un:10, cost:{silver:400, wood:300, iron:100}, g:2.1, max:7, d:'One more man in the battle line per level, and more room on the roll.'},
+  drill:     {n:'Drill yard', i:IC('target'), un:12, cost:{silver:300, wood:150, iron:80, feathers:60}, g:1.32, max:15, d:'The Captain\'s volley: more arrows, more often.'},
+  market:    {n:'Market', i:IC('scales'), un:15, cost:{silver:500, wood:300}, g:1.22, d:'Sells anything over the storage cap, and brings in silver of its own.'},
+  bowyer:    {n:'Bowyer', i:IC('tree'), un:15, cost:{silver:600, wood:400, iron:150}, g:1.24, d:'Better bows for everyone. Damage doubles every ten levels.'},
+  surgeon:   {n:'Barber-surgeon', i:IC('cross'), un:20, cost:{silver:800, food:500, wood:300}, g:1.25, max:9, d:'Wounded men recover faster, and everyone is a bit tougher.'},
+  butts:     {n:'Practice butts', i:IC('target'), un:25, cost:{silver:1000, food:800, wood:600}, g:1.25, d:'Men in the line train on their own: a free level every so often.'},
+  tavern:    {n:'Tavern', i:IC('tankard'), un:30, cost:{silver:1500, wood:800, iron:300}, g:1.3, max:10, d:'Better recruits, cheaper writs, more room on the roll.'},
+  scriptorium:{n:'Scriptorium', i:IC('book'), un:18, cost:{silver:700, wood:500, food:300}, g:1.25, d:'Clerks copying texts. Parchment for research in the Study.', prod:'parchment', rate:.05},
+  bill:      {n:'Billmen', i:IC('axe'), un:15, cost:{silver:500, food:400, iron:150}, g:1.22, d:'A knot of billmen who hold the road and stop whatever comes down it.'},
+  pavise:    {n:'Pavise-bearers', i:IC('shield'), un:25, cost:{silver:900, wood:600, iron:200}, g:1.22, d:'Big wooden shields: crossbow bolts do half damage, and the line is tougher.'},
+  treb:      {n:'Trebuchet', i:IC('stone'), un:45, cost:{silver:3000, wood:2000, iron:800}, g:1.24, d:'Lobs a stone into the thickest crowd every few seconds.'}
 };
 const LEGACY = {
   drill:   {n:"Drillmaster's Book", d:'Archer damage ×1.25 per level', c:3, g:1.45},
@@ -582,9 +590,9 @@ function portrait(a, size){
   const key = a.cls + (a.hero || '') + a.rar + size + '|' + (a.stars || 0);
   if (pcache[key]) return pcache[key];
   const c = document.createElement('canvas'), k = 2; c.width = c.height = size * k; const g = c.getContext('2d'); g.scale(k, k);
-  const gr = g.createRadialGradient(size * .5, size * .45, 2, size * .5, size * .5, size * .7); gr.addColorStop(0, '#3b4a33'); gr.addColorStop(1, '#141a12');
-  g.fillStyle = gr; g.beginPath(); g.roundRect ? g.roundRect(0, 0, size, size, size * .22) : g.rect(0, 0, size, size); g.fill();
-  g.strokeStyle = RAR[a.rar].c; g.lineWidth = 2.5; g.stroke(); if ((a.stars || 0) >= 5) { g.strokeStyle = '#e8c64a'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(3.5, 3.5, size - 7, size - 7, size * .18) : g.rect(3.5, 3.5, size - 7, size - 7); g.stroke(); }
+  const gr = '#26301f';
+  g.fillStyle = gr; g.beginPath(); g.roundRect ? g.roundRect(0, 0, size, size, 2) : g.rect(0, 0, size, size); g.fill();
+  g.strokeStyle = RAR[a.rar].c; g.lineWidth = 2.5; g.stroke(); if ((a.stars || 0) >= 5) { g.strokeStyle = '#e8c64a'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(3.5, 3.5, size - 7, size - 7, 1) : g.rect(3.5, 3.5, size - 7, size - 7); g.stroke(); }
   if ((a.stars || 0) >= 7) { g.fillStyle = '#e8c64a'; g.font = `bold ${Math.round(size * .2)}px serif`; g.textAlign = 'center'; g.fillText('♛', size / 2, size * .2); }
   g.save(); g.translate(size / 2, size / 2 + 2); g.scale(size / 34, size / 34); drawArcher(g, 0, 0, -Math.PI / 2.6, look(a), .8, {}); g.restore();
   return pcache[key] = c.toDataURL();
@@ -592,10 +600,10 @@ function portrait(a, size){
 
 /* ================= expansion data ================= */
 const GSLOT = {
-  bow:{n:'Bow', ic:'🏹', st:'damage', names:['Elm self bow','Ash war bow','Yew war bow','Spanish yew bow','The Crécy bow']},
-  head:{n:'Arrowheads', ic:'➶', st:'damage and pierce', names:['Broadheads','Swallowtails','Bodkins','Needle bodkins','Tempered bodkins']},
-  armour:{n:'Armour', ic:'🛡️', st:'health', names:['Padded jack','Mail shirt','Brigandine','Jack of plates','Milanese breastplate']},
-  charm:{n:'Charm', ic:'📿', st:'loose rate', names:['Lock of hair',"Rabbit's foot",'Pilgrim badge','St George medal','Relic of St Crispin']}
+  bow:{n:'Bow', ic:IC('bow'), st:'damage', names:['Elm self bow','Ash war bow','Yew war bow','Spanish yew bow','The Crécy bow']},
+  head:{n:'Arrowheads', ic:IC('head'), st:'damage and pierce', names:['Broadheads','Swallowtails','Bodkins','Needle bodkins','Tempered bodkins']},
+  armour:{n:'Armour', ic:IC('shield'), st:'health', names:['Padded jack','Mail shirt','Brigandine','Jack of plates','Milanese breastplate']},
+  charm:{n:'Charm', ic:IC('beads'), st:'loose rate', names:['Lock of hair',"Rabbit's foot",'Pilgrim badge','St George medal','Relic of St Crispin']}
 };
 const SETPIECES = [
   {id:'mud', n:'The Mud', d:'Freshly ploughed and soaking. Everything they send wades at half speed, and they send horse.', mix:{knight:4, maa:3}},
@@ -641,7 +649,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.7';
+const VERSION = '2.8';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -759,13 +767,13 @@ const rSlots = () => R('l5') ? 2 : 1;
 const rTime = n => RTIME[n.t - 1] * (G('scholar') ? .5 : 1);
 function viewStudy(){
   let h = `<h2>The Scriptorium</h2><div class="sub">Monks, clerks and one very old knight write down what the company has learned. Research is permanent: it survives every new campaign. One subject at a time${rSlots() > 1 ? ' (two with Scribes)' : ''}. Some choices rule out others.</div>
-  <div class="card" style="margin-top:10px">📖 <b>${fmt(S.res.parchment)}</b> parchment <span class="sub">· +${fmt(rate('scriptorium'))}/s from the Scriptorium${B_('scriptorium') ? '' : ' (build it in Camp)'}</span></div>`;
+  <div class="card" style="margin-top:10px">${IC('book')} <b>${fmt(S.res.parchment)}</b> parchment <span class="sub">· +${fmt(rate('scriptorium'))}/s from the Scriptorium${B_('scriptorium') ? '' : ' (build it in Camp)'}</span></div>`;
   S.research.active.forEach(x => { const n = RESEARCH.find(r => r.id === x.id), left = (x.end - Date.now()) / 1000; h += `<div class="card"><b>Studying: ${n.n}</b><div class="bar"><i style="width:${clamp(100 * (1 - left / rTime(n)), 0, 100)}%"></i></div><div class="sub">${fmtT(left)} left</div></div>`; });
   ['Archery', 'Logistics', 'Command'].forEach(br => {
     h += `<h3>${br.toUpperCase()}</h3>`;
     RESEARCH.filter(n => n.br === br).forEach(n => {
       const done = R(n.id), act = S.research.active.some(x => x.id === n.id), lockedOut = n.x && !done && RESEARCH.some(o => o.x === n.x && R(o.id)), can = rUnlocked(n) && !act, c = RCOST[n.t - 1];
-      h += `<div class="card row ${!done && !can && !act ? 'lock' : ''}"><div class="grow"><b>${done ? '✓ ' : ''}${n.n}</b> <span class="sub">tier ${n.t}${n.x ? ' · choose one' : ''}</span><div class="sub">${n.d}${lockedOut ? ' · ruled out by your choice' : ''}</div>${!done && !lockedOut ? `<div class="cost">📖${fmt(c)} · ${fmtT(rTime(n))}</div>` : ''}</div>${can ? `<button class="btn ${S.res.parchment >= c && S.research.active.length < rSlots() ? 'gold' : ''}" data-act="research" data-id="${n.id}" ${S.res.parchment >= c && S.research.active.length < rSlots() ? '' : 'disabled'}>Study</button>` : act ? '<span class="sub">Studying</span>' : ''}</div>`;
+      h += `<div class="card row ${!done && !can && !act ? 'lock' : ''}"><div class="grow"><b>${done ? '✓ ' : ''}${n.n}</b> <span class="sub">tier ${n.t}${n.x ? ' · choose one' : ''}</span><div class="sub">${n.d}${lockedOut ? ' · ruled out by your choice' : ''}</div>${!done && !lockedOut ? `<div class="cost">${IC('book')}${fmt(c)} · ${fmtT(rTime(n))}</div>` : ''}</div>${can ? `<button class="btn ${S.res.parchment >= c && S.research.active.length < rSlots() ? 'gold' : ''}" data-act="research" data-id="${n.id}" ${S.res.parchment >= c && S.research.active.length < rSlots() ? '' : 'disabled'}>Study</button>` : act ? '<span class="sub">Studying</span>' : ''}</div>`;
     });
   });
   return h;
@@ -776,9 +784,9 @@ const garterGain = () => Math.floor(Math.sqrt(S.gloryOrder) / 2);
 function garterHtml(){
   if (S.prestiges < 10 && !S.garters) return `<h3>THE ORDER OF THE GARTER</h3><div class="card sub">Unlocks after ten campaigns (${S.prestiges}/10). Then you can give up your whole Legacy for Garter stars and far bigger, permanent rewards.</div>`;
   const g = garterGain();
-  let h = `<h3>THE ORDER OF THE GARTER · 🎗️ ${S.res.garter}</h3><div class="card"><div class="sub">Give up your glory and every Legacy upgrade, and end the campaign, for Garter stars. Glory earned since your last investiture: <b>${fmt(S.gloryOrder)}</b>. Research, men, gear and the Codex are kept.</div>
-  <button class="btn red big" style="margin-top:8px" data-act="garter" ${g > 0 ? '' : 'disabled'}>Kneel for 🎗️ ${g} Garter star${g === 1 ? '' : 's'}</button></div>`;
-  Object.keys(GARTER).forEach(k => { const P = GARTER[k], l = G(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row"><div class="grow"><b>${P.n}</b> <span class="lvl" style="color:var(--gold);font-weight:800">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Held</span>' : `<button class="btn ${S.res.garter >= c ? 'gold' : ''}" data-act="gperk" data-id="${k}" ${S.res.garter >= c ? '' : 'disabled'}>🎗️ ${c}</button>`}</div>`; });
+  let h = `<h3>THE ORDER OF THE GARTER · ${IC('garter')} ${S.res.garter}</h3><div class="card"><div class="sub">Give up your glory and every Legacy upgrade, and end the campaign, for Garter stars. Glory earned since your last investiture: <b>${fmt(S.gloryOrder)}</b>. Research, men, gear and the Codex are kept.</div>
+  <button class="btn red big" style="margin-top:8px" data-act="garter" ${g > 0 ? '' : 'disabled'}>Kneel for ${IC('garter')} ${g} Garter star${g === 1 ? '' : 's'}</button></div>`;
+  Object.keys(GARTER).forEach(k => { const P = GARTER[k], l = G(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row"><div class="grow"><b>${P.n}</b> <span class="lvl" style="color:var(--gold);font-weight:800">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Held</span>' : `<button class="btn ${S.res.garter >= c ? 'gold' : ''}" data-act="gperk" data-id="${k}" ${S.res.garter >= c ? '' : 'disabled'}>${IC('garter')} ${c}</button>`}</div>`; });
   return h;
 }
 function codexHtml(){
@@ -896,7 +904,7 @@ function sheetSettings(){
     : `<div class="sub">Sign in to keep your company safe and carry on from any phone or computer.</div><button class="btn gold big" style="margin-top:8px" data-act="signin">Sign in with Google</button>`;
   openSheet(`<div class="fell" style="font-size:26px">Settings</div>
   <h3>ACCOUNT</h3><div class="card">${acct}${cloudMsg ? `<div class="sub" style="margin-top:6px;color:#e8dcc0">${esc(cloudMsg)}</div>` : ''}</div>
-  <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:11px;padding:6px"></textarea>
+  <h3>SAVE CODE</h3><div class="card"><div class="sub">Copy this to move your game without an account, or paste one in to load it.</div><textarea id="code" style="width:100%;height:70px;margin-top:8px;background:#0f140e;color:var(--ink);border:1px solid var(--line);border-radius:2px;font-size:11px;padding:6px"></textarea>
   <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
   <h3>YOUR COMPANY</h3><div class="card"><div class="sub">Captain's name, for the league</div><input class="nmin" id="capname" value="${esc(S.captain || '')}" maxlength="24" placeholder="${esc(captainName())}">
   <div class="sub" style="margin-top:8px">Company name</div><input class="nmin" id="coname" value="${esc(S.company || '')}" maxlength="40" placeholder="The Northampton Company">
@@ -966,11 +974,11 @@ function eventHtml(){
   if (!evOpen()) return `<h3>WEEKLY EVENT</h3><div class="card sub">Weekly events unlock at stage 20. Each week brings a special campaign with its own rules, rewards and shop.</div>`;
   const E = evState(), ev = curEvent(), on = S.mode === 'event';
   return `<h3>WEEKLY EVENT · ENDS IN ${fmtT(weekEnds()).toUpperCase()}</h3><div class="tav" style="margin-top:0"><div class="fell" style="font-size:22px">${ev.n}</div><div class="sub" style="color:#c9b08a">${ev.d}</div>
-  <div class="sub" style="color:#e8dcc0;margin-top:6px">Event stage <b>${E.stage}</b> · best <b>${E.best}</b> · 🎟️ tokens <b>${E.tokens}</b>. Event battles only run while you watch; your campaign carries on while you're away.</div>
+  <div class="sub" style="color:#e8dcc0;margin-top:6px">Event stage <b>${E.stage}</b> · best <b>${E.best}</b> · ${IC('ticket')} tokens <b>${E.tokens}</b>. Event battles only run while you watch; your campaign carries on while you're away.</div>
   <div style="margin-top:6px">${EV_MS.map(([s, r]) => `<span class="pill ${E.ms[s] ? 'g' : ''}">Stage ${s}: ${Object.keys(r).map(k => k === 'hero' ? HEROES[featuredHero()].n : k === 'gear' ? 'gear' : `${r[k]} ${k}`).join(', ')}</span>`).join('')}</div>
   <button class="btn ${on ? '' : 'gold'} big" style="margin-top:10px" data-act="evmode">${on ? 'Back to the campaign' : 'Fight in the event'}</button>
   <div class="sub" style="color:#c9b08a;margin-top:10px">Token shop</div>
-  ${EV_SHOP.map(s => `<div class="row" style="padding:4px 0"><span class="grow">${s.id === 'hero' ? `${s.n}: <b class="r4">${HEROES[featuredHero()].n}</b>` : s.n}</span><button class="btn" data-act="evbuy" data-id="${s.id}" ${E.tokens >= s.c ? '' : 'disabled'}>🎟️ ${s.c}</button></div>`).join('')}</div>`;
+  ${EV_SHOP.map(s => `<div class="row" style="padding:4px 0"><span class="grow">${s.id === 'hero' ? `${s.n}: <b class="r4">${HEROES[featuredHero()].n}</b>` : s.n}</span><button class="btn" data-act="evbuy" data-id="${s.id}" ${E.tokens >= s.c ? '' : 'disabled'}>${IC('ticket')} ${s.c}</button></div>`).join('')}</div>`;
 }
 
 /* ================= league ================= */
@@ -987,7 +995,7 @@ async function loadLeague(){
 setInterval(() => { if (fbUser) leaguePush().catch(() => {}); }, 300000);
 function leagueHtml(){
   if (cloudState === 'unavailable') return '';
-  if (!fbUser) return `<h3>THE KING'S LEAGUE</h3><div class="card sub">Every week, captains race to the furthest stage. Sign in from Settings ⚙️ to join.</div>`;
+  if (!fbUser) return `<h3>THE KING'S LEAGUE</h3><div class="card sub">Every week, captains race to the furthest stage. Sign in from Settings to join.</div>`;
   if (Date.now() - league.t > 120000) setTimeout(loadLeague, 0);
   const me = fbUser.uid;
   return `<h3>THE KING'S LEAGUE · THIS WEEK</h3><div class="card">${league.err ? `<div class="sub">${league.err}</div>` : !league.rows.length ? '<div class="sub">Loading...</div>' :
@@ -1338,6 +1346,8 @@ let sheetFn = null;
 function refreshSheet(){ if (sheetFn && $('#modal').classList.contains('show')) { const sc = $('#sheet').scrollTop; sheetFn(); $('#sheet').scrollTop = sc; } }
 const rankName = () => S.bestEver >= 150 ? "Master of the King's Archers" : S.bestEver >= 100 ? 'Knight Banneret' : S.bestEver >= 60 ? 'Captain of Archers' : S.bestEver >= 25 ? 'Centenar' : 'Vintenar';
 function renderRes(){
+  const si = S.sound ? 'sound' : 'mute'; if ($('#snd').dataset.ic !== si) { $('#snd').dataset.ic = si; $('#snd').innerHTML = IC(si, 'currentColor'); }
+  if (!$('#setBtn').firstChild) $('#setBtn').innerHTML = IC('gear', 'currentColor');
   const show = ['silver','food','wood']; if (S.seen.mine) show.push('iron', 'feathers'); if (S.seen.fletcher) show.push('arrows'); if (B_('scriptorium') || S.res.parchment >= 1) show.push('parchment'); if (S.seen.tavern) show.push('writs'); if (S.res.medals > 0 || S.seen.medals) show.push('medals'); if (S.res.glory > 0 || S.prestiges) show.push('glory'); if (S.res.garter > 0 || S.garters) show.push('garter');
   const rates = {food:rate('farm'), wood:rate('woodcut'), iron:rate('mine'), feathers:rate('geese'), silver:marketRate(), arrows:B_('fletcher') ? fletchRate() : 0, parchment:rate('scriptorium')};
   const html = show.map(r => { const capd = CAPPED.includes(r), c = capd ? storeCap(r) : 0, full = capd && S.res[r] >= c - .5, rt = rates[r];
@@ -1426,7 +1436,7 @@ function viewCamp(){
     h += `<h3>${g}</h3>`;
     ks.forEach(k => {
       const b = BLD[k], l = B_(k), un = bUnlocked(k);
-      if (!un) { h += `<div class="card row lock"><div class="bico">🔒</div><div class="grow"><b>${b.n}</b><div class="sub">Reach stage ${b.un}</div></div></div>`; return; }
+      if (!un) { h += `<div class="card row lock"><div class="bico">${IC('lock')}</div><div class="grow"><b>${b.n}</b><div class="sub">Reach stage ${b.un}</div></div></div>`; return; }
       const c = bCost(k), mx = isMax(k);
       h += `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div><div class="cost">${mx ? 'Fully built' : costHtml(c)}</div></div>${mx ? '' : `<button class="btn ${canPay(c) ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) ? '' : 'disabled'}>${l ? 'Upgrade' : 'Build'}</button>`}</div>`;
     });
@@ -1476,7 +1486,7 @@ function viewCompany(){
   return h;
 }
 function slotHtml(i, ln){
-  if (!slotOpen(i)) return `<div class="slot x" title="Build up the Barracks">🔒</div>`;
+  if (!slotOpen(i)) return `<div class="slot x" title="Build up the Barracks">${IC('lock')}</div>`;
   const a = S.roster.find(x => x.id === S.form[i]), sub = ln[i] && ln[i] !== a ? ln[i] : null;
   if (!a) return `<div class="slot ${i < 5 ? 'f' : ''} ${pickSlot === i ? 'pick' : ''}" data-act="slot" data-i="${i}">+</div>`;
   return `<div class="slot ${i < 5 ? 'f' : ''}" data-act="slot" data-i="${i}"><img src="${portrait(sub || a, 60)}" alt=""><span class="lv">${(sub || a).lvl}</span>${!fit(a) ? `<span class="w">${sub ? 'STAND-IN' : a.away ? 'AWAY' : 'WOUNDED'}</span>` : ''}</div>`;
@@ -1488,8 +1498,8 @@ function viewTavern(){
   <div class="tav"><div class="fell" style="font-size:22px">The Bell &amp; Bodkin</div><div class="sub" style="color:#c9b08a">Smells of tar, ale and desperation.</div>
   <div class="odds">${RAR.map((r, i) => `<span style="color:${r.c}">${r.n} ${(100 * w[i] / tot).toFixed(1)}%</span>`).join('')}</div>
   <div class="sub" style="color:#c9b08a">A Legendary is guaranteed within <b>${50 - S.pity}</b> recruits. Ten at once guarantees a Rare or better. Legendary duplicates gain a star.</div>
-  <div class="row" style="margin-top:12px"><button class="btn gold grow" data-act="pull" data-n="1" ${S.res.writs >= 1 ? '' : 'disabled'}>Recruit 1<small>📜 1</small></button><button class="btn gold grow" data-act="pull" data-n="10" ${S.res.writs >= 10 ? '' : 'disabled'}>Recruit 10<small>📜 10</small></button></div>
-  <div class="row" style="margin-top:8px"><div class="grow sub" style="color:#c9b08a">Buy a writ of indenture. The price climbs as the campaign goes on.</div><button class="btn" data-act="buywrit" ${S.res.silver >= wp ? '' : 'disabled'}>Buy 📜<small>🪙${fmt(wp)}</small></button></div>
+  <div class="row" style="margin-top:12px"><button class="btn gold grow" data-act="pull" data-n="1" ${S.res.writs >= 1 ? '' : 'disabled'}>Recruit 1<small>${IC('scroll')} 1</small></button><button class="btn gold grow" data-act="pull" data-n="10" ${S.res.writs >= 10 ? '' : 'disabled'}>Recruit 10<small>${IC('scroll')} 10</small></button></div>
+  <div class="row" style="margin-top:8px"><div class="grow sub" style="color:#c9b08a">Buy a writ of indenture. The price climbs as the campaign goes on.</div><button class="btn" data-act="buywrit" ${S.res.silver >= wp ? '' : 'disabled'}>Buy ${IC('scroll')}<small>${IC('coin')}${fmt(wp)}</small></button></div>
   <div class="sub" style="margin-top:8px;color:#c9b08a">Room on the roll: ${rosterCap() - S.roster.length}.</div></div>
   <h3>DISMISSALS</h3><div class="sub">Pay off men you do not need from their record in the Company tab. Each leaves you medals for promotions.</div>
   <h3>LEGENDARY ARCHERS</h3>${Object.keys(HEROES).map(k => { const Hh = HEROES[k], own = S.roster.find(a => a.hero === k), fake = {cls:'hero', hero:k, rar:4}; return `<div class="card row" ${own ? '' : 'style="opacity:.55"'}><img class="pt" src="${portrait(fake, 50)}" alt=""><div class="grow"><div class="nm r4">${Hh.n} ${own ? `<span class="stars">${'★'.repeat(own.stars)}</span>` : ''}</div><div class="sub">${Hh.title} · ${Hh.abN}: ${Hh.abD}</div></div><span class="sub">${own ? 'Serving' : 'Not met'}</span></div>`; }).join('')}`;
@@ -1512,10 +1522,10 @@ function gloryGain(){ return S.runMax < 40 ? 0 : Math.floor(Math.pow(S.runMax / 
 function viewLegacy(){
   const g = gloryGain();
   let h = `<h2>Legacy</h2><div class="sub">Every campaign ends. Lead the company home, and the next campaign starts from the beginning with everything you learned. Buildings, stages, resources and orders reset. Your men and their stars, gear, research, the Codex, writs, medals, event tokens and your Legacy all stay.</div>
-  <div class="card" style="margin-top:10px"><div class="row"><div class="grow"><div class="fell" style="font-size:22px">End the campaign</div><div class="sub">Furthest stage this campaign: <b>${S.runMax}</b>. Glory now: <b>⚜️ ${fmt(g)}</b>${S.runMax < 40 ? '. Reach stage 40 to earn glory.' : '. More stages, a lot more glory.'}</div></div></div>
-  <button class="btn red big" style="margin-top:10px" data-act="prestige" ${g > 0 ? '' : 'disabled'}>Go home with ⚜️ ${fmt(g)} glory</button></div>
-  <h3>THE LEGACY · ⚜️ ${fmt(S.res.glory)} TO SPEND</h3>`;
-  Object.keys(LEGACY).forEach(k => { const P = LEGACY[k], l = L(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row perk"><div class="grow"><b>${P.n}</b> <span class="lvl">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Max</span>' : `<button class="btn ${S.res.glory >= c ? 'gold' : ''}" data-act="perk" data-id="${k}" ${S.res.glory >= c ? '' : 'disabled'}>⚜️ ${fmt(c)}</button>`}</div>`; });
+  <div class="card" style="margin-top:10px"><div class="row"><div class="grow"><div class="fell" style="font-size:22px">End the campaign</div><div class="sub">Furthest stage this campaign: <b>${S.runMax}</b>. Glory now: <b>${IC('fleur')} ${fmt(g)}</b>${S.runMax < 40 ? '. Reach stage 40 to earn glory.' : '. More stages, a lot more glory.'}</div></div></div>
+  <button class="btn red big" style="margin-top:10px" data-act="prestige" ${g > 0 ? '' : 'disabled'}>Go home with ${IC('fleur')} ${fmt(g)} glory</button></div>
+  <h3>THE LEGACY · ${IC('fleur')} ${fmt(S.res.glory)} TO SPEND</h3>`;
+  Object.keys(LEGACY).forEach(k => { const P = LEGACY[k], l = L(k), mx = P.max && l >= P.max, c = Math.ceil(P.c * Math.pow(P.g, l)); h += `<div class="card row perk"><div class="grow"><b>${P.n}</b> <span class="lvl">${l ? 'Lv ' + l : ''}</span><div class="sub">${P.d}</div></div>${mx ? '<span class="sub">Max</span>' : `<button class="btn ${S.res.glory >= c ? 'gold' : ''}" data-act="perk" data-id="${k}" ${S.res.glory >= c ? '' : 'disabled'}>${IC('fleur')} ${fmt(c)}</button>`}</div>`; });
   h += garterHtml() + codexHtml();
   h += `<h3>CHRONICLE</h3><div class="card sub">Campaigns ended: <b>${S.prestiges}</b> · best stage ever: <b>${S.bestEver}</b> · Frenchmen killed: <b>${fmt(S.stats.kills)}</b> · stages cleared: <b>${fmt(S.stats.clears)}</b> · bosses: <b>${S.stats.bosses}</b> · recruits: <b>${S.stats.recruits}</b></div>`;
   return h;
@@ -1535,7 +1545,7 @@ function sheetArcher(id){
   ${bondHtml(a)}
   ${gearHtml(a)}
   ${archerCard(a).replace(/^<div class="card">/, '<div class="card" style="margin-top:10px">')}
-  <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="close">Done</button><button class="btn ghost" data-act="dismiss" data-id="${a.id}">Pay off · 🎖️${dm}</button></div>`);
+  <div class="row" style="margin-top:10px"><button class="btn gold grow" data-act="close">Done</button><button class="btn ghost" data-act="dismiss" data-id="${a.id}">Pay off · ${IC('medal')}${dm}</button></div>`);
 }
 function sheetSlot(i){
   sheetFn = () => sheetSlot(i);
@@ -1760,7 +1770,7 @@ document.addEventListener('change', e => {
   if (e.target.id === 'coname') { S.company = e.target.value.trim().slice(0, 40); save(); renderRes(); }
 });
 window.addEventListener('load', () => { initCloud(); initPwa(); setTimeout(pushStats, 4000); });
-$('#snd').addEventListener('click', () => { S.sound = !S.sound; $('#snd').textContent = S.sound ? '🔊' : '🔈'; save(); });
+$('#snd').addEventListener('click', () => { S.sound = !S.sound; $('#snd').innerHTML = IC(S.sound ? 'sound' : 'mute', 'currentColor'); save(); });
 
 /* ================= render battle ================= */
 function renderBG(){
@@ -1846,7 +1856,7 @@ function draw(){
     if (f.blood) { ctx.fillStyle = `rgba(150,20,15,${1 - f.t / .5})`; ctx.fillRect(f.x, f.y, 1.6, 1.6); continue; }
     if (f.burn) { const s = f.t / 1.2; ctx.fillStyle = `rgba(255,${140 - s * 100},40,${.8 * (1 - s)})`; ctx.beginPath(); ctx.arc(f.x + Math.sin(f.t * 9) * 2, f.y - s * 14, 3 + s * 5, 0, 7); ctx.fill(); continue; }
     if (f.ring) { const s = f.t / .6; ctx.strokeStyle = f.col; ctx.globalAlpha = 1 - s; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(f.x, f.y, 8 + s * 22, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; continue; }
-    const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 11 : 9}px Inter,sans-serif`; ctx.textAlign = 'center';
+    const s = f.t / 1.3; ctx.globalAlpha = 1 - s * s; ctx.font = `${f.big ? 800 : 700} ${f.big ? 11 : 9}px "Alegreya Sans",sans-serif`; ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillText(f.txt, f.x + .7, f.y - s * 18 + .7); ctx.fillStyle = f.col; ctx.fillText(f.txt, f.x, f.y - s * 18); ctx.globalAlpha = 1;
   }
   if (b.sp && b.sp.id === 'night') { ctx.fillStyle = 'rgba(6,10,30,.42)'; ctx.fillRect(0, 0, W, H); b.units.forEach(u => { const g = ctx.createRadialGradient(u.x, u.y, 2, u.x, u.y, 40); g.addColorStop(0, 'rgba(255,190,90,.18)'); g.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = g; ctx.fillRect(u.x - 40, u.y - 40, 80, 80); }); }
@@ -1922,7 +1932,7 @@ migrate();
 checkUnlocks();
 if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
 newBattle(); render(); save();
-if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:13px">Sign in from Settings ⚙️ to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
+if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:13px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
 window.__dbg = {levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
