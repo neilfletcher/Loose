@@ -668,7 +668,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18.1';
+const VERSION = '2.18.2';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1482,7 +1482,9 @@ const isMax = k => BLD[k].max && B_(k) >= BLD[k].max;
    and medals finish a job now. Jobs keep going while you're away. */
 const builders = () => 2 + (S.bestEver >= 60 ? 1 : 0);
 const WARB = ['barracks','bowyer','drill','surgeon','butts','tavern','bill','pavise','treb','market','scriptorium'];
-const bDur = k => Math.min(7200, (WARB.includes(k) ? 3 : 2) * Math.pow(1.18, B_(k)));
+/* buildings with a level cap take longer the closer they get to it: 30s for the first level, then from a few minutes up to TOPT at the last */
+const TOPT = {barracks:8 * 3600, tavern:6 * 3600, drill:4 * 3600, surgeon:4 * 3600};
+const bDur = k => { const l = B_(k), mx = BLD[k].max; if (mx) return l === 0 ? 30 : 120 * Math.pow((TOPT[k] || 4 * 3600) / 120, (l - 1) / Math.max(1, mx - 2)); return Math.min(7200, (WARB.includes(k) ? 3 : 2) * Math.pow(1.18, l)); };
 const building = k => (S.builds || []).find(b => b.k === k);
 const rushCost = b => Math.max(1, Math.ceil((b.end - Date.now()) / 600000));
 function applyBuild(k){
@@ -2212,10 +2214,11 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {bDur, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18.2","items":["Buildings with a top level (Barracks, Tavern, Drill yard, Barber-surgeon) now take longer the nearer they get to it. The last Barracks level takes eight hours."]},
 {"v":"2.18.1","items":["Each kind of expedition can only be out once at a time."]},
 {"v":"2.18","items":["On a computer the game now uses the whole window: the battlefield stays on the left and keeps fighting while you run the Camp, Company and the rest on the right. Phones are unchanged."]},
 {"v":"2.17","items":["A new Legendary has joined the company: Alex, the Sleepless. Her special, Up till three, keeps the whole line loosing at three times the pace.","Friends of the company: thirteen named archers can now turn up at the Tavern as Rare or Epic recruits, each with their own story.","New faces around camp: Doc the medic, Grim the Master Pintsman, Gaz the Chapman, Scott on the drill yard, Ross Taylor and his trebuchet, and Riles keeping the Chronicle.","A new camp event: the Hermit."]},
