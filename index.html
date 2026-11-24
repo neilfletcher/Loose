@@ -123,6 +123,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;z-index:40}
 #modal.show{display:block}
 #sheet{position:absolute;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;max-height:90%;overflow-y:auto;background:#151c13;border:1px solid var(--line);border-radius:4px 4px 0 0;padding:8px 16px 22px}
+.sheetx{position:sticky;top:0;float:right;margin:-6px -4px 0 0;width:36px;height:36px;border:1px solid #3d4b38;background:#1a2016;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:2}.sheetx:hover{border-color:var(--gold)}
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
@@ -411,7 +412,8 @@ function lvlCost(a, n){
   for (let i = 0; i < n; i++) { const l = a.lvl + i; s += 10 * Math.pow(1.08, l - 1) * fr; f += 8 * Math.pow(1.08, l - 1) * fr * gl * (fol('cook') ? .95 : 1); }
   return {silver:s, food:f};
 }
-function promoteCost(a){ return {medals:Math.round(3 * a.stars * (a.rar + 1)), iron:Math.round(50 * Math.pow(1.6, a.stars))}; }
+/* up to 3 stars needs only iron and silver; medals from 4 stars */
+function promoteCost(a){ return a.stars < 3 ? {silver:Math.round(clearBonus(Math.max(1, S.runMax)) * 3 * a.stars * (a.rar + 1)), iron:Math.round(50 * Math.pow(1.6, a.stars))} : {medals:Math.round(3 * a.stars * (a.rar + 1)), iron:Math.round(50 * Math.pow(1.6, a.stars))}; }
 const MAXSTARS = 7, STARPOW = 1.3;
 function slotsOpen(){ return Math.min(10, 3 + B_('barracks')); }
 function rosterCap(){ return 12 + 2 * B_('barracks') + 2 * B_('tavern'); }
@@ -642,7 +644,7 @@ function faceOf(a){
   let h = hashStr(key + '|face'); const r = n => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h ^= h >>> 13; return (h >>> 0) % n; };
   const f = isF(a), old = r(100) < 14, gen = a.cls === 'genoese';
   const F = {f, sk:SKIN[gen ? 3 + r(2) : r(10) < 8 ? r(4) : 4 + r(3)], hc:old ? (r(2) ? '#8a8a86' : '#d8d4cc') : HAIRC[r(HAIRC.length)], old,
-    hair:f ? 5 + r(4) : r(5), beard:f ? 0 : r(10) < 3 ? 0 : 1 + r(5), brow:1.8 + r(3) * .8, eye:r(3), nose:r(4), mouth:r(4), jaw:r(3),
+    hair:f ? 5 + r(3) : r(5), beard:f ? 0 : r(10) < 3 ? 0 : 1 + r(5), brow:1.8 + r(3) * .8, eye:r(3), nose:r(4), mouth:r(4), jaw:r(3),
     scar:r(100) < 18, freck:r(100) < 15, ear:r(2)};
   if (a.hero === 'tom') { F.beard = 3; F.hc = '#1a1410'; } if (a.hero === 'erpingham') { F.old = true; F.hc = '#d8d4cc'; F.beard = 4; } if (a.hero === 'gwen') { F.old = true; F.hc = '#8a8a86'; F.hair = 7; }
   if (a.hero === 'nell') F.hair = 6; if (a.hero === 'joan') { F.hc = '#9a3c1c'; F.freck = true; F.hair = 5; } if (a.hero === 'alex') { F.hc = '#2a1d14'; F.hair = 8; F.eye = 1; } if (a.hero === 'agnes') F.hair = 7;
@@ -665,6 +667,8 @@ function drawFace(g, a){
   if (head === 'hood') ell(50, 50, 33, 37, hood);
   // long hair behind
   if (F.f && (F.hair === 5) && head !== 'hood') { g.fillStyle = hc; g.beginPath(); g.moveTo(27, 40); g.quadraticCurveTo(22, 70, 30, 90); g.lineTo(70, 90); g.quadraticCurveTo(78, 70, 73, 40); g.closePath(); g.fill(); }
+  // women's hair hangs down behind the head under hoods, caps and helmets
+  if (F.f && head !== 'bare' && head !== 'tonsure') { g.fillStyle = F.hair === 7 ? '#e9e4d6' : hc; [-1, 1].forEach(d => { const x = 50 + d * rx; g.beginPath(); g.moveTo(x - d * 2, 34); g.quadraticCurveTo(x + d * 11, 58, x + d * 9, 90); g.lineTo(x + d * 2, 90); g.quadraticCurveTo(x + d * 2, 66, x - d * 2, 34); g.closePath(); g.fill(); }); }
   // ears
   if (head !== 'hood') { ell(50 - rx, 52, 5, 7, skd); if (!halfEar) ell(50 + rx, 52, 5, 7, skd); else ell(50 + rx, 56, 4, 3.5, skd); }
   // head
@@ -682,7 +686,7 @@ function drawFace(g, a){
       case 3: g.fillRect(50 - rx - 1, 36, 7, 16); g.fillRect(50 + rx - 6, 36, 7, 16); break;
       case 4: g.globalAlpha = .35; top(); g.quadraticCurveTo(50, 28, 50 - rx - 1, 46); g.fill(); g.globalAlpha = 1; break;
       case 5: case 6: top(); g.quadraticCurveTo(58, 26, 50, 25); g.quadraticCurveTo(40, 28, 50 - rx - 1, 46); g.fill();
-        if (F.hair === 6) { for (let i = 0; i < 6; i++) ell(50 - rx + 2 + i * 1.2, 58 + i * 6, 4.2, 3.6, i % 2 ? hc : hcd); } break;
+        if (F.hair === 6) { for (let i = 0; i < 6; i++) ell(50 - rx - 4 + i * .4, 60 + i * 5.5, 4, 3.4, i % 2 ? hc : hcd); } break;
       case 7: g.fillStyle = '#e9e4d6'; top(); g.lineTo(50 + rx + 2, 62); g.quadraticCurveTo(50, 84, 50 - rx - 2, 62); g.closePath(); g.fill(); ell(50, 51, rx - 3, ry - 4, sk); break;
       case 8: top(); g.quadraticCurveTo(60, 34, 50, 33); g.quadraticCurveTo(36, 32, 50 - rx - 1, 46); g.fill(); break;
     }
@@ -691,9 +695,7 @@ function drawFace(g, a){
   if (head === 'hood') { g.fillStyle = hood; g.beginPath(); g.moveTo(50 - rx - 4, 52); g.quadraticCurveTo(50 - rx - 2, 14, 50, 13); g.quadraticCurveTo(50 + rx + 2, 14, 50 + rx + 4, 52); g.quadraticCurveTo(50 + rx - 2, 30, 50, 29); g.quadraticCurveTo(50 - rx + 2, 30, 50 - rx - 4, 52); g.fill(); }
   if (head === 'cap') { ell(50, 26, rx + 3, 11, trim === '#7a1a1a' ? '#7a1a1a' : '#9c2a22'); g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(50 - rx - 3, 30, (rx + 3) * 2, 4); }
   if (head === 'kettle') { g.fillStyle = '#9aa2ab'; g.beginPath(); g.ellipse(50, 33, rx + 3, 17, 0, Math.PI, 0); g.fill(); ell(50, 34, rx + 10, 5, '#828a93'); g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(43, 24, 6, 4, -.4, 0, 7); g.fill(); }
-  // women keep their hair showing under hoods, caps and helmets
-  if (F.f && F.hair !== 7 && (head === 'hood' || head === 'kettle' || head === 'cap')) { g.fillStyle = hc; [[-1, 50 - rx + 1], [1, 50 + rx - 1]].forEach(([d, x]) => { g.beginPath(); g.moveTo(x, 34); g.quadraticCurveTo(x - d * 6, 56, x - d * 1, 74); g.lineTo(x + d * 4, 72); g.quadraticCurveTo(x + d * 1, 54, x + d * 3, 36); g.fill(); }); }
-  if (F.f && F.hair === 6 && head !== 'bare') { for (let i = 0; i < 6; i++) ell(50 - rx + 2 + i * 1.2, 58 + i * 6, 4.2, 3.6, i % 2 ? hc : hcd); }
+  if (F.f && F.hair === 6 && head !== 'bare') { for (let i = 0; i < 6; i++) ell(50 - rx - 4 + i * .4, 60 + i * 5.5, 4, 3.4, i % 2 ? hc : hcd); }
   // brows
   g.strokeStyle = hcd; g.lineWidth = F.brow; g.lineCap = 'round';
   g.beginPath(); g.moveTo(36, 42 - (F.mouth === 3 ? -1 : 0)); g.lineTo(46, 41 + (F.mouth === 3 ? 1.5 : 0)); g.moveTo(54, 41 + (F.mouth === 3 ? 1.5 : 0)); g.lineTo(64, 42); g.stroke();
@@ -718,7 +720,7 @@ function drawFace(g, a){
   if (mood === 'grin') { g.stroke(); g.fillStyle = '#3a1a14'; g.beginPath(); g.moveTo(43, 66); g.quadraticCurveTo(50, 75, 57, 66); g.closePath(); g.fill(); g.fillStyle = '#efe8d8'; g.fillRect(45, 66, 10, 2.2); g.beginPath(); }
   else if (F.mouth === 1) { g.moveTo(44, 67); g.quadraticCurveTo(50, 71.5, 56, 67); } else if (F.mouth === 2) { g.moveTo(44, 69); g.quadraticCurveTo(50, 65.5, 56, 69); } else { g.moveTo(44, 68); g.lineTo(56, 68); }
   g.stroke();
-  if (F.f) { g.strokeStyle = 'rgba(160,60,60,.35)'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(46, 68); g.lineTo(54, 68); g.stroke(); }
+  if (F.f) { g.strokeStyle = '#1e1a16'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(37, 46.5); g.lineTo(35.5, 45); g.moveTo(63, 46.5); g.lineTo(64.5, 45); g.stroke(); g.strokeStyle = 'rgba(170,60,60,.55)'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(46, 68); g.lineTo(54, 68); g.stroke(); }
   if (mood === 'sick') { ell(50, 52, rx, ry, 'rgba(120,170,60,.18)'); }
   if (mood === 'grin' || mood === 'smile') { ell(37, 60, 5, 3, 'rgba(220,110,90,.18)'); ell(63, 60, 5, 3, 'rgba(220,110,90,.18)'); }
   // scars
@@ -788,7 +790,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.20.1';
+const VERSION = '2.21';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1085,12 +1087,27 @@ function pushStats(){
     const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
       kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION,
-      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide, capXP:S.cap ? S.cap.xp : 0, capRank:S.cap ? capRankI() : 0, fair:S.rep ? Math.round(S.rep.fair) : 0, love:S.rep ? Math.round(S.rep.love) : 0, mor:Math.round(morState().m), fol:Object.keys(S.fol || {}).join(','), women:S.roster.filter(isF).length};
+      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide, capXP:S.cap ? S.cap.xp : 0, capRank:S.cap ? capRankI() : 0, fair:S.rep ? Math.round(S.rep.fair) : 0, love:S.rep ? Math.round(S.rep.love) : 0, mor:Math.round(morState().m), fol:Object.keys(S.fol || {}).join(','), women:S.roster.filter(isF).length, cap:captainName()};
     const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
     fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
   } catch(e){}
 }
 setInterval(pushStats, 180000);
+/* gifts from the admin page: a doc in loose_gifts named after this save's anonymous id; collect it, remember it, clear it */
+async function checkGift(){
+  if (!S || !S.pid) return;
+  const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_gifts/${S.pid}?key=${FB.apiKey}`;
+  try {
+    const r = await fetch(url); if (!r.ok) return; const d = await r.json(), f = d.fields || {};
+    const gid = f.gid && f.gid.stringValue, md = +(f.medals && (f.medals.integerValue || f.medals.doubleValue) || 0), msg = f.msg && f.msg.stringValue || '';
+    S.gifts = S.gifts || []; if (!gid || S.gifts.includes(gid) || md <= 0) return;
+    S.gifts.push(gid); S.gifts = S.gifts.slice(-30); S.res.medals += md; tr('gift'); chron(`Received a gift of ${md} medals.`); save();
+    fetch(url, {method:'DELETE'}).catch(() => {});
+    sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">A gift from the Constable</div><p class="ev">A rider brings a purse from headquarters: <b>${md} medals</b>.${msg ? `</p><p class="ev"><i>"${esc(msg)}"</i>` : ''}</p><button class="btn gold big" data-act="close">My thanks</button>`);
+  } catch (e) {}
+}
+setInterval(checkGift, 120000); setTimeout(checkGift, 8000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkGift(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pushStats(); });
 
 /* ---------- settings ---------- */
@@ -1528,6 +1545,8 @@ function endBattle(win){
 /* early on wounds heal in seconds; full 90-second wounds only from stage 50 */
 const earlyHeal = () => clamp((S.runMax - 10) / 40, .15, 1);
 function woundTime(){ return earlyHeal() * 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1) / (S.rep ? repFx().heal : 1) / (fol('laund') ? 1.15 : 1); }
+/* farming stages you have already beaten pays a medal every 10 clears, so a held company still earns */
+function farmMedal(n){ S.farmC = (S.farmC || 0) + n; const m = Math.floor(S.farmC / 10); if (m > 0) { S.farmC -= m * 10; S.res.medals += m; S.stats.farmMedals = (S.stats.farmMedals || 0) + m; tr('farmMedal', m); } return m; }
 /* a short break between stages, only while someone is watching, so they can upgrade and swap without pausing */
 const brkOn = () => S.brk !== false && bOn() && !document.hidden && BT && !BT.ev && BT.phase === 'fight' && !(S.tut >= 1 && S.tut < 99);
 function afterBattle(){
@@ -1538,6 +1557,7 @@ function afterBattle(){
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
     else S.farmN++;
+    if (S.stage < S.runMax || !S.autoAdv) farmMedal(1);
     const newBest = S.stage > S.bestEver; S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest(); capXP(1 + (newBest ? 3 : 0) + (isBoss(b.N) ? 8 : 0));
     if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
@@ -1565,6 +1585,7 @@ function offlineSim(sec){
     if (isBoss(N)) { S.res.medals += 1 + Math.floor(N / 20); if (!S.bossFirst[N]) { S.bossFirst[N] = 1; S.res.writs += 1 + Math.floor(N / 50); } }
     if (arrowsOn()) S.res.arrows = Math.max(0, S.res.arrows - lineUp().filter(Boolean).length * 12);
     if (S.autoAdv && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.stage++; S.runMax = Math.max(S.runMax, S.stage); }
+    else rep.medals = (rep.medals || 0) + farmMedal(1);
   }
   S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
   rep.endStage = S.stage; capXP(Math.floor(rep.clears / 2)); return rep;
@@ -1576,7 +1597,7 @@ let tab = 'battle';
 const WIDEQ = matchMedia('(min-width: 980px)'); let wide = WIDEQ.matches;
 const bOn = () => tab === 'battle' || wide;
 function toast(m, ok){ const t = $('#toast'); t.textContent = m; t.className = ok ? 'ok' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
-function openSheet(h){ $('#sheet').innerHTML = '<div class="handle"></div>' + h; $('#modal').classList.add('show'); $('#sheet').scrollTop = 0; }
+function openSheet(h){ $('#sheet').innerHTML = '<div class="handle"></div><button class="sheetx" data-act="close" aria-label="Close">×</button>' + h; $('#modal').classList.add('show'); $('#sheet').scrollTop = 0; }
 function closeSheet(){ $('#modal').classList.remove('show'); sheetFn = null; }
 let sheetFn = null;
 function refreshSheet(){ if (sheetFn && $('#modal').classList.contains('show')) { const sc = $('#sheet').scrollTop; sheetFn(); $('#sheet').scrollTop = sc; } }
@@ -1972,9 +1993,19 @@ const ORDERS = {
   ale:   {n:'A night at the tavern', d:'+15% damage for 20 minutes, then a hangover: -10% for 20 minutes. Morale +15; drunkards are hungover for an hour. Costs silver.', cd:4, cost:() => Math.round(clearBonus(S.runMax) * 4 * (fol('alewife') ? .5 : 1)), fx:() => { const t = Date.now(); morMove(15); S.roster.filter(a => a.traits.includes('drunk')).forEach(a => hangover(a, 60)); S.buffs.push({k:'dmg', m:1.15, end:t + 1200e3, n:'Merry'}); S.buffs.push({k:'dmg', m:.90, end:t + 2400e3, start:t + 1200e3, n:'Hungover'}); repMove(0, 7); return 'Grim keeps the tap running until dawn. They will shoot well tonight, and badly tomorrow.'; }},
   pay:   {n:'Pay a bonus', d:'Every man in the line gains 2 levels. Fair dealing is remembered. Costs silver.', cd:6, cost:() => Math.round(clearBonus(S.runMax) * 10), fx:() => { lineUp().forEach(a => { if (a) a.lvl = Math.min(cap(a), a.lvl + 2); }); repMove(8, 4); morMove(12); return 'Every man gets his coin, counted out in front of him. They will remember it.'; }}
 };
+ORDERS.drill = {n:'Drill at dawn', d:'Every man in the line gains a level. The men grumble about the hour.', cd:3, fx:() => { lineUp().forEach(a => { if (a) a.lvl = Math.min(cap(a), a.lvl + 1); }); repMove(2, -3); morMove(-3); return 'Scott has them at the butts before the birds are up. They shoot better and like it less.'; }};
+ORDERS.rations = {n:'Double rations', d:'Morale +12, and the men like you for it. Costs a quarter of your food.', cd:4, ok:() => S.res.food >= storeCap('food') * .25, no:'You need a quarter of a full granary for this.', fx:() => { S.res.food -= storeCap('food') * .25; morMove(12); repMove(1, 7); return 'Two bowls each, and meat in both. Nobody can remember the last time.'; }};
+/* the forlorn hope: spare common men storm a breach for medals; most do not come back */
+const hopeMen = () => S.roster.filter(a => a.rar <= 1 && !a.hero && !a.friend && !a.away && !S.form.includes(a.id)).sort((p, q) => power(p) - power(q)).slice(0, 6);
+const hopePay = a => (a.rar === 0 ? 3 : 5) + Math.floor(S.runMax / 20);
+ORDERS.hope = {n:'The forlorn hope', get d(){ const m = hopeMen(); return `Up to six spare Common and Uncommon men, not in the line, storm a breach. Each pays medals whether they live or not (${m.length ? `${m.length} ready, about ${m.reduce((t, a) => t + hopePay(a), 0)} medals` : 'nobody spare right now'}). Most will not come back.`; }, cd:2, ok:() => hopeMen().length > 0, no:'Nobody spare. Only Common and Uncommon men outside the line can go.', fx:() => {
+  const men = hopeMen(); let md = 0; const back = [];
+  men.forEach(a => { md += hopePay(a); if (Math.random() < .65) { killArcher(a, 'Went with the forlorn hope.'); morMove(5); } else { a.lvl = Math.min(cap(a), a.lvl + 5); if (!a.nick) a.nick = 'of the Breach'; back.push(a); } });
+  S.res.medals += md; S.stats.hopeMedals = (S.stats.hopeMedals || 0) + md; tr('hopeMen', men.length); repMove(0, -4); chron(`Sent ${men.length} men with the forlorn hope.`);
+  return `${men.length} men go over the wall at dusk. ${back.length ? `${back.map(a => esc(a.name.split(' ')[0])).join(' and ')} came back, with 5 levels and the name "of the Breach".` : 'None of them came back.'} The company is ${md} medals richer.`; }};
 const ordReady = k => !S.ordT[k] || Date.now() >= S.ordT[k];
 function giveOrder(k){
-  const o = ORDERS[k]; if (!o || !perk(1) || !ordReady(k)) return; const c = o.cost ? o.cost() : 0;
+  const o = ORDERS[k]; if (!o || !perk(1) || !ordReady(k)) return; if (o.ok && !o.ok()) return toast(o.no); const c = o.cost ? o.cost() : 0;
   if (c && S.res.silver < c) return toast(`That needs ${fmt(c)} silver.`); if (c) S.res.silver -= c;
   const out = o.fx(); S.ordT[k] = Date.now() + o.cd * 3600e3; tr('order_' + k); capXP(3); save(); refreshLineStats(); sheetFn = null;
   openSheet(`<div class="fell" style="font-size:24px">${o.n}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`);
@@ -2000,7 +2031,8 @@ function viewCaptain(){
   <h3>RANKS</h3><div class="card">${RANKS.map((x, i) => `<div class="row" style="padding:3px 0;${i > ri ? 'opacity:.5' : ''}"><span style="width:20px">${i <= ri ? IC('shield', 'var(--gold)') : ''}</span><b style="width:150px">${x.n}</b><span class="sub grow">${x.p}</span></div>`).join('')}</div>
   <h3>REPUTATION</h3><div class="card"><div class="sub">How the company sees you. Your choices in camp, your orders and your raids move it.</div>
   ${bar(S.rep.fair, 'Harsh', 'Fair')}<div class="sub" style="text-align:center">${repWord(S.rep.fair, 'Harsh', 'Fair')}</div>${bar(S.rep.love, 'Feared', 'Loved')}<div class="sub" style="text-align:center">${repWord(S.rep.love, 'Feared', 'Loved')}</div>
-  <div class="sub" style="margin-top:8px">${[fx.dmg > 1 ? '<b>Feared:</b> +5% damage, nobody dares slack' : '', fx.heal > 1 ? '<b>Loved:</b> wounds heal 25% faster' : '', fx.silver > 1 ? '<b>Fair:</b> +8% silver, honest dealing pays' : '', fx.raid > 1 ? '<b>Harsh:</b> raids bring 25% more' : ''].filter(Boolean).join('<br>') || 'Lean far enough either way on either scale and it starts to count for something.'}</div></div>`;
+  <div class="sub" style="margin-top:8px">No way is wrong: every end of each scale has its reward once you lean far enough (40 points).</div>
+  <div style="margin-top:6px">${[['Feared', '+5% damage, nobody dares slack', fx.dmg > 1], ['Loved', 'wounds heal 25% faster', fx.heal > 1], ['Harsh', 'raids bring 25% more', fx.raid > 1], ['Fair', '+8% silver, honest dealing pays', fx.silver > 1]].map(([n, d, on]) => `<div class="sub" style="padding:2px 0;${on ? 'color:var(--ink)' : 'opacity:.6'}">${on ? IC('shield', 'var(--gold)') : ''} <b>${n}:</b> ${d}${on ? ' · <b style="color:var(--gold)">in effect</b>' : ''}</div>`).join('')}</div></div>`;
   if (perk(1)) { const buffs = (S.buffs || []).filter(b => b.end > Date.now() && (!b.start || b.start <= Date.now()));
     h += `<h3>ORDERS FOR YOUR MEN</h3>${buffs.length ? `<div class="sub" style="margin-bottom:6px">In effect: ${buffs.map(b => `<b>${b.n}</b> (${fmtT((b.end - Date.now()) / 1000)})`).join(', ')}</div>` : ''}` + Object.keys(ORDERS).map(k => { const o = ORDERS[k], c = o.cost ? o.cost() : 0, ok = ordReady(k); return `<div class="card row"><div class="grow"><b>${o.n}</b><div class="sub">${o.d}</div>${c ? `<div class="cost">${costHtml({silver:c})}</div>` : ''}</div>${ok ? `<button class="btn ${!c || S.res.silver >= c ? 'gold' : ''}" data-act="order" data-id="${k}">Give the order</button>` : `<span class="sub">Again in ${fmtT((S.ordT[k] - Date.now()) / 1000)}</span>`}</div>`; }).join(''); }
   else h += `<h3>ORDERS FOR YOUR MEN</h3><div class="card lock sub">Reach Centenar to give orders: discipline, days off, a night at the tavern.</div>`;
@@ -2165,9 +2197,9 @@ function campLife(A, Bm, nm, cb){
     ['Stand them both a drink', () => { setBond(A, Bm, 'f'); morMove(4); hangover(A, 20); hangover(Bm, 20); return `They drink to each other until the barrel is dry. Friends for life now: +6% damage side by side.`; }],
     ['Mention it in dispatches', () => { lvl(A, 5); capXP(4); repMove(3, 0); return `Your letter to the Constable names ${fn(A)}. ${P.He} gains 5 levels, and walks taller for it.`; }]]});
   if (common.length) { const D = pick(common); add({id:'desert', t:'One of ours', x:`${nm(D)} tried to slip away in the night with a sack of the company's bread, and was caught at the pickets.`, c:[
-    ['Hang them', () => { leaveCompany(D, 'was hanged for desertion.'); repMove(6, -12); morMove(-8); tr('hanged'); return `The provost does it at dawn, in front of the whole company. Nobody tries it again. Nobody looks at you quite the same way, either.`; }],
-    ['Flog them', () => { D.woundT = Math.max(D.woundT, 1800); repMove(2, -4); morMove(-2); return `Twenty strokes. ${esc(D.name.split(' ')[0])} is out for half an hour, and will think twice.`; }],
-    ['Forgive them', () => { lvl(D, 3); addTrait(D, 'steady'); repMove(-4, 8); morMove(4); chron(`${D.name} deserted, was forgiven, and stayed.`); return `You give back the bread and ask why. It is a long story, and a sad one. ${esc(D.name.split(' ')[0])} stays, and fights like someone with a debt to pay.`; }]]}); }
+    ['Hang them', () => { leaveCompany(D, 'was hanged for desertion.'); repMove(6, -12); morMove(-8); tr('hanged'); return `The provost does it at dawn, in front of the whole company. Nobody tries it again. Nobody looks at you quite the same way, either.`; }, 'Fair, Feared'],
+    ['Flog them', () => { D.woundT = Math.max(D.woundT, 1800); repMove(2, -4); morMove(-2); return `Twenty strokes. ${esc(D.name.split(' ')[0])} is out for half an hour, and will think twice.`; }, 'Feared'],
+    ['Forgive them', () => { lvl(D, 3); addTrait(D, 'steady'); repMove(-4, 8); morMove(4); chron(`${D.name} deserted, was forgiven, and stayed.`); return `You give back the bread and ask why. It is a long story, and a sad one. ${esc(D.name.split(' ')[0])} stays, and fights like someone with a debt to pay.`; }, 'Loved']]}); }
   if (A !== Bm) add({id:'debt', t:'Gambling debts', x:`${nm(A)} owes ${nm(Bm)} a month's pay at dice and cannot pay it. ${nm(Bm)} wants it out of ${P.his} hide.`, c:[
     [`Pay the debt (${cost(cb * 4)})`, () => { if (!pay(cb * 4)) return 'You cannot cover it either. You confiscate the dice instead, which pleases nobody.'; repMove(2, 6); morMove(3); return `${fn(A)} swears never to gamble again. ${fn(Bm)} buys a round with the money, which is a sort of justice.`; }],
     ['Let them sort it out', () => { addTrait(A, 'nervous'); addTrait(Bm, 'greedy'); setBond(A, Bm, 'g'); return `${fn(Bm)} takes it out of ${fn(A)}'s pay for the rest of the campaign. ${fn(A)} turns Nervous, ${fn(Bm)} turns Greedy, and they hate each other.`; }]]});
@@ -2204,9 +2236,28 @@ function campLife(A, Bm, nm, cb){
   if (woman) add({id:'knight', t:'Not in the line', x:`A knight of the household rides up and says ${nm(woman)} has no business standing in a line of archers, being a woman.`, c:[
     ['Back her', () => { lvl(woman, 5); repMove(6, 4); morMove(4); return `You point out that ${esc(woman.name.split(' ')[0])} has killed more Frenchmen this month than he has. He rides off. She gains 5 levels from the satisfaction.`; }],
     ['Keep the peace', () => { addTrait(woman, 'nervous'); repMove(-6, -3); morMove(-4); return `You move her to the back rank for the afternoon. She does not forget it. Nervous now.`; }]]});
+  /* 2.21: choices that clearly push you towards Feared or Loved */
+  add({id:'poach', t:'The poacher', x:"A village boy has been caught taking the company's deer. His mother is at the pickets, weeping.", c:[
+    ['Hang him as a warning', () => { repMove(2, -10); morMove(-2); return 'The village learns to leave your deer alone. Your men learn something about you too.'; }, 'Feared'],
+    ['Feed him and send him home', () => { repMove(-1, 9); morMove(3); return 'He goes home with a haunch of venison. The village brings you eggs for a week.'; }, 'Loved']]});
+  add({id:'sentry', t:'Asleep on watch', x:`${nm(A)} was found asleep on the picket line with ${P.his} bow for a pillow.`, c:[
+    ['Make an example', () => { A.woundT = Math.max(A.woundT, 900); repMove(3, -9); S.buffs = S.buffs || []; S.buffs.push({k:'dmg', m:1.05, end:Date.now() + 1800e3, n:'Wide awake'}); return `Twenty strokes in front of the company. Nobody so much as yawns: +5% damage for half an hour. ${fn(A)} is out for fifteen minutes.`; }, 'Feared'],
+    ['Let it pass', () => { repMove(-2, 8); morMove(3); return `You wake ${P.him} with your boot and say nothing more. ${fn(A)} will not forget it.`; }, 'Loved']]});
+  add({id:'mock', t:'Insolence', x:`${nm(A)} has been doing an impression of you round the fire. It is, everyone agrees, very good.`, c:[
+    ['The stocks, for a day', () => { addTrait(A, 'nervous'); repMove(0, -10); return `${fn(A)} spends a day in the stocks. The impression is not performed again, at least not where you can hear it.`; }, 'Feared'],
+    ['Ask for an encore', () => { lvl(A, 2); repMove(0, 9); morMove(5); return `You laugh louder than anyone. ${fn(A)} gains 2 levels and a lot of goodwill.`; }, 'Loved']]});
+  add({id:'nameday', t:'Your name day', x:"The men have found out it is your name day. They have clubbed together for a gift: a very large, very ugly hat.", c:[
+    [`Wear it and stand a round (${cost(cb * 2)})`, () => { if (!pay(cb * 2)) { repMove(0, 4); return 'You cannot afford the round, but you wear the hat. It is enough.'; } repMove(0, 9); morMove(10); line().forEach(a => hangover(a, 15)); return 'You wear the hat all evening. The men will be talking about it for years.'; }, 'Loved'],
+    ['Remind them who is captain', () => { repMove(2, -8); S.buffs = S.buffs || []; S.buffs.push({k:'dmg', m:1.08, end:Date.now() + 1800e3, n:'Put in their place'}); return 'You thank them coldly and set them to drill. +8% damage for half an hour.'; }, 'Feared']]});
+  add({id:'church', t:'Plate from a church', x:'Some of the men have come back from a village with a silver chalice and two candlesticks.', c:[
+    ['Let them keep it', () => { repMove(-9, 6); morMove(5); S.res.silver += cb * 4; return 'The men share it out and give you a cut. The priest will be writing to someone.'; }, 'Harsh, Loved'],
+    ['Return it and flog the thieves', () => { repMove(8, -7); morMove(-4); return 'The chalice goes back. The men go to the whipping post. God, presumably, is pleased.'; }, 'Fair, Feared']]});
+  add({id:'cow', t:"The widow's cow", x:'A French widow has walked ten miles to ask for her cow back. The cook has already named it.', c:[
+    ['Give her the cow', () => { repMove(9, 3); morMove(-1); return 'She leads it home, blessing you in French. Hamo sulks.'; }, 'Fair'],
+    ['Keep the cow', () => { repMove(-8, 0); S.res.food = Math.min(storeCap('food'), S.res.food + storeCap('food') * .1); return 'The widow walks home. The company eats well.'; }, 'Harsh']]});
   if (S.mor !== undefined && S.mor < 25) { E.length = 0; add({id:'mutiny', t:'Mutiny talk', x:'The men are muttering about pay and food and you, in that order. Someone has been seen sharpening a knife and looking at your tent.', c:[
     [`Pay them now (${cost(cb * 8)})`, () => { if (!pay(cb * 8)) { morMove(-5); return 'You do not have it. The muttering gets louder.'; } morMove(25); repMove(5, 6); return 'You pay every man in coin, in front of the company. The knife goes back in its sheath.'; }],
-    ['Hang the ringleader', () => { const r = pick(common.length ? common : S.roster.filter(a => !a.hero && !a.friend)); if (r) leaveCompany(r, 'was hanged as a mutineer.'); morMove(12); repMove(2, -15); tr('hanged'); return `${r ? esc(r.name) + ' hangs at noon.' : 'The ringleader hangs at noon.'} The muttering stops. The company is quieter, and colder.`; }],
+    ['Hang the ringleader', () => { const r = pick(common.length ? common : S.roster.filter(a => !a.hero && !a.friend)); if (r) leaveCompany(r, 'was hanged as a mutineer.'); morMove(12); repMove(2, -15); tr('hanged'); return `${r ? esc(r.name) + ' hangs at noon.' : 'The ringleader hangs at noon.'} The muttering stops. The company is quieter, and colder.`; }, 'Feared'],
     ['Promise them better', () => { morMove(10); S.promised = Date.now() + 3600e3; repMove(-3, 2); return 'They believe you, for now. In an hour they will want to see something.'; }]]}); }
   return E.filter(e => !e.ok || e.ok());
 }
@@ -2254,7 +2305,7 @@ function campEvent(){
   let pool = life.find(e => e.id === 'mutiny') ? life : evs.concat(life);
   const fresh = pool.filter(e => !seen.includes(e.id || e.t)); if (fresh.length) pool = fresh;
   EV = pick(pool); S.evSeen = seen.concat(EV.id || EV.t).slice(-12); tr('ev_' + (EV.id || 'old')); sheetFn = null;
-  openSheet(`<div class="sub" style="color:var(--gold);font-weight:700;letter-spacing:.1em">CAMP NEWS</div><div class="fell" style="font-size:25px">${EV.t}</div><p class="ev">${EV.x}</p>${EV.c.map((c, i) => `<button class="btn ${i ? '' : 'gold'} big" style="margin-top:8px" data-act="evc" data-i="${i}">${c[0]}</button>`).join('')}`);
+  openSheet(`<div class="sub" style="color:var(--gold);font-weight:700;letter-spacing:.1em">CAMP NEWS</div><div class="fell" style="font-size:25px">${EV.t}</div><p class="ev">${EV.x}</p>${EV.c.map((c, i) => `<button class="btn ${i ? '' : 'gold'} big" style="margin-top:8px" data-act="evc" data-i="${i}">${c[0]}${c[2] ? ` <small style="opacity:.75;font-weight:400">· ${c[2]}</small>` : ''}</button>`).join('')}`);
   battleHud(true);
 }
 
@@ -2595,7 +2646,7 @@ window.addEventListener('pagehide', save);
 function welcome(rep){
   const gained = ['silver','food','wood','iron','feathers','arrows','writs','medals'].map(r => [r, S.res[r] - (rep.res0[r] || 0)]).filter(([, v]) => v > .5);
   sheetFn = null;
-  openSheet(`<div class="fell" style="font-size:26px">While you were away</div><p class="ev">The company kept at it for ${fmtT(rep.counted)}${rep.counted < rep.sec ? ` (the most your ledger covers; you were gone ${fmtT(rep.sec)})` : ''}. ${rep.clears ? `They cleared ${fmt(rep.clears)} stage${rep.clears > 1 ? 's' : ''} and now hold stage ${rep.endStage}.` : 'No battles were won.'}</p>
+  openSheet(`<div class="fell" style="font-size:26px">While you were away</div><p class="ev">The company kept at it for ${fmtT(rep.counted)}${rep.counted < rep.sec ? ` (the most your ledger covers; you were gone ${fmtT(rep.sec)})` : ''}. ${rep.clears ? `They cleared ${fmt(rep.clears)} stage${rep.clears > 1 ? 's' : ''} and now hold stage ${rep.endStage}.` : 'No battles were won.'}${rep.medals ? ` Farming old ground earned ${rep.medals} medal${rep.medals > 1 ? 's' : ''}.` : ''}</p>
   <div class="card">${gained.map(([r, v]) => `<div class="row" style="padding:2px 0"><span class="grow">${RES[r].i} ${RES[r].n}</span><b>+${fmt(v)}</b></div>`).join('') || '<div class="sub">Nothing much.</div>'}</div><button class="btn gold big" data-act="welcomeok">Back to it</button>`);
 }
 
@@ -2608,10 +2659,11 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {bDur, checkUnlocks, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.21","items":["More ways to earn medals. Farming a stage you have already beaten pays a medal every 10 clears, offline too, so a company held at a wall still earns.","The forlorn hope, a new order: up to six spare Common and Uncommon men outside the line storm a breach. Each one pays medals, living or dead. Most do not come back; the few who do gain 5 levels and the name \"of the Breach\".","Promotions up to 3 stars now cost silver and iron only. Medals are needed from 4 stars.","Two more orders: Drill at dawn (a level for every man in the line) and Double rations (morale, at the cost of food).","Six new camp stories with clear Feared, Loved, Fair or Harsh choices, and the choice buttons now say which way each one leans.","The captain page shows the reward at every end of both reputation scales. There is no wrong way to lead.","Every pop-up has a close button in the corner.","Women in helmets and caps no longer look like bearded men. Sorry, Ellen.","Now and then a rider may arrive from headquarters with a purse of medals."]},
 {"v":"2.20.1","items":["After a loss the company now holds at the last stage it beat and stays there, farming, until you press Push on. No more waking up to a company that threw itself at the same wall all night.","A 10-second break between stages while you are watching, to upgrade and swap. Tap the field to skip it, or turn it off in Settings.","The Tavern opens at stage 5 instead of 8, so you can recruit reserves sooner.","Faces show the mood of the camp: smiles and grins when morale is high, long faces when it is low, and a green tinge for the hungover."]},
 {"v":"2.20","items":["Camp life: your company has a mood. Morale, on the Company page, rises with victories, ale, pay and kindness and falls with deaths, defeats and the whip. High spirits add up to 10% damage; a mutinous company loses 15%.","Twenty-seven new camp events, and most of them leave a mark: weddings, feuds, friendships, ballads, deserters, an outlaw, a drinking match, the pledge, a feast and, if you let things slide, mutiny.","Drink and hangovers: a hungover archer shoots 20% worse until it wears off. Drunkards who take the pledge can become Teetotal.","Camp followers: seven people can join the baggage train for good, each with a lasting benefit. A cook, a laundress, a herbwife, an alewife, a sutler, a chaplain and a fletcher's boy.","Women in the company: about one recruit in five is now a woman, and one may turn up at the muster.","A faster start: wounds early on heal in seconds (full length only from stage 50), nobody can be killed outright before stage 30, and if the company drops below three men a local volunteers.","Early upgrades are instant again: every building's first 15 levels (the first level of capped buildings like the Barracks) finish straight away. Timers only start once buildings get bigger.","Every archer now has a face of their own, built from parts: hair, beards, scars, broken noses, eye patches and a drinker's red nose."]},
 {"v":"2.19","items":["Eight new regions past stage 120, from Cravant and Patay to Castillon, then the old soldiers' tales of Crécy and Poitiers: new stages up to 200 before the war starts round again.","Your captain: tap your rank at the top of the screen. Earn experience from every fight and decision and rise from Vintenar to King, with a reward at each rank. Experience is never lost.","Reputation: your choices make the men see you as Harsh or Fair, Feared or Loved, and each has its upside.","From Centenar, give orders: flog the slackers, a day off, a night at the tavern, or a bonus.","From Captain of Archers, lead raids through the French countryside for rich loot, at a cost to your good name.","Your record and best men on the captain page, and tap a name in the King's League to see their captain and army."]},

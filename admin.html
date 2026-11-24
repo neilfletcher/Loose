@@ -64,6 +64,18 @@ auth.onAuthStateChanged(async u => {
     render(P);
   } catch (e) { $('out').innerHTML = `<p class="note">Could not read the figures. The database rules may not be in place yet. (${esc(e.message)})</p>`; }
 });
+/* gifts: written to loose_gifts/{save id}; the game collects them within a couple of minutes of being open */
+const RULES = `match /loose_gifts/{id} {\n  allow read, delete: if true;\n  allow create, update: if request.auth != null && request.auth.token.email == '${ADMIN}';\n}`;
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button.gift'); if (!b) return;
+  const n = parseInt(prompt(`How many medals for ${b.dataset.cap}?`, '50'), 10); if (!n || n <= 0) return;
+  const msg = prompt('A note to go with it (optional)', '') || '';
+  try {
+    const ref = db.collection('loose_gifts').doc(b.dataset.id), cur = await ref.get(), prev = cur.exists ? (cur.data().medals || 0) : 0;
+    await ref.set({medals:prev + n, msg, gid:Math.random().toString(36).slice(2, 10), at:Date.now()});
+    b.textContent = `Sent ${prev + n}`; b.disabled = true;
+  } catch (err) { alert(`The gift could not be sent: ${err.message}\n\nAdd this to your Firestore rules (Firebase console, Firestore Database, Rules), inside "match /databases/{database}/documents", then publish:\n\n${RULES}`); }
+});
 /* one row per person: saves from the same device (save slots) are merged, keeping the furthest-along save and summing feature use */
 function people(all){
   const by = {}; all.forEach(p => { const k = p.dev || p.id; (by[k] = by[k] || []).push(p); });
@@ -71,7 +83,7 @@ function people(all){
     list.forEach(p => { for (const k in (p.tr || {})) tr[k] = (tr[k] || 0) + p.tr[k]; });
     return Object.assign({}, top, {tr, saves:list.length, last:Math.max(...list.map(p => p.last || 0)), v:[...list].sort((a, b) => (b.last || 0) - (a.last || 0))[0].v, play:list.reduce((t, p) => t + (p.play || 0), 0)}); });
 }
-const FEAT = [['volley', 'Tapped a volley'], ['volleyAuto', 'Let volleys fire themselves'], ['medic', 'Called Doc (medic)'], ['archerTap', 'Tapped an archer'], ['zoom', 'Zoomed the battlefield'], ['pause', 'Paused'], ['fullscreen', 'Went full screen'], ['gearDrag', 'Dragged gear between archers'], ['bulkPay', 'Paid off in bulk'], ['timedBuild', 'Started a timed upgrade'], ['rush', 'Finished an upgrade with medals'], ['revive', 'Brought back a Legendary'], ['slotSwitch', 'Switched save slot'], ['update', 'Installed an update'], ['cardShow', 'Pressed "Show me" on a New card'], ['newsChoice', 'Made a camp-news choice'], ['order_flog', 'Ordered a flogging'], ['order_rest', 'Gave a day off'], ['order_ale', 'Sent the men to the tavern'], ['order_pay', 'Paid a bonus'], ['raid', 'Led a raid'], ['rivalView', "Looked at another captain's page"], ['rankUp', 'Was promoted'], ['follower', 'Took on a camp follower'], ['hangover', 'Had a hungover archer'], ['bond_w', 'Married two archers'], ['bond_f', 'Made two archers friends in camp'], ['bond_g', 'Started a feud in camp'], ['hanged', 'Hanged a deserter or mutineer'], ['nick', 'Earned a nickname at camp'], ['ev_mutiny', 'Faced a mutiny'], ['pushOn', 'Pressed Push on after a loss'], ['breakSkip', 'Skipped the break between stages'], ['breakToggle', 'Changed the break setting']];
+const FEAT = [['volley', 'Tapped a volley'], ['volleyAuto', 'Let volleys fire themselves'], ['medic', 'Called Doc (medic)'], ['archerTap', 'Tapped an archer'], ['zoom', 'Zoomed the battlefield'], ['pause', 'Paused'], ['fullscreen', 'Went full screen'], ['gearDrag', 'Dragged gear between archers'], ['bulkPay', 'Paid off in bulk'], ['timedBuild', 'Started a timed upgrade'], ['rush', 'Finished an upgrade with medals'], ['revive', 'Brought back a Legendary'], ['slotSwitch', 'Switched save slot'], ['update', 'Installed an update'], ['cardShow', 'Pressed "Show me" on a New card'], ['newsChoice', 'Made a camp-news choice'], ['order_flog', 'Ordered a flogging'], ['order_rest', 'Gave a day off'], ['order_ale', 'Sent the men to the tavern'], ['order_pay', 'Paid a bonus'], ['raid', 'Led a raid'], ['rivalView', "Looked at another captain's page"], ['rankUp', 'Was promoted'], ['follower', 'Took on a camp follower'], ['hangover', 'Had a hungover archer'], ['bond_w', 'Married two archers'], ['bond_f', 'Made two archers friends in camp'], ['bond_g', 'Started a feud in camp'], ['hanged', 'Hanged a deserter or mutineer'], ['nick', 'Earned a nickname at camp'], ['ev_mutiny', 'Faced a mutiny'], ['pushOn', 'Pressed Push on after a loss'], ['breakSkip', 'Skipped the break between stages'], ['breakToggle', 'Changed the break setting'], ['farmMedal', 'Earned medals by farming'], ['hopeMen', 'Sent men with the forlorn hope'], ['order_hope', 'Ordered the forlorn hope'], ['order_drill', 'Ordered a dawn drill'], ['order_rations', 'Ordered double rations']];
 const FRIENDN = {bobby:'Bobby Arrow', col:'Col the Man', cras:'Nick Cras', curio:'Curio the Wastrel', davpaz:'Dav Paz', jasmine:'Jasmine the Goddess', jacket:'Nick "Jacket" Stewart', joans:'Old Joans', wookie:'Wookie the Underling', mali:'Mali of Aldgate', nase:'Tony Nason', trousers:'Trousers', zaphod:'Zaphod'};
 function render(ALL){
   const P = people(ALL);
@@ -120,8 +132,8 @@ function render(ALL){
   <div class="two"><div><h2>MORALE (2.20 AND LATER)</h2><div class="card">${bars(morq)}</div></div><div><h2>CAMP FOLLOWERS TAKEN ON</h2><div class="card">${bars(folr)}</div></div></div>
   <div class="two"><div><h2>NEW CAMP EVENTS SEEN MOST</h2><div class="card">${evr.length ? bars(evr) : '<div class="sub">None yet.</div>'}</div></div><div><h2>WOMEN IN THE COMPANY</h2><div class="card"><div style="font-size:28px;font-weight:700">${rost ? Math.round(100 * wom / rost) : 0}%</div><div class="sub">${wom} women across ${rost} archers on players' rolls (2.20 and later)</div></div></div></div>
   <h2>FRIENDS OF THE COMPANY RECRUITED</h2><div class="card">${bars(frows)}</div>
-  <h2>MOST RECENT PLAYERS</h2><div class="card scroll"><table><thead><tr><th>Last seen</th><th>Best</th><th>Now at</th><th>Campaigns</th><th>Time played</th><th>Roll</th><th>Legendaries</th><th>Fallen</th><th>Device</th><th>Account</th><th>Version</th><th>Saves</th></tr></thead>
-  <tbody>${recent.map(p => `<tr><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : p.wide ? 'Computer (wide)' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td><td>${esc(p.v || '')}</td><td class="n">${p.saves || 1}</td></tr>`).join('')}</tbody></table></div>`;
+  <h2>MOST RECENT PLAYERS</h2><div class="card scroll"><table><thead><tr><th>Captain</th><th>Last seen</th><th>Best</th><th>Now at</th><th>Campaigns</th><th>Time played</th><th>Roll</th><th>Legendaries</th><th>Fallen</th><th>Device</th><th>Account</th><th>Version</th><th>Saves</th><th>Gift</th></tr></thead>
+  <tbody>${recent.map(p => `<tr><td>${esc(p.cap || '')}</td><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : p.wide ? 'Computer (wide)' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td><td>${esc(p.v || '')}</td><td class="n">${p.saves || 1}</td><td><button class="gift" data-id="${esc(p.id)}" data-cap="${esc(p.cap || 'this player')}" style="padding:4px 8px">Gift medals</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 </script>
 </body>
