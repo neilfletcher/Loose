@@ -655,7 +655,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.13';
+const VERSION = '2.13.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -850,7 +850,7 @@ function signIn(){ if (!fbAuth) return; fbAuth.signInWithPopup(new firebase.auth
 const DEV = (() => { try { let d = localStorage.getItem('loose-device'); if (!d) { d = uid(); localStorage.setItem('loose-device', d); } return d; } catch(e) { return uid(); } })();
 const syncAt = {get(){ try { return +localStorage.getItem('loose-sync') || 0; } catch(e) { return 0; } }, set(v){ try { localStorage.setItem('loose-sync', String(v)); } catch(e){} }};
 let lastInput = 0, cloudDoc = null, unsubCloud = null, syncing = false;
-['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => lastInput = Date.now(), true));
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); if (S && S.sound && (!AC || AC.state !== 'running')) { try { ac(); } catch(e){} } }, true));
 const isActive = () => !document.hidden && Date.now() - lastInput < 120000;
 /* SYNC RULE: the save that is further along always wins. Progress = stages cleared (live and offline), kills break ties.
    Both only ever go up, so whichever is higher has been played more. The losing save is always kept as a backup. */
@@ -1178,6 +1178,8 @@ function shoot(u, e, o){
   BT.arrows.push({x0:u.x + Math.cos(u.face) * 10, y0:u.y + Math.sin(u.face) * 10, tx, ty, e:hit ? e : null, T, t:0, h:u.s.xbow ? dd * .05 : dd * .16, dmg, pierce:u.bodkinT > 0 ? 1 : u.s.pierce + (BT.ev && BT.ev.rule === 'pierce' ? .3 : 0), fire:u.fireT > 0, src:u, gold:o.gold, bolt:u.s.xbow});
   u.drawAmt = 0; u.face = Math.atan2(e.y - u.y, e.x - u.x); sfx('twang');
 }
+const clockTxt = b => { const r = Math.max(0, Math.ceil(battleLimit(b) - b.t)); return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`; };
+const battleLimit = b => b && b.en && (b.boss || b.en.some(e => e.type === 'boss')) ? 180 : 120;
 function hurt(e, dmg, pierce, src, fire){
   if (e.dead) return;
   e.hp -= dmg * (1 - e.d.arm * (1 - Math.min(1, pierce || 0))) * (e.markT > 0 ? 2 : 1); e.flash = .12; sfx('hit');
@@ -1308,7 +1310,7 @@ function bstep(dt){
   b.shake = Math.max(0, b.shake - dt * 20); b.inspireT = (b.inspireT || 0) - dt; b.shieldT = (b.shieldT || 0) - dt;
   if (!b.units.some(u => !u.down) || b.camp <= 0) return endBattle(false);
   if (b.spawnI >= b.spawns.length && !b.en.length) return endBattle(true);
-  if (b.t > 120) return endBattle(false);
+  if (b.t > battleLimit(b)) return endBattle(false);
 }
 function stick(x, y){ if (BT.decals.length > 140) BT.decals.shift(); BT.decals.push({x, y, arrow:1, ang:rnd(-.5, .5), t:0}); }
 function endBattle(win){
@@ -1328,7 +1330,7 @@ function endBattle(win){
     }
     if (b.sp) { S.codex.setpieces[b.sp.id] = 1; if (!S.spFirst[N]) { S.spFirst[N] = 1; const it = dropItem(N, 2); if (it) sub += ` · ${itemName(it)}`; chron(`Won ${b.sp.n} at stage ${N}.`); gtag('event', 'set_piece', {id:b.sp.id, stage:N}); } }
     bmsg(b.sp ? b.sp.n + ' won!' : boss ? (b.ev ? 'Champion beaten!' : 'Boss defeated!') : 'Stage cleared', sub); sfx('win');
-  } else { bmsg(b.camp <= 0 ? 'The camp is overrun' : 'Driven back', b.ev ? 'Back one event stage' : S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
+  } else { bmsg(b.camp <= 0 ? 'The camp is overrun' : b.t > battleLimit(b) ? 'Out of time' : 'Driven back', b.ev ? 'Back one event stage' : S.stage > 1 ? 'Falling back a stage to regroup' : 'Strengthen the company'); sfx('lose'); }
   if (dead.length) setTimeout(() => toast(`${dead.map(a => a.name).join(' and ')} fell in the fighting. See the Roll of Honour.`), 900);
   b.won = win;
 }
@@ -1495,7 +1497,7 @@ function battleHud(full){
     $('#newsBtn').style.display = S.news ? '' : 'none'; $('#newsBtn').classList.toggle('news', S.news);
   }
   const left = b.spawns.length - b.spawnI + b.en.length;
-  $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} left · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · no arrows' : arrowsOn() ? ' · arrows +50%' : '');
+  $('#bP').textContent = b.phase === 'empty' ? 'Nobody fit to fight. Put men in the line, or wait for the wounded.' : `${left} left · ${clockTxt(b)} · camp ${Math.ceil(b.camp)}%` + (b.noArrows ? ' · no arrows' : arrowsOn() ? ' · arrows +50%' : '');
   $('#bD').textContent = `Line DPS ${fmt(squadDps(N))}`;
   $('#bBar').style.width = (100 * (1 - left / Math.max(1, b.spawns.length))) + '%';
   $('#bA').textContent = b.ev ? 'Event: win to climb, lose to drop back' : S.autoAdv ? (S.tutVolley ? 'Pinch to zoom · tap an archer' : 'Tap the field to loose a volley') : `Farming · retry in ${Math.max(0, 10 - S.farmN)} wins`;
