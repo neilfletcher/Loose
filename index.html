@@ -662,7 +662,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.17.1';
+const VERSION = '2.17.2';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1011,7 +1011,7 @@ Object.assign(HEROES, {
   rook:     {n:'Rook', title:'The silent poacher', dmg:12, int:1.2, hp:65, range:210, pierce:.3, ab:'mark', abN:'Marked', abD:'Marks the toughest enemy: everyone does double damage to him for eight seconds.', bio:'Nobody knows his real name. The King\'s deer certainly never did.', look:{tunic:'#2f3a2c', trim:'#1a1a1a', head:'hood', cape:'#1a2418'}},
   hal:      {n:'Hal of the Long Arms', title:'Twice-pressed man', dmg:10, int:.9, hp:75, range:200, ab:'quickdraw', abN:'Quick, lads!', abD:'The whole line looses three times as fast for four seconds.', bio:'Pressed into service twice. Escaped once. Has come round to it.', look:{tunic:'#b39b70', trim:'#7a1a1a', head:'cap', cape:'#7a1a1a'}},
   joan:     {n:'Joan Ashdown', title:'Fire-keeper', dmg:9, int:1.0, hp:70, range:185, ab:'wildfire', abN:'Light them', abD:'Every archer in the line shoots fire arrows for five seconds.', bio:'Keeps the braziers lit for the fire arrows. Sometimes too lit.', look:{tunic:'#5a2a12', trim:'#ff9a3a', head:'bare', cape:'#3a1a0a'}},
-  alex:     {n:'Alex', title:'The sleepless', dmg:11, int:.9, hp:72, range:195, ab:'sleepless', abN:'Up till three', abD:'Keeps the whole line at it: everyone looses three times as fast for six seconds, and the wounded find their feet.', bio:"Joined the company for one evening and was still loosing at three in the morning. Has an opinion on everything, and most of them are right. Has asked for a refund twice.", look:{tunic:'#1c1c1e', trim:'#e9e4d6', head:'bare', cape:'#4a4a4e'}}
+  alex:     {n:'Alex', title:'The Sleepless', dmg:11, int:.9, hp:72, range:195, ab:'sleepless', abN:'Up till three', abD:'Keeps the whole line at it: everyone looses three times as fast for six seconds, and the wounded find their feet.', bio:"Joined the company for one evening and was still loosing at three in the morning. Has an opinion on everything, and most of them are right. Has asked for a refund twice.", look:{tunic:'#1c1c1e', trim:'#e9e4d6', head:'bare', cape:'#4a4a4e'}}
 });
 
 /* ================= weekly events ================= */
@@ -1736,7 +1736,7 @@ function sheetArcher(id){
   <div class="stat4"><div><b>${fmt(st.dps)}</b><span>DPS</span></div><div><b>${fmt(st.hp)}</b><span>HEALTH</span></div><div><b>${(60 / st.int).toFixed(0)}</b><span>PER MIN</span></div><div><b>${st.range.toFixed(0)}</b><span>RANGE</span></div></div>
   <div class="card"><b>${b.abN}</b><div class="sub">${b.abD} Fires on its own when charged.</div></div>
   ${a.traits.map(t => `<div class="card row" style="padding:8px 11px"><span class="pill ${TRAITS[t].g ? 'g' : 'b'}">${TRAITS[t].n}</span><span class="sub">${TRAITS[t].d}</span></div>`).join('')}
-  <div class="sub">${a.kills} kills. Damage doubles every 25 levels. Promotion adds a star: +40% damage, +30% health and 25 more levels.</div>
+  <div class="sub">${a.kills} kills. Damage doubles every 25 levels. Promotion adds a star: +30% damage, +30% health and 25 more levels.</div>
   ${bondHtml(a)}
   ${gearHtml(a)}
   ${archerCard(a).replace(/^<div class="card">/, '<div class="card" style="margin-top:10px">')}
