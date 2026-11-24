@@ -124,6 +124,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 #modal.show{display:block}
 #sheet{position:absolute;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;max-height:90%;overflow-y:auto;background:#151c13;border:1px solid var(--line);border-radius:4px 4px 0 0;padding:8px 16px 22px}
 .sheetx{position:sticky;top:0;float:right;margin:-6px -4px 0 0;width:36px;height:36px;border:1px solid #3d4b38;background:#1a2016;color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:2}.sheetx:hover{border-color:var(--gold)}
+.rankbtn{display:inline-flex;align-items:center;gap:7px;margin-left:10px;margin-right:auto;padding:4px 10px 4px 8px;border:1px solid #6b5a2a;background:#221f12;color:var(--ink);font:inherit;font-size:13px;line-height:1.1;cursor:pointer;text-align:left;position:relative;max-width:46vw}.rankbtn small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}.rankbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rankbtn b{color:var(--gold);font-size:18px}.rankbtn:hover{border-color:var(--gold)}.rankbtn.dot::after{content:'';position:absolute;top:-4px;right:-4px;width:9px;height:9px;background:#d8584c}
 .handle{width:42px;height:4px;border-radius:2px;background:#3d4b38;margin:4px auto 10px}
 .stat4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0}
 .stat4 div{background:#0f140e;border:1px solid var(--line);border-radius:2px;padding:6px;text-align:center}
@@ -184,7 +185,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
 <div id="updBar" role="status"><span class="grow">A new version of Loose! is ready.</span><button class="btn gold" data-act="updopen">See what's new</button><button class="btn" data-act="upddismiss" aria-label="Later">Later</button></div>
 <div id="app">
   <header>
-    <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank" data-act="captain" role="button" tabindex="0" style="cursor:pointer;text-decoration:underline dotted rgba(232,182,76,.5);text-underline-offset:3px"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
+    <div class="hrow"><div class="logo">Loose<b>!</b></div><button class="rankbtn" id="rank" data-act="captain" title="Your captain: rank, reputation, orders and raids"></button><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
     <div class="res" id="res"></div>
   </header>
   <div id="side"></div>
@@ -524,6 +525,43 @@ function qProgress(q){ return q.t === 'reach' ? S.runMax : (S.qp[QT[q.t].k] || 0
 /* feature-use counters for the admin page (anonymous) */
 function tr(k, n){ S.tr = S.tr || {}; S.tr[k] = (S.tr[k] || 0) + (n || 1); }
 function bump(k, v){ S.qp[k] = (S.qp[k] || 0) + (v || 1); }
+/* ================= daily orders from the Constable (2.22) =================
+   three small tasks a day, all doable while held at a wall; each pays a writ and medals, all three pay a bonus. Miss a day and nothing is lost. */
+const DT = {
+  clear:  {n:'Win {n} battles', src:'qp', k:'clears', s:() => 25},
+  level:  {n:'Train archers {n} times', src:'qp', k:'levels', s:() => 10},
+  build:  {n:'Upgrade buildings {n} times', src:'qp', k:'builds', s:() => 4},
+  kills:  {n:'Kill {n} Frenchmen', src:'qp', k:'kills', s:() => 200 + S.runMax * 4},
+  recruit:{n:'Recruit {n} men at the Tavern', src:'qp', k:'recruits', s:() => 2, ok:() => S.seen.tavern},
+  exped:  {n:'Bring back an expedition', src:'qp', k:'expeds', s:() => 1, ok:() => S.seen.exped},
+  volley: {n:'Loose {n} volleys yourself', src:'tr', k:'volley', s:() => 10},
+  order:  {n:'Give {n} orders to your men', src:'tr', k:'orders', s:() => 2, ok:() => perk(1)},
+  news:   {n:'Settle {n} camp matters', src:'tr', k:'newsChoice', s:() => 2, ok:() => S.bestEver >= 18},
+  doc:    {n:'Have Doc patch up {n} men', src:'tr', k:'medic', s:() => 3, ok:() => medicOn()}
+};
+const dCount = t => DT[t].src === 'qp' ? (S.qp[DT[t].k] || 0) : ((S.tr || {})[DT[t].k] || 0);
+const dMed = () => 4 + Math.floor(S.runMax / 10);
+const dTaskRw = () => ({writs:1, medals:dMed()}), dBonusRw = () => ({writs:2, medals:dMed() * 3});
+const dProg = x => Math.max(0, dCount(x.t) - x.base);
+function dlyRoll(){
+  if (!S.seen.orders) return;
+  if (S.quests && S.quests.length) { S.quests.forEach(q => { if (qProgress(q) >= q.n) for (const k in q.rw) addRes(k, q.rw[k]); }); S.quests = []; }
+  if (S.dly && S.dly.day === dayKey()) return;
+  const opts = Object.keys(DT).filter(k => !DT[k].ok || DT[k].ok()), pickd = [];
+  while (pickd.length < 3 && opts.length) pickd.push(opts.splice(Math.floor(Math.random() * opts.length), 1)[0]);
+  S.dly = {day:dayKey(), tasks:pickd.map(t => ({t, n:DT[t].s(), base:dCount(t), done:false})), bonus:false};
+}
+const dlyClaimable = () => !!S.dly && (S.dly.tasks.some(x => !x.done && dProg(x) >= x.n) || (!S.dly.bonus && S.dly.tasks.every(x => x.done)));
+const rwHtml = r => Object.entries(r).map(([k, v]) => RES[k].i + fmt(v)).join(' ');
+function dlyHtml(){
+  dlyRoll(); if (!S.dly) return '';
+  const all = S.dly.tasks.every(x => x.done);
+  let h = `<h3>ORDERS FROM THE CONSTABLE · TODAY</h3><div class="sub" style="margin-bottom:8px">New orders every morning. Miss a day and nothing is lost.</div>`;
+  S.dly.tasks.forEach((x, i) => { const p = Math.min(dProg(x), x.n), ready = !x.done && p >= x.n;
+    h += `<div class="card row"><div class="grow"><b>${DT[x.t].n.replace('{n}', fmt(x.n))}</b><div class="bar"><i style="width:${100 * p / x.n}%"></i></div><div class="sub">${x.done ? 'Done' : `${fmt(p)}/${fmt(x.n)}`} · ${rwHtml(dTaskRw())}</div></div>${x.done ? '<span class="sub">Claimed</span>' : `<button class="btn ${ready ? 'gold' : ''}" data-act="dclaim" data-i="${i}" ${ready ? '' : 'disabled'}>Claim</button>`}</div>`; });
+  h += `<div class="card row"><div class="grow"><b>All three</b><div class="sub">${S.dly.bonus ? 'Claimed. Well done, captain.' : `Bonus: ${rwHtml(dBonusRw())}`}</div></div>${S.dly.bonus ? '' : `<button class="btn ${all ? 'gold' : ''}" data-act="dbonus" ${all ? '' : 'disabled'}>Claim</button>`}</div>`;
+  return h;
+}
 const DAILY = [{silver:1}, {writs:1}, {food:1, wood:1}, {medals:5}, {writs:2}, {iron:1, feathers:1}, {writs:3}];
 function dayKey(){ const d = new Date(); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
 function dailyReady(){ return S.seen.orders && S.daily.day !== dayKey(); }
@@ -790,7 +828,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.21';
+const VERSION = '2.22';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1455,7 +1493,7 @@ function bstep(dt){
     a.t += dt;
     if (a.t >= a.T && !a.done) {
       a.done = 1;
-      if (a.area) { const hit = b.en.filter(e => !e.dead && dist(e.x, e.y, a.tx, a.ty) < e.d.r + 3)[0]; if (hit) hurt(hit, a.dmg, .3, null); else stick(a.tx, a.ty); continue; }
+      if (a.area) { const hit = b.en.filter(e => !e.dead && dist(e.x, e.y, a.tx, a.ty) < e.d.r + 3)[0]; if (hit) hurt(hit, a.dmg, Math.max(.3, a.pierce || 0), null); else stick(a.tx, a.ty); continue; }
       if (a.e && !a.e.dead) { hurt(a.e, a.dmg, a.pierce, a.src, a.fire); if (a.fire) b.en.forEach(o => { if (o !== a.e && !o.dead && dist(o.x, o.y, a.e.x, a.e.y) < 26) hurt(o, a.dmg * .55, a.pierce, a.src, true); }); }
       else stick(a.tx, a.ty);
     }
@@ -1464,7 +1502,7 @@ function bstep(dt){
   for (const v of b.volleys) {
     v.t += dt;
     if (v.t >= .45 && !v.fired) { v.fired = 1; const live = v.src.filter(u => !u.down); if (!live.length) continue;
-      for (let i = 0; i < v.n; i++) { const u = live[i % live.length], ang = Math.random() * 7, r = Math.sqrt(Math.random()) * v.r, tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r, dd = dist(u.x, u.y, tx, ty); b.arrows.push({x0:u.x, y0:u.y, tx, ty, t:-i * .02, T:.7 + dd / 420 + Math.random() * .15, h:60 + dd * .25, dmg:v.dmg, area:1}); } }
+      for (let i = 0; i < v.n; i++) { const u = live[i % live.length], ang = Math.random() * 7, r = Math.sqrt(Math.random()) * v.r, tx = v.x + Math.cos(ang) * r, ty = v.y + Math.sin(ang) * r, dd = dist(u.x, u.y, tx, ty); b.arrows.push({x0:u.x, y0:u.y, tx, ty, t:-i * .02, T:.7 + dd / 420 + Math.random() * .15, h:60 + dd * .25, dmg:v.dmg, pierce:v.pierce || 0, area:1}); } }
   }
   b.volleys = b.volleys.filter(v => v.t < 2.2);
   if (b.treb) { b.treb.cd -= dt; b.treb.arm = Math.max(0, b.treb.arm - dt);
@@ -1610,7 +1648,7 @@ function renderRes(){
   const html = show.map(r => { const capd = CAPPED.includes(r), c = capd ? storeCap(r) : 0, full = capd && S.res[r] >= c - .5, rt = rates[r];
     return `<div class="rc ${full ? 'full' : ''}" title="${RES[r].n}${capd ? `: ${fmt(S.res[r])} of ${fmt(c)}${full ? ' (full)' : ''}` : ''}${rt ? `, +${fmt(rt)}/s` : ''}"><b>${RES[r].i} ${fmt(S.res[r])}</b>${capd ? `<i><s style="width:${Math.min(100, 100 * S.res[r] / c)}%"></s></i>` : `<span>${rt ? '+' + fmt(rt) + '/s' : RES[r].n}</span>`}</div>`; }).join('');
   if ($('#res')._h !== html) { $('#res').innerHTML = html; $('#res')._h = html; }
-  $('#rank').textContent = (S.company ? S.company + ' · ' : '') + rankName() + (S.prestiges ? ` · campaign ${S.prestiges + 1}` : '');
+  $('#rank').innerHTML = `${IC('shield', 'var(--gold)')}<span><small>Captain</small>${esc(rankName())}${S.prestiges ? ` · campaign ${S.prestiges + 1}` : ''}</span><b>›</b>`; $('#rank').classList.toggle('dot', capPing());
 }
 function navBadges(){
   const tu = S.tut >= 1 && S.tut < 99 ? S.tut : 99;
@@ -1618,7 +1656,7 @@ function navBadges(){
   document.querySelectorAll('nav button').forEach(b => {
     b.classList.toggle('on', b.dataset.tab === tab); b.classList.toggle('hide', !show[b.dataset.tab]);
     let bd = false;
-    if (b.dataset.tab === 'orders') bd = dailyReady() || S.quests.some(q => qProgress(q) >= q.n) || S.exped.some(x => x.end <= Date.now());
+    if (b.dataset.tab === 'orders') bd = dailyReady() || dlyClaimable() || S.exped.some(x => x.end <= Date.now());
     if (b.dataset.tab === 'legacy') bd = S.runMax >= 40 && gloryGain() > 0 && !S.prestiges;
     if (b.dataset.tab === 'camp') bd = Object.keys(BLD).some(k => bUnlocked(k) && !isMax(k) && canPay(bCost(k)) && B_(k) === 0);
     if (b.dataset.tab === 'tavern') bd = S.res.writs >= 1;
@@ -1685,8 +1723,10 @@ function playerVolley(x, y, auto){
   if (!BT || BT.phase !== 'fight') return false;
   const live = BT.units.filter(u => !u.down); if (!live.length) return false;
   if (VOL.c < 1) { BT.fx.push({t:0, x, y, txt:'Not ready', col:'#cbbd9f'}); return false; }
-  tr(auto ? 'volleyAuto' : 'volley'); VOL.c--; const avg = live.reduce((t, u) => t + u.s.dmg, 0) / live.length;
-  BT.volleys.push({x, y, t:.25, n:30, r:42, src:live, dmg:avg * 1.1, mine:1}); BT.fx.push({t:0, x, y:y - 20, txt:'Loose!', col:'#f2d07a', big:1}); sfx('volley'); S.tutVolley = 1; return true;
+  tr(auto ? 'volleyAuto' : 'volley'); VOL.c--; const good = arrowsOn() && S.res.arrows >= 30, avg = live.reduce((t, u) => t + u.s.dmg * u.rm, 0) / live.length * (good ? 1.5 : 1) * (BT.inspireT > 0 ? 1.5 : 1);
+  if (good) S.res.arrows -= 30;
+  /* plunging arrows come down through armour, so a volley half ignores it */
+  BT.volleys.push({x, y, t:.25, n:30, r:42, src:live, dmg:avg * 1.4, pierce:.5, mine:1}); BT.fx.push({t:0, x, y:y - 20, txt:'Loose!', col:'#f2d07a', big:1}); sfx('volley'); S.tutVolley = 1; return true;
 }
 function volleyTick(dt){
   if (!BT || BT.phase !== 'fight' || paused) return;
@@ -1893,8 +1933,7 @@ function viewOrders(){
   const ready = dailyReady(), streak = S.daily.streak % 7;
   h += `<h3>DAILY RATIONS</h3><div class="card"><div class="days">${DAILY.map((d, i) => `<div class="${i < streak || (!ready && i === streak - 1) ? 'got' : ''} ${ready && i === streak ? 'now' : ''}">Day ${i + 1}<br>${Object.keys(d).map(r => RES[r].i).join('')}</div>`).join('')}</div>
   ${ready ? `<button class="btn gold big" data-act="daily">Claim day ${streak + 1}: ${Object.entries(dailyReward(streak)).map(([r, v]) => RES[r].i + fmt(v)).join(' ')}</button>` : '<div class="sub">Claimed today. Back tomorrow for more.</div>'}</div>`;
-  h += `<h3>ORDERS FROM THE KING</h3>`;
-  S.quests.forEach((q, i) => { const p = qProgress(q), done = p >= q.n; h += `<div class="card row"><div class="grow"><b>${QT[q.t].n.replace('{n}', fmt(q.n))}</b><div class="bar"><i style="width:${clamp(100 * p / q.n, 0, 100)}%"></i></div><div class="sub">${fmt(Math.min(p, q.n))}/${fmt(q.n)} · reward ${Object.entries(q.rw).map(([r, v]) => RES[r].i + fmt(v)).join(' ')}</div></div><button class="btn ${done ? 'gold' : ''}" data-act="claimq" data-i="${i}" ${done ? '' : 'disabled'}>Claim</button></div>`; });
+  h += dlyHtml();
   if (S.seen.exped) {
     h += `<h3>EXPEDITIONS · ${S.exped.length}/${expMax()} OUT</h3><div class="sub" style="margin-bottom:8px">Send men who are not in the line. They come back with resources, stories, and sometimes a new habit.</div>`;
     S.exped.forEach((x, i) => { const left = (x.end - Date.now()) / 1000, E = EXPED[x.type]; h += `<div class="card row"><div class="grow"><b>${E.n}</b><div class="sub">${x.ids.map(id => esc((S.roster.find(a => a.id === id) || {name:'?'}).name.split(' ')[0])).join(', ')} · ${left > 0 ? fmtT(left) + ' left' : 'back in camp'}</div><div class="bar"><i style="width:${clamp(100 * (1 - left / E.t), 0, 100)}%"></i></div></div><button class="btn ${left <= 0 ? 'gold' : ''}" data-act="collect" data-i="${i}" ${left <= 0 ? '' : 'disabled'}>Collect</button></div>`; });
@@ -2004,10 +2043,12 @@ ORDERS.hope = {n:'The forlorn hope', get d(){ const m = hopeMen(); return `Up to
   S.res.medals += md; S.stats.hopeMedals = (S.stats.hopeMedals || 0) + md; tr('hopeMen', men.length); repMove(0, -4); chron(`Sent ${men.length} men with the forlorn hope.`);
   return `${men.length} men go over the wall at dusk. ${back.length ? `${back.map(a => esc(a.name.split(' ')[0])).join(' and ')} came back, with 5 levels and the name "of the Breach".` : 'None of them came back.'} The company is ${md} medals richer.`; }};
 const ordReady = k => !S.ordT[k] || Date.now() >= S.ordT[k];
+/* a dot on the captain button when an order or a raid is ready */
+const capPing = () => !!(S.ordT && perk(1) && (Object.keys(ORDERS).some(ordReady) || (perk(2) && (!S.ordT.raid || Date.now() >= S.ordT.raid))));
 function giveOrder(k){
   const o = ORDERS[k]; if (!o || !perk(1) || !ordReady(k)) return; if (o.ok && !o.ok()) return toast(o.no); const c = o.cost ? o.cost() : 0;
   if (c && S.res.silver < c) return toast(`That needs ${fmt(c)} silver.`); if (c) S.res.silver -= c;
-  const out = o.fx(); S.ordT[k] = Date.now() + o.cd * 3600e3; tr('order_' + k); capXP(3); save(); refreshLineStats(); sheetFn = null;
+  const out = o.fx(); S.ordT[k] = Date.now() + o.cd * 3600e3; tr('order_' + k); tr('orders'); capXP(3); save(); refreshLineStats(); sheetFn = null;
   openSheet(`<div class="fell" style="font-size:24px">${o.n}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`);
 }
 /* raids: rich, quick, and they cost you your good name */
@@ -2345,7 +2386,7 @@ function checkUnlocks(){
   if (!S.seen.legacy && S.bestEver >= 35) S.seen.legacy = 1;
   newCards();
   if (S.res.medals > 0) S.seen.medals = 1;
-  while (S.seen.orders && S.quests.length < 3) S.quests.push(newQuest());
+  dlyRoll();
   if (msgs.length) { toast(msgs.join(' · '), true); render(); }
 }
 function levelUp(a, n){
@@ -2368,7 +2409,7 @@ function resetCampaign(){
   S.bld = G('found') ? {farm:10, woodcut:10, mine:10, geese:10, store:5} : {farm:1, woodcut:1};
   const st = 1 + 5 * L('march'); S.stage = st; S.runMax = st; S.autoAdv = true; S.farmN = 0; S.writBuys = 0; S.buttsT = 0;
   S.roster.forEach(a => { a.lvl = Math.min(cap(a), 1 + 5 * L('vets')); a.woundT = 0; a.away = null; });
-  S.exped = []; S.quests = []; S.qp = {}; S.mode = 'main';
+  S.exped = []; S.quests = []; S.qp = {}; S.mode = 'main'; if (S.dly) S.dly.tasks.forEach(x => { if (DT[x.t].src === 'qp') x.base = 0; });
   checkUnlocks(); newBattle(); save(); tab = 'battle'; render(); closeSheet();
 }
 function prestige(){
@@ -2393,7 +2434,10 @@ document.addEventListener('click', e => {
   const ar = id ? S.roster.find(x => x.id === id) : null;
   switch (a) {
     case 'close': closeSheet(); break;
-    case 'build': startBuild(id); break;
+    case 'build': { const lv = B_(id), c = bCost(id);
+      if (startBuild(id)) { const job = building(id); toast(job ? `${BLD[id].n}: work started, ready in ${fmtT((job.end - Date.now()) / 1000)}.` : `${BLD[id].n} upgraded to level ${lv + 1}.`, true); }
+      else if (!building(id) && !isMax(id) && !canPay(c)) { const short = Object.keys(c).filter(r => (S.res[r] || 0) < c[r]).map(r => RES[r].n.toLowerCase()); toast(`Not enough ${short.join(' or ')}.`); }
+      break; }
     case 'rush': rushBuild(id); break;
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
     case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); if (ar.stars >= 5) chron(`${ar.name} was promoted to ${ar.stars} stars.`); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
@@ -2409,6 +2453,8 @@ document.addEventListener('click', e => {
     case 'pull': pull(+el.dataset.n); return;
     case 'buywrit': { const p = writPrice(); if (S.res.silver < p) return; S.res.silver -= p; S.res.writs++; S.writBuys++; sfx('coin'); break; }
     case 'daily': { if (!dailyReady()) return; const r = dailyReward(S.daily.streak % 7); for (const k in r) addRes(k, r[k]); S.daily.day = dayKey(); S.daily.streak++; sfx('coin'); toast('Rations collected.', true); break; }
+    case 'dclaim': { dlyRoll(); const x = S.dly && S.dly.tasks[+el.dataset.i]; if (!x || x.done || dProg(x) < x.n) return; const r = dTaskRw(); for (const k in r) addRes(k, r[k]); x.done = true; tr('dailyTask'); sfx('coin'); toast(`Order done: +${r.writs} writ, +${r.medals} medals.`, true); break; }
+    case 'dbonus': { if (!S.dly || S.dly.bonus || !S.dly.tasks.every(x => x.done)) return; const r = dBonusRw(); for (const k in r) addRes(k, r[k]); S.dly.bonus = true; tr('dailyBonus'); sfx('legend'); toast(`All three orders done: +${r.writs} writs, +${r.medals} medals.`, true); break; }
     case 'claimq': { const q = S.quests[+el.dataset.i]; if (!q || qProgress(q) < q.n) return; for (const k in q.rw) addRes(k, q.rw[k]); S.quests.splice(+el.dataset.i, 1); S.quests.push(newQuest()); sfx('coin'); break; }
     case 'exped': if (S.exped.some(x => x.type === id)) return toast('That expedition is already out.'); expSel = []; sheetExped(id); return;
     case 'expsel': { if (expSel.includes(id)) expSel = expSel.filter(x => x !== id); else if (expSel.length < 3) expSel.push(id); sheetExped(el.closest('#sheet').querySelector('[data-act=expgo]').dataset.id); return; }
@@ -2659,10 +2705,11 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.22","items":["Orders from the Constable: three small orders every day on the Orders tab, such as win battles, train archers or settle camp matters. Each pays a writ and medals, and finishing all three pays a bonus of 2 writs and three times the medals.","Every order can be done while your company is held at a wall, and if you miss a day nothing is lost. There are no streaks to break.","These replace the King's orders. Any King's order you had finished but not claimed has been paid out.","Your captain is easier to find: the rank at the top is now a Captain button, with a red dot when an order or a raid is ready.","Upgrade buttons tell you what happened: upgraded, work started (and how long), or which resource you are short of.","Volleys hit much harder: they now count front-rank and arrow bonuses, and plunging arrows half ignore armour."]},
 {"v":"2.21","items":["More ways to earn medals. Farming a stage you have already beaten pays a medal every 10 clears, offline too, so a company held at a wall still earns.","The forlorn hope, a new order: up to six spare Common and Uncommon men outside the line storm a breach. Each one pays medals, living or dead. Most do not come back; the few who do gain 5 levels and the name \"of the Breach\".","Promotions up to 3 stars now cost silver and iron only. Medals are needed from 4 stars.","Two more orders: Drill at dawn (a level for every man in the line) and Double rations (morale, at the cost of food).","Six new camp stories with clear Feared, Loved, Fair or Harsh choices, and the choice buttons now say which way each one leans.","The captain page shows the reward at every end of both reputation scales. There is no wrong way to lead.","Every pop-up has a close button in the corner.","Women in helmets and caps no longer look like bearded men. Sorry, Ellen.","Now and then a rider may arrive from headquarters with a purse of medals."]},
 {"v":"2.20.1","items":["After a loss the company now holds at the last stage it beat and stays there, farming, until you press Push on. No more waking up to a company that threw itself at the same wall all night.","A 10-second break between stages while you are watching, to upgrade and swap. Tap the field to skip it, or turn it off in Settings.","The Tavern opens at stage 5 instead of 8, so you can recruit reserves sooner.","Faces show the mood of the camp: smiles and grins when morale is high, long faces when it is low, and a green tinge for the hungover."]},
 {"v":"2.20","items":["Camp life: your company has a mood. Morale, on the Company page, rises with victories, ale, pay and kindness and falls with deaths, defeats and the whip. High spirits add up to 10% damage; a mutinous company loses 15%.","Twenty-seven new camp events, and most of them leave a mark: weddings, feuds, friendships, ballads, deserters, an outlaw, a drinking match, the pledge, a feast and, if you let things slide, mutiny.","Drink and hangovers: a hungover archer shoots 20% worse until it wears off. Drunkards who take the pledge can become Teetotal.","Camp followers: seven people can join the baggage train for good, each with a lasting benefit. A cook, a laundress, a herbwife, an alewife, a sutler, a chaplain and a fletcher's boy.","Women in the company: about one recruit in five is now a woman, and one may turn up at the muster.","A faster start: wounds early on heal in seconds (full length only from stage 50), nobody can be killed outright before stage 30, and if the company drops below three men a local volunteers.","Early upgrades are instant again: every building's first 15 levels (the first level of capped buildings like the Barracks) finish straight away. Timers only start once buildings get bigger.","Every archer now has a face of their own, built from parts: hair, beards, scars, broken noses, eye patches and a drinker's red nose."]},
