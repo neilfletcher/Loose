@@ -832,7 +832,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.25.4';
+const VERSION = '2.26';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -845,7 +845,112 @@ function migrate(){
   S.res.parchment = S.res.parchment || 0; S.res.garter = S.res.garter || 0; S.pid = S.pid || uid(); S.spFirst = S.spFirst || {}; S.firstSeen = S.firstSeen || Date.now();
   S.roster.forEach(a => { a.gear = a.gear || {}; a.kt = a.kt || {}; S.codex.classes[a.cls === 'hero' ? 'hero_' + a.hero : a.cls] = 1; if (a.hero) S.codex.heroes[a.hero] = 1; });
 }
-function chron(txt){ S.chronicle.push({t:Date.now(), txt}); if (S.chronicle.length > 80) S.chronicle.splice(0, S.chronicle.length - 80); }
+function chron(txt){ S.chronicle.push({t:Date.now(), txt}); if (S.chronicle.length > 80) S.chronicle.splice(0, S.chronicle.length - 80); try { taleNote(txt); } catch (e) {} }
+/* ================= the formation screen (2.26) =================
+   men are arranged here, not on the live battlefield, so taps in a fight are always volleys.
+   Changes apply straight away during the break between stages, otherwise from the next fight. */
+let FM = null;
+function fmUnits(){ const ln = lineUp(), pos = formPositions(BT.path, BT.slots); return ln.map((a, i) => a ? {a, i, x:pos[i][0], y:pos[i][1], L:look(a), face:-Math.PI / 2} : null).filter(Boolean); }
+function sheetFormation(){
+  if (!BT || !BT.path) return; tr('formationOpen');
+  sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">Formation</div><div class="sub">Drag men anywhere on your side of the road; drop one on another to swap. The shaded band is the front: +20% damage, but charged, with room for five. Keep three on the road or the French come hunting. Your formation keeps its shape on every road.</div>
+  <canvas id="fcv" style="display:block;width:100%;max-width:420px;margin:10px auto;border:1px solid var(--line);touch-action:none"></canvas>
+  <div class="sub" id="fmNote" style="text-align:center;min-height:18px"></div>
+  <div class="row" style="margin-top:8px"><button class="btn" data-act="fmreset">Reset to ranks</button><button class="btn" data-act="fmbest">Best men forward</button><button class="btn gold grow" data-act="close">Done</button></div>`);
+  const c = $('#fcv'), w = Math.min(c.clientWidth || 340, Math.round(window.innerHeight * .56 * W / H)), dpr = Math.min(2, window.devicePixelRatio || 1); c.style.width = w + 'px'; c.style.height = Math.round(w * H / W) + 'px'; c.width = Math.round(w * dpr); c.height = Math.round(w * H / W * dpr);
+  /* the enemy side, worked out cell by cell so it follows the road's bends */
+  const mk = document.createElement('canvas'); mk.width = W; mk.height = H; const mg = mk.getContext('2d'); mg.fillStyle = 'rgba(40,8,8,.42)';
+  for (let y = 0; y < H; y += 6) for (let x = 0; x < W; x += 6) if (projPath(BT.path, x + 3, y + 3).f < MYHALF) mg.fillRect(x, y, 6, 6);
+  FM = {c, units:fmUnits(), drag:null, msg:'', msgT:0, mask:mk};
+  const toL = ev => { const r = c.getBoundingClientRect(); return [(ev.clientX - r.left) / r.width * W, (ev.clientY - r.top) / r.height * H]; };
+  c.addEventListener('pointerdown', ev => { const [x, y] = toL(ev); const u = FM.units.filter(o => dist(o.x, o.y, x, y) < 24).sort((p, q) => dist(p.x, p.y, x, y) - dist(q.x, q.y, x, y))[0]; if (!u) return; c.setPointerCapture(ev.pointerId); FM.drag = {u, ox:u.x, oy:u.y}; });
+  c.addEventListener('pointermove', ev => { if (!FM.drag) return; const [x, y] = toL(ev); FM.drag.u.x = clamp(x, 0, W); FM.drag.u.y = clamp(y, 0, H); });
+  const up = () => { if (!FM.drag) return; const u = FM.drag.u, d = FM.drag; FM.drag = null; const say = (t, col) => { FM.msg = t; FM.msgCol = col; FM.msgT = performance.now(); };
+    if (dist(u.x, u.y, d.ox, d.oy) < 6) { u.x = d.ox; u.y = d.oy; return; }
+    S.place = S.place || {};
+    const other = FM.units.find(o => o !== u && dist(o.x, o.y, u.x, u.y) < 14);
+    if (other) { const fi = S.form[u.i], fj = S.form[other.i]; S.form[u.i] = fj; S.form[other.i] = fi; const oi = u.i; u.i = other.i; other.i = oi; u.x = other.x; u.y = other.y; other.x = d.ox; other.y = d.oy; tr('placeSwap'); say('Swapped', '#f2d07a'); }
+    else { const pr = projPath(BT.path, u.x, u.y), back = t => { u.x = d.ox; u.y = d.oy; say(t, '#e9988c'); };
+      if (pr.f < MYHALF) return back('Keep to your half of the field');
+      if (pr.d < ROADGAP) return back('Not on the road');
+      if (FM.units.some(o => o !== u && dist(o.x, o.y, u.x, u.y) < MINGAP)) return back('Too close to another man');
+      if ((BT.treb && dist(BT.treb.x, BT.treb.y, u.x, u.y) < 28) || (BT.bill && dist(BT.bill.x, BT.bill.y, u.x, u.y) < 18)) return back('Something is in the way');
+      S.place[u.i] = {f:+pr.f.toFixed(4), o:+pr.o.toFixed(1)}; tr('placeMove');
+      const nf = FM.units.filter(o => isFront(BT.path, o.x, o.y)).length; say(isFront(BT.path, u.x, u.y) ? (nf > 5 ? `Front, crowded: +${Math.round(20 * 5 / nf)}% each` : 'Front: +20%') : 'Back: safer', '#f2d07a'); }
+    S.tutSwap = 1; save(); fmApply(); };
+  c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+  const loop = () => { if (!FM || !document.body.contains(FM.c) || !$('#modal').classList.contains('show')) { FM = null; return; } fmDraw(); requestAnimationFrame(loop); }; requestAnimationFrame(loop);
+}
+/* during the break the new formation takes effect at once; mid-fight it waits for the next one */
+function fmApply(){ const n = $('#fmNote'); if (BT && (BT.phase === 'ready' || BT.phase === 'empty' || (BT.phase === 'fight' && BT.t < 1.5))) { newBattleIfIdle(); if (n) n.textContent = 'In place for this fight.'; } else if (n) n.textContent = 'Your men take up these places from the next fight.'; }
+function fmDraw(){
+  const F = FM, c = F.c, g = c.getContext('2d'), k = c.width / W; g.setTransform(1, 0, 0, 1, 0, 0);
+  if (bg) g.drawImage(bg, 0, 0, c.width, c.height); else { g.fillStyle = '#4d6a30'; g.fillRect(0, 0, c.width, c.height); }
+  g.setTransform(k, 0, 0, k, 0, 0); const p = BT.path, tr2 = () => { g.beginPath(); p.pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); };
+  g.lineCap = 'round'; g.lineJoin = 'round'; tr2(); g.strokeStyle = 'rgba(232,182,76,.18)'; g.lineWidth = FRONTD * 2; g.stroke();
+  g.drawImage(F.mask, 0, 0); const h = pathAt(p, p.total * MYHALF * .5);
+  const focus = F.drag ? F.drag.u : null, pairs = bondPairs(F.units.map(u => Object.assign(u, {down:false})));
+  for (const pr of pairs) { const mine = focus && (pr.a === focus || pr.b === focus); if (!pr.near && !mine) continue; const col = BONDTXT[pr.st][2]; g.globalAlpha = mine ? .85 : .5; g.strokeStyle = col; g.lineWidth = 1.5; g.setLineDash(pr.near ? [] : [3, 5]); g.beginPath(); g.moveTo(pr.a.x, pr.a.y); g.lineTo(pr.b.x, pr.b.y); g.stroke(); g.setLineDash([]); if (mine) { const o = pr.a === focus ? pr.b : pr.a; g.beginPath(); g.arc(o.x, o.y, 15, 0, 7); g.stroke(); } g.globalAlpha = 1; }
+  [...F.units].sort((a, b) => (a === focus) - (b === focus) || a.y - b.y).forEach(u => { g.save(); g.translate(u.x, u.y); g.scale(SPR, SPR); drawArcher(g, 0, 0, u.face, u.L, 0, {ring:true}); g.restore(); });
+  g.font = '700 11px "Alegreya Sans",sans-serif'; g.textAlign = 'center'; g.lineJoin = 'round';
+  const label = (t, x, y, col) => { g.strokeStyle = 'rgba(0,0,0,.8)'; g.lineWidth = 3; g.strokeText(t, x, y); g.fillStyle = col; g.fillText(t, x, y); };
+  label('Enemy side: keep out', clamp(h[0] + h[2] * 40, 70, W - 70), h[1] + h[3] * 40, '#f3c3b5');
+  F.units.forEach(u => { if (u !== focus) label(u.a.name.split(' ')[0], u.x, u.y + 24, isFront(p, u.x, u.y) ? '#f2d07a' : '#e8dcc0'); });
+  if (focus) { const mine = pairs.filter(pr => pr.a === focus || pr.b === focus), near = mine.filter(pr => pr.near); const t = near.length ? near.map(pr => BONDTXT[pr.st][0] + ' ' + BONDTXT[pr.st][1]).join(' · ') : mine.some(pr => pr.st !== 'g') ? 'Move next to a ringed man for a bonus' : isFront(p, focus.x, focus.y) ? 'Front: +20%, charged' : 'Back: safer'; label(t, focus.x, focus.y - 24, near.length ? BONDTXT[near[0].st][2] : '#f2d07a'); }
+  if (F.msg && performance.now() - F.msgT < 1500) label(F.msg, W / 2, H - 20, F.msgCol);
+}
+
+/* ================= the tale of the company (2.26) =================
+   Riles writes a chapter each time the company clears a region's boss for the first time in a campaign, and when a
+   campaign ends. A chapter picks the best moments from the chronicle in that stretch, adds the deadliest man and a
+   few wry numbers, and keeps the rest out. Chapters persist across campaigns. */
+const ROMAN = n => { const m = [[40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]; let r = ''; for (const [v, s] of m) while (n >= v) { r += s; n -= v; } return r; };
+const TALEW = [[/were married/, 9, 'w'], [/hanged/, 9, 'h'], [/known now as|known since as|the name /, 7, 'n'], [/lives\. Wounded|carried back from the field/, 7, 'l'],
+  [/signed on at the butts|came in from the woods|signed on at the Tavern/, 6, 'r'], [/deserted, was forgiven/, 7, 'f'], [/drinking match/, 7, 'm'], [/took the pledge/, 6, 'p'], [/promises came to nothing/, 6, 'x'],
+  [/joined the baggage train/, 5, 'b'], [/shooting contest/, 5, 'c'], [/Raised to/, 6, 'k'], [/Won .* at stage/, 6, 's'], [/promoted to [5-7] stars/, 5, 'o'], [/forlorn hope/, 5, 'h2'], [/chevauchée/, 4, 'v'], [/gift of/, 4, 'g'], [/Garter/, 6, 't']];
+function taleInit(){ S.tale = S.tale || {ch:[], cur:null, last:0}; if (!S.tale.cur) taleStart(); }
+function taleSnap(){ const k = {}; S.roster.forEach(a => k[a.id] = a.kills || 0); const t = S.tr || {}; return {kills:S.stats.kills, fallen:S.fallen.length, k, hang:t.hangover || 0, bt:t.barrelTap || 0, ba:t.barrelAuto || 0, vol:t.volley || 0, fire:t.fireArrows || 0, raid:t.raid || 0, ev:t.newsChoice || 0}; }
+function taleStart(){ S.tale.cur = {s0:Math.max(1, S.runMax), at:Date.now(), snap:taleSnap(), notes:[]}; }
+function taleNote(txt){ taleInit(); const w = TALEW.find(([re]) => re.test(txt)); if (!w) return; const n = S.tale.cur.notes; if (n.length < 30) n.push({t:txt, w:w[1], k:w[2]}); }
+function taleClose(N, home){
+  taleInit(); const c = S.tale.cur, sn = c.snap, now = taleSnap(), co = S.company || 'the company', Co = co.charAt(0).toUpperCase() + co.slice(1), z = zoneOf(Math.max(1, N)), rng = mulberry(Date.now() & 0xffff), pk = a => a[Math.floor(rng() * a.length)];
+  const kills = now.kills - sn.kills, fell = S.fallen.slice(Math.min(sn.fallen, S.fallen.length)).map(f => f.name), hang = now.hang - sn.hang, bt = now.bt - sn.bt, ba = now.ba - sn.ba, vol = now.vol - sn.vol, fire = now.fire - sn.fire, ev = now.ev - sn.ev;
+  const top = S.roster.map(a => [a, (a.kills || 0) - (sn.k[a.id] || 0)]).sort((p, q) => q[1] - p[1])[0];
+  const title = home ? `Chapter ${ROMAN(S.tale.ch.length + 1)}: Home again` : `Chapter ${ROMAN(S.tale.ch.length + 1)}: ${z.n}`;
+  const out = [];
+  out.push(home ? pk([`After ${S.runMax} stages, ${co} turned for home.`, `The campaign ended at stage ${S.runMax}, and ${co} came home with more scars than it left with.`, `There comes a point when even the King has seen enough. For ${co} it came at stage ${S.runMax}.`])
+    : pk([`${Co} came to ${z.n} at stage ${c.s0} and left it at stage ${N}.`, `Stages ${c.s0} to ${N} took ${co} through ${z.n}, mostly on foot and mostly in the rain.`, `${z.n} was the next place to be cleared of Frenchmen, and ${co} cleared it, stages ${c.s0} to ${N}.`]));
+  if (!home && z.boss) out.push(pk([`${z.boss} waited at the end of it, and did not enjoy the meeting.`, `It ended with ${z.boss}, who will not be troubling anyone again.`, `At the far end stood ${z.boss}. Then he lay down.`]));
+  const used = new Set(), notes = [...c.notes].sort((p, q) => q.w - p.w + (rng() - .5)).filter(x => !used.has(x.k) && used.add(x.k)).slice(0, 3);
+  const lead = ['It was here that ', 'Nobody will forget that ', 'Somewhere along the way, ', 'Also, ', 'Then '];
+  notes.forEach((x, i) => { let t = x.t.replace(/\.$/, ''); if (x.k === 'k') t = `the captain was ${t.replace('Raised to', 'raised to')}`; else if (x.k === 's') t = t.replace(/^Won (.*) at stage (\d+)/, 'the company won $1 at stage $2'); else if (x.k === 'g') t = 'a purse of medals arrived from headquarters, and nobody asked questions'; else if (x.k === 'h2') t = t.replace(/^Sent/, 'the captain sent'); else if (x.k === 'v') t = 'the company rode out on a chevauchée and came back richer and less popular'; else if (x.k === 't') t = 'the captain knelt before the King and rose a Knight of the Garter';
+    out.push(lead[i % lead.length] + t + '.'); });
+  if (top && top[1] > 0) out.push(pk([`${dispName(top[0])} killed ${fmt(top[1])} Frenchmen in that stretch and would like it written down. It has been.`, `The deadliest of them was ${dispName(top[0])}, with ${fmt(top[1])} kills.`, `${dispName(top[0])} accounted for ${fmt(top[1])} of the enemy, which is a lot of arrows to fetch back.`]));
+  const funny = [];
+  if (hang > 0) funny.push(pk([`There were ${hang} hangovers, which Riles considers modest.`, `The company suffered ${hang} hangover${hang > 1 ? 's' : ''}, all of them self-inflicted.`]));
+  if (bt + ba > 0) funny.push(`${bt + ba} barrel${bt + ba > 1 ? 's' : ''} of pitch went up${ba ? `, ${bt} of them on purpose` : ', every one of them on purpose'}.`);
+  if (vol > 20) funny.push(pk([`The captain personally called ${fmt(vol)} volleys, and takes credit for every kill.`, `${fmt(vol)} volleys were called by hand. The men stopped counting at forty.`]));
+  if (fire > 0) funny.push(`Fire arrows were lit ${fire} time${fire > 1 ? 's' : ''}. The French have opinions about this.`);
+  if (ev > 3) funny.push(`The captain settled ${ev} disputes in camp, at least ${Math.max(1, Math.floor(ev / 3))} of them fairly.`);
+  if (funny.length) out.push(pk(funny)); if (funny.length > 2) out.push(funny.find(f => !out.includes(f)));
+  out.push(`${fmt(kills)} of the enemy fell in all.`);
+  if (fell.length) out.push(fell.length === 1 ? `We buried ${fell[0]}.` : `We buried ${fell.slice(0, -1).join(', ')} and ${fell[fell.length - 1]}.`);
+  if (!home) out.push(pk(['On, then.', 'And so to the next place.', 'Riles has run out of ink, and the road goes on.', 'The march continues tomorrow, weather permitting, which it will not.']));
+  S.tale.ch.push({n:S.tale.ch.length + 1, title, s0:c.s0, s1:home ? S.runMax : N, at:Date.now(), camp:S.prestiges + 1, text:out.filter(Boolean).join(' ')});
+  if (S.tale.ch.length > 60) S.tale.ch.splice(0, S.tale.ch.length - 60);
+  taleStart(); tr('taleChapter');
+  setTimeout(() => toast(`Riles has finished ${title.split(':')[0]} of the company's tale. Read it on the Captain page.`, true), 1800);
+}
+function taleHtml(){
+  taleInit(); const co = S.company || 'the Company', ch = S.tale.ch, c = S.tale.cur;
+  let h = `<h3>THE TALE OF ${esc(co.toUpperCase())}</h3><div class="sub" style="margin-bottom:6px">Riles writes a new chapter each time you beat a region's boss, and when a campaign ends.${c ? ` He is writing about stage ${c.s0} onwards now.` : ''}</div>`;
+  if (!ch.length) return h + '<div class="card sub">Nothing written yet. Beat the next boss and Riles will put pen to paper.</div>';
+  const one = x => `<div class="fell" style="font-size:18px">${esc(x.title)}</div><div class="sub" style="margin-bottom:4px">Campaign ${x.camp} · stages ${x.s0} to ${x.s1}</div><p class="ev" style="margin:4px 0 0">${esc(x.text)}</p>`;
+  h += `<div class="card">${one(ch[ch.length - 1])}</div>`;
+  if (ch.length > 1) h += `<details class="card"><summary class="sub" style="cursor:pointer">Earlier chapters (${ch.length - 1})</summary>${[...ch].slice(0, -1).reverse().map(x => `<div style="margin-top:12px">${one(x)}</div>`).join('')}</details>`;
+  return h;
+}
+
 const dispName = a => a.nick ? `${a.name} "${a.nick}"` : a.name;
 function codexDmg(){ let n = 0; for (const k in S.codex.kills) n += [100, 1000, 10000, 100000].filter(x => S.codex.kills[k] >= x).length; return 1 + .02 * n + .05 * Object.keys(S.codex.heroes).length; }
 const codexHp = () => 1 + .03 * Object.keys(S.codex.classes).length;
@@ -1187,7 +1292,7 @@ function sheetSettings(){
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (drag them anywhere on your half of the battlefield), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
+  <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (arranged on the Formation screen), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
 }
@@ -1287,7 +1392,7 @@ const TUT = [null,
   {t:'company', x:'Open the Company tab and press Train on one of your archers.', ok:() => (S.qp.levels || 0) >= 1},
   {t:'camp', x:'Now open Camp and upgrade your Farms. Food and silver pay for training.', ok:() => (S.qp.builds || 0) >= 1},
   {t:'battle', x:'Tap the battlefield to loose a volley of your own. Charges build up again on their own.', ok:() => S.tutVolley},
-  {t:'battle', x:'Drag an archer anywhere on your side of the road. Close to the road they hit harder but get charged.', ok:() => S.tutSwap}
+  {t:'battle', x:'Tap Formation above the battlefield and drag an archer to a new spot. Close to the road they hit harder but get charged.', ok:() => S.tutSwap}
 ];
 function tutTick(){
   if (!(S.tut >= 1 && S.tut < TUT.length)) { if ($('#tut')) tutBar(); return; }
@@ -1396,7 +1501,7 @@ const SLOTS = PATHS.map(p => {
    each place in the line can be moved anywhere on your half of the field. Positions are kept relative to the road
    (how far along it, how far to which side), so a formation keeps its shape when the road changes every ten stages.
    Within FRONTD of the road counts as the front: +20% damage, but you get charged. */
-const FRONTD = 50, MINGAP = 20, MYHALF = .4, ROADGAP = 16;
+const FRONTD = 50, MINGAP = 20, MYHALF = .3, ROADGAP = 16;
 function projPath(p, x, y){
   let best = {d:1e9, s:0, side:1};
   for (let i = 1; i < p.pts.length; i++) { const a = p.pts[i - 1], b = p.pts[i], vx = b[0] - a[0], vy = b[1] - a[1], l2 = vx * vx + vy * vy || 1, t = clamp(((x - a[0]) * vx + (y - a[1]) * vy) / l2, 0, 1), px = a[0] + vx * t, py = a[1] + vy * t, d = dist(px, py, x, y);
@@ -1642,7 +1747,7 @@ function endBattle(win){
     growBonds(b.units.filter(u => !dead.includes(u.a)));
     let sub = '+' + fmt(b.silver + cb) + ' silver';
     if (boss) {
-      S.stats.bosses++; bump('bosses'); morMove(3); const md = 1 + Math.floor(N / 20); S.res.medals += md; sub += ` · +${md} medals`; if (!b.ev) S.codex.zones[Math.floor((N - 1) / 10)] = 1;
+      S.stats.bosses++; bump('bosses'); morMove(3); /* full boss medals once per boss per campaign; farming a boss again pays one */ S.bossCamp = S.bossCamp || {}; const md = S.bossCamp[N] ? 0 : 1 + Math.floor(N / 20); S.bossCamp[N] = 1; S.res.medals += md; if (md) sub += ` · +${md} medals`; if (!b.ev) S.codex.zones[Math.floor((N - 1) / 10)] = 1;
       if (!b.ev && !S.bossFirst[N]) { S.bossFirst[N] = 1; const w = 1 + Math.floor(N / 50); S.res.writs += w; sub += ` · +${w} writ${w > 1 ? 's' : ''}`; if (N % 50 === 0) chron(`Beat ${zoneOf(N).boss} at stage ${N}.`); }
       const it = dropItem(N, N >= 50 ? 1 : 0); if (it) sub += ` · ${itemName(it)}`;
     }
@@ -1665,6 +1770,7 @@ function afterBattle(){
   if (b.ev) { evAfter(b); save(); newBattle(); if (bOn()) battleHud(true); return; }
   if (b.won) {
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
+    if (!b.ev && isBoss(b.N)) { taleInit(); if (b.N > (S.tale.last || 0)) { S.tale.last = b.N; taleClose(b.N, false); } }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
     else S.farmN++;
     if (S.stage < S.runMax || !S.autoAdv) farmMedal(1);
@@ -1692,7 +1798,7 @@ function offlineSim(sec){
     const ct = Math.max(15, 10 + .8 * stageHp(N) / D); if (bt + ct > sec) break; bt += ct;
     S.res.silver += stageReward(N); spoils(N, isBoss(N) ? 4 : 1); rep.clears++; S.stats.clears++; bump('clears'); genStage(N).forEach(e => S.codex.kills[e.type] = (S.codex.kills[e.type] || 0) + 1);
     if (isBoss(N)) { S.codex.zones[Math.floor((N - 1) / 10)] = 1; if (drops < 25) { dropItem(N, N >= 50 ? 1 : 0); drops++; } } else if (drops < 25 && Math.random() < .03) { dropItem(N); drops++; } bump('kills', genStage(N).length); S.stats.kills += genStage(N).length;
-    if (isBoss(N)) { S.res.medals += 1 + Math.floor(N / 20); if (!S.bossFirst[N]) { S.bossFirst[N] = 1; S.res.writs += 1 + Math.floor(N / 50); } }
+    if (isBoss(N)) { S.bossCamp = S.bossCamp || {}; S.res.medals += S.bossCamp[N] ? 0 : 1 + Math.floor(N / 20); S.bossCamp[N] = 1; if (!S.bossFirst[N]) { S.bossFirst[N] = 1; S.res.writs += 1 + Math.floor(N / 50); } }
     if (arrowsOn()) S.res.arrows = Math.max(0, S.res.arrows - lineUp().filter(Boolean).length * 12);
     if (S.autoAdv && squadDps(N + 1) >= reqDps(N + 1) * 1.1) { S.stage++; S.runMax = Math.max(S.runMax, S.stage); }
     else rep.medals = (rep.medals || 0) + farmMedal(1);
@@ -1783,7 +1889,7 @@ function render(){
   if (tab === 'camp' && S.campView !== 'list') { const nv = $('#vcv'); if (keepV && nv && keepV !== nv) nv.replaceWith(keepV); villageStart(); }
 }
 function viewBattle(){
-  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
+  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="fmBtn" title="Arrange your men">Formation</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
   <div id="stage"><canvas id="cv"></canvas><div id="bMsg"></div></div>
   <div class="bfoot"><div class="lstrip" id="lstrip"></div><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
@@ -1883,6 +1989,7 @@ function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
   $('#ffBtn').addEventListener('click', () => { const on = !document.body.classList.contains('ff'); document.body.classList.toggle('ff', on); if (on) tr('fullscreen'); try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){} battleHud(true); setTimeout(layoutStage, 60); });
+  $('#fmBtn').addEventListener('click', () => sheetFormation());
   $('#pause').addEventListener('click', () => { paused = !paused; if (paused) tr('pause'); battleHud(true); });
   $('#spd').addEventListener('click', () => { const steps = S.mode === 'event' ? [1, 2, 3, 5] : L('swift') ? [1, 2, 3] : [1, 2]; const i = steps.indexOf(S.speed); S.speed = steps[(i + 1) % steps.length] || 1; battleHud(true); });
   $('#newsBtn').addEventListener('click', () => campEvent());
@@ -1909,21 +2016,25 @@ function bindBattleView(){
     rerank(); const nf = BT.units.filter(o => o.front).length; placeMsg(u, u.front ? (nf > 5 ? `Front, crowded: +${Math.round(20 * 5 / nf)}%` : 'Front +20%') : 'Back', '#f2d07a');  dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); cv.setPointerCapture(ev.pointerId); pts.set(ev.pointerId, toS(ev));
     if (pts.size === 2) { if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } pan = null; const [a, b] = [...pts.values()]; tr('zoom'); pinch = {d:dist(a[0], a[1], b[0], b[1]) || 1, s:V.s, cx:V.x + (a[0] + b[0]) / 2 / V.s, cy:V.y + (a[1] + b[1]) / 2 / V.s}; return; }
-    const [x, y] = toL(ev), [sx, sy] = toS(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24 / Math.sqrt(V.s));
-    if (u) dragU = {u, ox:u.x, oy:u.y, sx, sy, t:Date.now(), moved:false}; else pan = {sx, sy, vx:V.x, vy:V.y, moved:false, t:Date.now()}; });
+    const [x, y] = toL(ev), [sx, sy] = toS(ev); const u = BT.units.filter(u => !u.down && dist(u.x, u.y, x, y) < 22 / Math.sqrt(V.s)).sort((p, q) => dist(p.x, p.y, x, y) - dist(q.x, q.y, x, y))[0];
+    if (u) dragU = {u, ox:u.x, oy:u.y, sx, sy, lx:x, ly:y, t:Date.now(), moved:false}; else pan = {sx, sy, vx:V.x, vy:V.y, moved:false, t:Date.now()}; });
   cv.addEventListener('pointermove', ev => { if (!pts.has(ev.pointerId)) return; pts.set(ev.pointerId, toS(ev));
     if (pinch && pts.size >= 2) { const [a, b] = [...pts.values()], d = dist(a[0], a[1], b[0], b[1]); V.s = pinch.s * d / pinch.d; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; clampView(); V.x = pinch.cx - mx / V.s; V.y = pinch.cy - my / V.s; clampView(); return; }
     const [sx, sy] = toS(ev);
-    if (dragU) { if (dist(sx, sy, dragU.sx, dragU.sy) > 6) dragU.moved = true; if (dragU.moved) { const [x, y] = toL(ev); dragU.u.x = clamp(x, 0, W); dragU.u.y = clamp(y, 0, H); } return; }
+    /* a drag only starts after a real, deliberate move, so quick taps for volleys never shuffle the men */
+    if (dragU) { /* men are arranged on the Formation screen, never mid-fight */ if (dragU.moved) { const [x, y] = toL(ev); dragU.u.x = clamp(x, 0, W); dragU.u.y = clamp(y, 0, H); } return; }
     if (pan) { if (dist(sx, sy, pan.sx, pan.sy) > 6) pan.moved = true; if (pan.moved && V.s > 1) { V.x = pan.vx - (sx - pan.sx) / V.s; V.y = pan.vy - (sy - pan.sy) / V.s; clampView(); } } });
   const up = ev => { pts.delete(ev.pointerId); if (pinch) { if (pts.size < 2) pinch = null; pan = null; return; }
-    if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; if (docPick) { healOne(u); return; } tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
+    if (dragU) { if (!dragU.moved) { const u = dragU.u, d = dist(u.x, u.y, dragU.lx, dragU.ly); u.x = dragU.ox; u.y = dragU.oy; dragU = null; if (docPick) { healOne(u); return; }
+      /* a tap right on a man shows his details; a tap near him looses a volley there */
+      if (d > 10 / Math.sqrt(V.s) && BT.phase === 'fight') { tipU = null; const [x, y] = toL(ev); playerVolley(x, y); return; }
+      tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
     if (pan) { const p = pan; pan = null; if (p.moved) return; const now = Date.now();
       if (medicOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= 30 && p.sy <= 50) { useMedic(); return; }
       if (fireOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= (medicOn() ? 54 : 30) && p.sy <= (medicOn() ? 74 : 50)) { useFire(); return; }
       if (docPick) { docPick = false; stripTick(true); return; }
       if (p.sx >= 6 && p.sx <= 98 && p.sy >= 6 && p.sy <= 26) return;
-      if (now - lastTap < 300 && V.s > 1) { V.s = 1; clampView(); lastTap = 0; return; } lastTap = now;
+      if (V.s > 1.01 && p.sx >= W - 74 && p.sx <= W - 6 && p.sy >= 6 && p.sy <= 26) { V.s = 1; clampView(); tr('zoomOut'); return; } lastTap = now;
       if (BT.phase === 'ready') { BT.phase = 'fight'; tr('breakSkip'); return; }
       { const [bx, by] = toL(ev), br = (BT.barrels || []).find(r => !r.lit && dist(r.x, r.y, bx, by) < 20 / Math.sqrt(V.s)); if (br && BT.phase === 'fight') { blowBarrel(br, true); return; } }
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
@@ -2190,11 +2301,11 @@ function bulkHtml(){
 function viewCompany(){
   const ln = lineUp();
   const fr = [0,1,2,3,4,5,6,7,8,9].filter(i => slotOpen(i) && slotFront(i)).length;
-  let h = `<h2>The Company</h2><div class="sub">Who stands where decides the fight. Men within 50 paces of the road shoot 20% harder but take the charges; further back is safer, except from horsemen. Drag your men anywhere on your half of the battlefield.</div>
+  let h = `<h2>The Company</h2><div class="sub">Who stands where decides the fight. Men within 50 paces of the road shoot 20% harder but take the charges; further back is safer, except from horsemen. Arrange them on the Formation screen.</div>
   <h3>THE LINE · ${slotsOpen()} OF 10 PLACES</h3><div class="sub" style="margin-bottom:6px">Places 1 to 5 · ${fr} of your places are at the front on this map</div><div class="form">${[0,1,2,3,4].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="sub" style="margin:8px 0 6px">Places 6 to 10</div><div class="form">${[5,6,7,8,9].map(i => slotHtml(i, ln)).join('')}</div>
   <div class="row" style="margin-top:10px"><button class="btn grow" data-act="autofill">Best men forward</button><label class="tog" data-act="autores"><span class="sw ${S.autoRes ? 'on' : ''}"></span>Reserves step in</label></div>
-  <div class="row" style="margin-top:6px"><span class="sub grow">Drag archers on the battlefield to move them, or onto each other to swap.</span>${S.place && Object.keys(S.place).length ? '<button class="btn" data-act="resetplace">Reset to ranks</button>' : ''}</div>
+  <div class="row" style="margin-top:6px"><span class="sub grow">Where each man stands is set on the Formation screen.</span><button class="btn gold" data-act="formation">Formation</button></div>
   ${S.gear.length ? equipHtml() : S.bestEver >= 10 ? '<h3>EQUIPMENT</h3><div class="card sub">No gear yet. Bosses, set pieces and expeditions drop bows, arrowheads, armour and charms.</div>' : ''}
   ${campHtml()}
   <h3>MUSTER ROLL · ${S.roster.length}/${rosterCap()}</h3>${bulkHtml()}`;
@@ -2373,6 +2484,7 @@ function viewCaptain(){
   else h += `<h3>ORDERS FOR YOUR MEN</h3><div class="card lock sub">Reach Centenar to give orders: the whip, days off, the tavern, bonuses, drill, rations and the forlorn hope.</div>`;
   if (perk(2)) { const rd = !S.ordT.raid || Date.now() >= S.ordT.raid; h += `<h3>RAIDS</h3><div class="card row"><div class="grow"><b>Chevauchée</b><div class="sub">Ride through the French villages for grain, timber, iron and coin, and maybe a writ. The men enjoy it. Your name for fair dealing does not. Someone may get hurt.</div></div>${rd ? '<button class="btn gold" data-act="raid">Ride out</button>' : `<span class="sub">Again in ${fmtT((S.ordT.raid - Date.now()) / 1000)}</span>`}</div>`; }
   else h += `<h3>RAIDS</h3><div class="card lock sub">Reach Captain of Archers to lead raids.</div>`;
+  h += taleHtml();
   h += `<h3>YOUR RECORD</h3><div class="card"><div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px">${[['Best stage', S.bestEver], ['Campaigns ended', S.prestiges], ['Enemies killed', fmt(S.stats.kills)], ['Bosses', fmt(S.stats.bosses || 0)], ['Recruited', fmt(S.stats.recruits || 0)], ['Fallen', S.fallen.length], ['Time in the field', fmtT(S.stats.playSec)]].map(([l, v]) => `<div class="row"><span class="sub grow">${l}</span><b>${v}</b></div>`).join('')}</div>${fav && fav.kills ? `<div class="sub" style="margin-top:8px">Deadliest ${fav ? PR(fav).man : 'man'}: <b class="r${fav.rar}">${esc(dispName(fav))}</b>, ${fmt(fav.kills)} kills.</div>` : ''}</div>
   <h3>BEST MEN</h3>${best.map(a => `<div class="card row" data-act="archer" data-id="${a.id}" style="cursor:pointer"><img class="pt" src="${portrait(a, 40)}" alt=""><div class="grow"><b class="r${a.rar}">${esc(dispName(a))}</b> <span class="stars">${'★'.repeat(a.stars)}</span><div class="sub">Lv ${a.lvl} · DPS ${fmt(stats(a).dps)}</div></div></div>`).join('')}`;
   return h;
@@ -2652,7 +2764,7 @@ const NEWC = [
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
   {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time. He has three bandages per battle, more as the Barber-surgeon grows.'},
-  {id:'place', on:() => S.tut >= 99 && S.bestEver >= 3, t:'Your men, your field', tab:'battle', d:"Drag any archer anywhere on your half of the battlefield; drop one on another to swap them. Within 50 paces of the road they shoot 20% harder but get charged, and the front only has room for five before the bonus is shared out. Keep at least three men on the road, or the French leave it and come hunting. Your formation keeps its shape when the road changes. Reset to ranks is on the Company page."},
+  {id:'place', on:() => S.tut >= 99 && S.bestEver >= 3, t:'Your men, your field', tab:'battle', d:"Tap Formation above the battlefield to arrange your men anywhere on your half of the field; drop one on another to swap them. Within 50 paces of the road they shoot 20% harder but get charged, and the front only has room for five before the bonus is shared out. Keep at least three men on the road, or the French leave it and come hunting. Your formation keeps its shape when the road changes. Reset to ranks is on the Formation screen."},
   {id:'barrels', on:() => barrelsOn(), t:'Pitch barrels', tab:'battle', d:"Barrels of pitch now sit by the road in each battle. Tap one to blow it up when the French crowd round it, or leave it and it goes off by itself when enough of them gather. The ground burns for a few seconds afterwards."},
   {id:'fire', on:() => fireOn(), t:'Fire arrows', tab:'battle', d:"Tap Fire arrows, under the Volleys counter, to light every arrow in the line for 8 seconds. Burning arrows splash nearby men and set them alight. Two pots of pitch per battle, three once the Fletcher reaches level 30. Fire pots for the trebuchet come with it."},
   {id:'camp', on:() => morOn(), t:'Camp life', tab:'company', d:"Your company has a mood now. Morale, on the Company page, rises with victories, ale, pay and kindness, and falls with deaths, defeats and the whip. High spirits add damage; low spirits cost it. Camp news brings new faces too: cooks, laundresses, a chaplain and others who join the baggage train for good."},
@@ -2706,7 +2818,7 @@ function resetCampaign(){
   S.bld = G('found') ? {farm:10, woodcut:10, mine:10, geese:10, store:5} : {farm:1, woodcut:1};
   const st = 1 + 5 * L('march'); S.stage = st; S.runMax = st; S.autoAdv = true; S.farmN = 0; S.writBuys = 0; S.buttsT = 0;
   S.roster.forEach(a => { a.lvl = Math.min(cap(a), 1 + 5 * L('vets')); a.woundT = 0; a.away = null; });
-  S.exped = []; S.quests = []; S.qp = {}; S.mode = 'main'; if (S.dly) S.dly.tasks.forEach(x => { if (DT[x.t].src === 'qp') x.base = 0; });
+  S.exped = []; S.quests = []; S.qp = {}; S.mode = 'main'; S.bossCamp = {}; if (S.dly) S.dly.tasks.forEach(x => { if (DT[x.t].src === 'qp') x.base = 0; });
   checkUnlocks(); newBattle(); save(); tab = 'battle'; render(); closeSheet();
 }
 function prestige(){
@@ -2714,7 +2826,8 @@ function prestige(){
   S.res.glory += g; S.gloryOrder += g; S.prestiges++; capXP(50 + S.runMax);
   chron(`Ended campaign ${S.prestiges} at stage ${S.runMax} and came home with ${fmt(g)} glory.`);
   gtag('event', 'prestige', {glory:g, n:S.prestiges, stage:S.runMax});
-  resetCampaign();
+  try { taleClose(S.runMax, true); S.tale.last = 0; } catch (e) {}
+  resetCampaign(); try { S.tale.cur = null; taleInit(); } catch (e) {}
   toast(`The company comes home with ${fmt(g)} glory. A new campaign begins.`, true);
 }
 function doGarter(){
@@ -2748,6 +2861,9 @@ document.addEventListener('click', e => {
     case 'setslot': { const i = +el.dataset.i; if (id) { const j = S.form.indexOf(id); if (j >= 0) S.form[j] = S.form[i]; } S.form[i] = id || null; closeSheet(); refreshLineStats(); break; }
     case 'autofill': autofill(); S.tutFill = 1; refreshLineStats(); toast('Best men forward.', true); break;
     case 'autores': S.autoRes = !S.autoRes; refreshLineStats(); break;
+    case 'fmreset': S.place = {}; tr('placeReset'); if (FM) { FM.units = fmUnits(); FM.msg = 'Back in their ranks'; FM.msgCol = '#f2d07a'; FM.msgT = performance.now(); } fmApply(); save(); return;
+    case 'fmbest': autofill(); tr('formationBest'); if (FM) { FM.units = fmUnits(); FM.msg = 'Best men forward'; FM.msgCol = '#f2d07a'; FM.msgT = performance.now(); } fmApply(); save(); return;
+    case 'formation': sheetFormation(); return;
     case 'resetplace': S.place = {}; tr('placeReset'); if (BT && BT.units.length) { const pos = formPositions(BT.path, BT.slots); BT.units.forEach(u => { [u.x, u.y] = pos[u.i]; }); rerank(); } toast('Back in their ranks.', true); break;
     case 'pushon': S.autoAdv = true; S.farmN = 0; tr('pushOn'); S.stage = Math.min(S.stage + 1, S.runMax); newBattle(); battleHud(true); save(); return;
     case 'brk': S.brk = S.brk === false; tr('breakToggle'); save(); refreshSheet(); return;
@@ -2929,7 +3045,8 @@ function draw(){
   drawDragTop(ctx, b);
   /* screen-space overlay: volley charges, zoom hint, archer tooltip */
   ctx.setTransform(k, 0, 0, k, 0, 0);
-  if (b.phase === 'ready' && !dragU) { const cw = ctx.canvas.width / k, ch = ctx.canvas.height / k; ctx.fillStyle = 'rgba(8,10,7,.72)'; ctx.fillRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.font = '700 19px "Alegreya Sans",sans-serif'; ctx.fillText(`Stage ${b.N} in ${Math.ceil(b.readyT)}`, cw / 2, ch / 2 - 6); ctx.fillStyle = '#e8dcc0'; ctx.font = '12px "Alegreya Sans",sans-serif'; ctx.fillText('Upgrade and swap now, or tap to start', cw / 2, ch / 2 + 17); }
+  if (b.phase === 'ready' && !dragU) { const cw = ctx.canvas.width / k, ch = ctx.canvas.height / k; ctx.fillStyle = 'rgba(8,10,7,.72)'; ctx.fillRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(cw / 2 - 125, ch / 2 - 34, 250, 68); ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.font = '700 19px "Alegreya Sans",sans-serif'; ctx.fillText(`Stage ${b.N} in ${Math.ceil(b.readyT)}`, cw / 2, ch / 2 - 6); ctx.fillStyle = '#e8dcc0'; ctx.font = '12px "Alegreya Sans",sans-serif'; ctx.fillText('Upgrade or change your Formation now, or tap to start', cw / 2, ch / 2 + 17); }
+  if (V.s > 1.01) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W - 74, 6, 68, 20); ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1; ctx.strokeRect(W - 73.5, 6.5, 67, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f2d07a'; ctx.fillText('Zoom out', W - 40, 20); }
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
   if (b.phase === 'fight' && fireOn()) { const fy = medicOn() ? 54 : 30; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, fy, 92, 20); ctx.strokeStyle = FIRE.c ? '#ff9a3a' : 'rgba(255,154,58,.3)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, fy + .5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = FIRE.c ? '#ffb46a' : '#8a7a6a'; ctx.fillText(`Fire arrows · ${FIRE.c}`, 11, fy + 14); }
@@ -3014,12 +3131,13 @@ migrate();
 checkUnlocks();
 if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
 newBattle(); render(); save();
-if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You can lend a hand in a fight with volleys, and later with Doc, pitch barrels and fire arrows, but your real job is everything else: who stands in the line and where (drag them anywhere on your half of the battlefield), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
+if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You can lend a hand in a fight with volleys, and later with Doc, pitch barrels and fire arrows, but your real job is everything else: who stands in the line and where (arranged on the Formation screen), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle, render};
+window.__dbg = {chron, taleClose, taleInit, blowBarrel, useFire, get FIRE(){ return FIRE; }, dlyRoll, get dly(){ return S.dly; }, dProg, bDur, checkUnlocks, ORDERS, giveOrder, farmMedal, promoteCost, offlineSim, portrait, faceOf, campLife, morState, morMove, addFol, hungover, hangover, get EV(){ return EV; }, campEvent, viewCompany, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle, render};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.26","items":["The Tale of the Company: Riles writes a chapter of your company's story each time you beat a region's boss, and when a campaign ends. The weddings, hangings, nicknames and drinking matches, the deadliest man, the dead, and a few numbers he finds funny. Read it on the Captain page.","A Formation screen: tap Formation above the battlefield (or on the Company page) to arrange your men on a quiet copy of the map. Changes take effect at once during the break between stages, otherwise from the next fight.","Men can no longer be dragged on the live battlefield, so tapping near your archers always looses a volley. Tap right on a man to see his details.","When zoomed in, a Zoom out button replaces the double tap, so two quick taps are always two volleys.","A company held at a boss stage it already beats no longer prints medals: full boss medals come the first time you beat each boss in a campaign, and after that only the usual medal for every ten wins."]},
 {"v":"2.25.4","items":["While you drag a man, he and the hints stay on top of everyone else, so nothing hides them. Moving men no longer piles up Front and Back messages, even while paused."]},
 {"v":"2.25.2","items":["Bonds on the battlefield are much quieter: just a faint coloured line between bonded men standing together. Drag or tap a man to see who he is tied to (they get a ring), with one short line of text."]},
 {"v":"2.25.1","items":["Bonds show on the battlefield. Friends (+6%), married couples (+10%) and feuding men (-6%) standing close together are joined by a coloured line with their bonus.","While you drag a man, dashed lines point to everyone he is tied to, so you can see who to put him next to and who to keep him away from.","Tap an archer to see his bonds and whether they count right now."]},
