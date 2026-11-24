@@ -94,6 +94,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 #bMsg.on{opacity:1;transform:scale(1)}
 #bMsg small{display:block;font-family:"Alegreya Sans";font-size:14.5px;color:#e8dcc0}
 .bfoot{background:#0d110c;border-top:1px solid var(--line);padding:8px 12px}
+.lstrip{display:flex;gap:3px;margin-bottom:6px;height:34px}.lchip{flex:1 1 0;min-width:0;background:#141a12;border:1px solid #2e3a2a;color:#d8ccb0;padding:2px 3px;font:600 11px/1.2 'Alegreya Sans',sans-serif;text-align:left;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer}.lchip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700}.lchip i{display:block;height:5px;background:#3e6a2e}.lchip.low i{background:#c8a22a}.lchip.crit i{background:var(--red)}.lchip.down{opacity:.55}.lchip.down b{color:#ff9a8a}.lstrip.pick .lchip{border-color:#8fe08a;box-shadow:inset 0 0 0 1px #8fe08a}
 .bfoot .row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bfoot .tog{white-space:nowrap}
 .prog{height:7px;border-radius:2px;background:#2a1a14;overflow:hidden;margin:4px 0 8px}
 .prog i{display:block;height:100%;background:var(--red)}
@@ -670,7 +671,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.18.3';
+const VERSION = '2.18.4';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1524,7 +1525,7 @@ function render(){
 function viewBattle(){
   return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="ffBtn" aria-label="Full screen"></button><button class="btn" id="pause" aria-label="Pause"></button><button class="btn" id="spd">1×</button></div>
   <div id="stage"><canvas id="cv"></canvas><div id="bMsg"></div></div>
-  <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
+  <div class="bfoot"><div class="lstrip" id="lstrip"></div><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
 }
 let cv = null, ctx = null, dragU = null, gearRet = 'archer';
@@ -1548,13 +1549,29 @@ function volleyTick(dt){
 }
 let tipU = null, tipT = 0, paused = false;
 /* the medic: tap the cross to patch up the line and get downed men back on their feet. Manual only. */
-const MED = {c:1, t:0, max:2, every:40};
+const MED = {c:1, t:0, max:2, every:30};
 const medicOn = () => S.bestEver >= 25;
+let docPick = false;
 function useMedic(){
   if (!BT || BT.phase !== 'fight' || !medicOn()) return;
-  if (MED.c < 1) { BT.fx.push({t:0, x:50, y:52, txt:'Medic not ready', col:'#cbbd9f'}); return; }
-  MED.c--; tr('medic'); let up = 0; BT.units.forEach(u => { if (u.down) { u.down = false; u.hp = u.max * .3; up++; } else u.hp = Math.min(u.max, u.hp + u.max * .35); BT.fx.push({t:0, x:u.x, y:u.y - 16, txt:'+', col:'#8fe08a', big:1}); });
-  BT.fx.push({t:0, x:W / 2, y:H / 2, txt:up ? `Doc gets ${up} back up` : 'Doc patches up the line', col:'#8fe08a', big:1}); sfx('coin');
+  if (MED.c < 1) { BT.fx.push({t:0, x:50, y:52, txt:'Doc is not ready', col:'#cbbd9f'}); return; }
+  docPick = !docPick; stripTick(true);
+}
+function healOne(u){
+  if (!u || MED.c < 1 || !BT || BT.phase !== 'fight') { docPick = false; return; }
+  MED.c--; tr('medic'); docPick = false;
+  if (u.down) { u.down = false; u.hp = u.max * .5; BT.fx.push({t:0, x:u.x, y:u.y - 20, txt:`Doc gets ${u.a.name.split(' ')[0]} up`, col:'#8fe08a', big:1}); }
+  else { u.hp = Math.min(u.max, u.hp + u.max * .7); BT.fx.push({t:0, x:u.x, y:u.y - 20, txt:`Doc patches up ${u.a.name.split(' ')[0]}`, col:'#8fe08a', big:1}); }
+  sfx('coin'); stripTick(true);
+}
+/* the line at a glance: one chip per archer with a health bar, under the battlefield */
+let stripKey = '', stripT = 0;
+function stripTick(force){
+  const el = $('#lstrip'); if (!el || !BT) return;
+  const us = [...BT.units].sort((a, b) => a.i - b.i), key = us.map(u => u.a.id).join(',');
+  if (key !== stripKey || force && !el.children.length) { stripKey = key; el.innerHTML = us.map(u => `<button class="lchip" data-act="lchip" data-id="${u.a.id}" aria-label="${esc(u.a.name)}"><b class="r${u.a.rar}">${esc(u.a.name.split(' ')[0])}</b><span style="display:block;background:#2a1712"><i></i></span></button>`).join(''); }
+  el.classList.toggle('pick', docPick);
+  us.forEach((u, n) => { const c = el.children[n]; if (!c) return; const f = u.down ? 0 : Math.max(0, u.hp / u.max); c.querySelector('i').style.width = (100 * f) + '%'; c.classList.toggle('down', !!u.down); c.classList.toggle('low', !u.down && f < .5 && f >= .25); c.classList.toggle('crit', !u.down && f < .25); c.title = `${u.a.name}: ${u.down ? 'down' : Math.round(100 * f) + '% health'}`; });
 }
 function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
@@ -1587,9 +1604,10 @@ function bindBattleView(){
     if (dragU) { if (dist(sx, sy, dragU.sx, dragU.sy) > 6) dragU.moved = true; if (dragU.moved) { const [x, y] = toL(ev); dragU.u.x = clamp(x, 0, W); dragU.u.y = clamp(y, 0, H); } return; }
     if (pan) { if (dist(sx, sy, pan.sx, pan.sy) > 6) pan.moved = true; if (pan.moved && V.s > 1) { V.x = pan.vx - (sx - pan.sx) / V.s; V.y = pan.vy - (sy - pan.sy) / V.s; clampView(); } } });
   const up = ev => { pts.delete(ev.pointerId); if (pinch) { if (pts.size < 2) pinch = null; pan = null; return; }
-    if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
+    if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; if (docPick) { healOne(u); return; } tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
     if (pan) { const p = pan; pan = null; if (p.moved) return; const now = Date.now();
       if (medicOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= 30 && p.sy <= 50) { useMedic(); return; }
+      if (docPick) { docPick = false; stripTick(true); return; }
       if (p.sx >= 6 && p.sx <= 98 && p.sy >= 6 && p.sy <= 26) return;
       if (now - lastTap < 300 && V.s > 1) { V.s = 1; clampView(); lastTap = 0; return; } lastTap = now;
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
@@ -1890,7 +1908,7 @@ const NEWC = [
   {id:'orders', on:() => S.seen.orders, t:'Orders', tab:'orders', d:"Daily rations to collect, and the King's orders: small goals that pay out."},
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
   {id:'news', on:() => S.bestEver >= 18, t:'Camp news', tab:null, d:"Now and then something happens in camp. A News button appears on the battlefield: your call decides how it goes."},
-  {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter in a hard fight: he patches up the line and gets downed men back on their feet. He needs time between calls, so pick your moment.'},
+  {id:'medic', on:() => medicOn(), t:'Doc joins the company', tab:null, d:'Doc is a Welsh barber-surgeon with a bag of bandages and no bedside manner. Tap Doc under the volley counter, then tap the archer who needs him, on the field or in the row of names under it. He patches up the wounded and gets downed men back on their feet, one at a time.'},
   {id:'exped', on:() => S.seen.exped, t:'Expeditions', tab:'orders', d:'Send men away to forage or raid. They come back with spoils, if they come back.'},
   {id:'event', on:() => evOpen(), t:'Weekly events', tab:null, d:'A separate tournament each week, with its own token shop. Switch to it with the Event button above the battlefield.'},
   {id:'study', on:() => S.bestEver >= 32, t:'The Study', tab:'study', d:'Parchment from the Scriptorium buys research: lasting upgrades for the whole company.'},
@@ -2008,6 +2026,7 @@ document.addEventListener('click', e => {
     case 'cloudsave': cloudSync().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
     case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; tr('slotSwitch'); (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
     case 'revive': revive(el.dataset.id); return;
+    case 'lchip': { if (!BT) return; const u = BT.units.find(x => x.a.id === el.dataset.id); if (!u) return; if (docPick) healOne(u); else { tipU = u; tipT = 4; } return; }
     case 'cardgo': tr('cardShow'); closeSheet(); tab = el.dataset.tab; render(); return;
     case 'updopen': $('#updBar').classList.remove('on'); sheetUpdate(); return;
     case 'upddismiss': try { localStorage.setItem('loose-upd-later', updInfo ? updInfo.v : ''); } catch(e){} $('#updBar').classList.remove('on'); toast('The Update button stays at the top whenever you want it.'); return;
@@ -2140,7 +2159,7 @@ function draw(){
   ctx.setTransform(k, 0, 0, k, 0, 0);
   if (b.phase === 'fight') { ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 6, 92, 20); ctx.fillStyle = '#e8dcc0'; ctx.fillText('Volleys', 11, 20);
     for (let i = 0; i < VOL.max; i++) { const x = 58 + i * 12; ctx.strokeStyle = '#e8b64c'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, 16, 4, 0, 7); ctx.stroke(); const f = i < VOL.c ? 1 : i === VOL.c ? VOL.t / VOL.every : 0; if (f > 0) { ctx.fillStyle = '#e8b64c'; ctx.beginPath(); ctx.moveTo(x, 16); ctx.arc(x, 16, 4, -Math.PI / 2, -Math.PI / 2 + f * 6.283); ctx.fill(); } } }
-  if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(`Doc ${'+'.repeat(MED.c)}${MED.c < MED.max ? ' ' + Math.ceil(MED.every - MED.t) + 's' : ''}`, 11, 44); }
+  if (b.phase === 'fight' && medicOn()) { ctx.fillStyle = 'rgba(8,10,7,.62)'; ctx.fillRect(6, 30, 92, 20); ctx.strokeStyle = MED.c ? '#8fe08a' : 'rgba(143,224,138,.35)'; ctx.lineWidth = 1; ctx.strokeRect(6.5, 30.5, 91, 19); ctx.font = '700 11px "Alegreya Sans",sans-serif'; ctx.textAlign = 'left'; ctx.fillStyle = MED.c ? '#cfeecb' : '#7d8a7a'; ctx.fillText(docPick ? 'Doc: pick one' : `Doc ${'+'.repeat(MED.c)}${MED.c < MED.max ? ' ' + Math.ceil(MED.every - MED.t) + 's' : ''}`, 11, 44); if (docPick) { ctx.fillStyle = 'rgba(8,10,7,.7)'; ctx.fillRect(W / 2 - 110, H - 34, 220, 22); ctx.fillStyle = '#cfeecb'; ctx.textAlign = 'center'; ctx.fillText('Tap an archer, or a name below, to heal', W / 2, H - 19); } }
   if (paused) { ctx.fillStyle = 'rgba(8,10,7,.45)'; ctx.fillRect(0, 0, W, H); ctx.font = '400 30px "IM Fell English SC",serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#efe3c4'; ctx.fillText('Paused', W / 2, H / 2); }
   if (V.s > 1.01) { ctx.font = '600 10px "Alegreya Sans",sans-serif'; ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(232,220,192,.75)'; ctx.fillText('Double-tap to zoom out', W - 8, 18); }
   if (tipU && tipT > 0 && b.units.includes(tipU)) { const u = tipU, a = u.a, sx = (u.x - V.x) * V.s, sy = (u.y - V.y) * V.s, bb = base(a), ab = bb.abN || '';
@@ -2187,7 +2206,7 @@ function frame(dtReal){
   let dt = paused ? 0 : dtReal * S.speed;
   while (dt > 0) { const s = Math.min(.025, dt); bstep(s); dt -= s; }
   if (BT && BT.pendingRebuild && BT.phase !== 'fight') BT.pendingRebuild = false;
-  uiT += dtReal; saveT += dtReal;
+  uiT += dtReal; saveT += dtReal; stripT += dtReal; if (stripT > .2) { stripT = 0; if (bOn()) stripTick(); }
   if (uiT > .5) { uiT = 0; renderRes(); battleHud(false); navBadges(); liveRefresh(); tutTick(); musicTick(); showCard(); buildTick(); buildLive(); }
   if (saveT > 5) { saveT = 0; save(); }
 }
@@ -2222,10 +2241,11 @@ if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You do not aim or fight yourself. Your job is everything else: who stands in the line and where (drag them on the battlefield to swap places), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
-window.__dbg = {bDur, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
+window.__dbg = {bDur, get BTs(){ return BT; }, friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ updInfo = i; updBtnShow(); }, get V(){ return V; }, HEROES, newArcher, levelUp, bCost, canPay, pay, lineUp, autofill, pull, promoteCost, bUnlocked, isMax, RESEARCH, RCOST, rUnlocked, rTime, rSlots, cap, BLD, evAfter, evState, tutTick, weekNo, dropItem, extraTick, doGarter, get S(){ return S; }, get BT(){ return BT; }, offlineSim, squadDps, reqDps, stageHp, prestige, gloryGain, frame, newBattle};
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18.4","items":["A row under the battlefield shows every archer in the line with their health, so you can see who is in trouble even in a crowd. Tap a name to see their card.","Doc now treats one archer at a time: tap Doc, then tap who needs him. He recharges faster to make up for it."]},
 {"v":"2.18.3","items":["A banner now tells you when a new version is ready, and Settings shows your version with a Check now button."]},
 {"v":"2.18.2","items":["Buildings with a top level (Barracks, Tavern, Drill yard, Barber-surgeon) now take longer the nearer they get to it. The last Barracks level takes eight hours."]},
 {"v":"2.18.1","items":["Each kind of expedition can only be out once at a time."]},
