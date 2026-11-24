@@ -103,12 +103,12 @@ function render(ALL){
   <div class="two"><div><h2>WHERE PEOPLE STOP (BEST STAGE)</h2><div class="card">${bars(funnel)}</div></div><div><h2>HOW MANY GET THIS FAR</h2><div class="card">${bars(reached)}</div></div></div>
   <div class="two"><div><h2>CAMPAIGNS ENDED (PRESTIGE)</h2><div class="card">${bars(prest)}</div></div><div><h2>AVERAGE BUILDING LEVEL</h2><div class="card">${bars(bld)}</div></div></div>
   <h2>RESEARCH TAKEN (INCLUDING THE CHOICES)</h2><div class="card">${bars(res)}</div>
-  <div class="kpis"><div class="kpi"><b>${pct(tutDone)}</b><span>finished the tutorial</span></div><div class="kpi"><b>${multi}</b><span>players using more than one save slot</span></div><div class="kpi"><b>${rushM}</b><span>medals spent finishing upgrades</span></div><div class="kpi"><b>${ALL.length}</b><span>saves in total</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${pct(tutDone)}</b><span>finished the tutorial</span></div><div class="kpi"><b>${multi}</b><span>players using more than one save slot</span></div><div class="kpi"><b>${rushM}</b><span>medals spent finishing upgrades</span></div><div class="kpi"><b>${ALL.length}</b><span>saves in total</span></div><div class="kpi"><b>${pct(P.filter(p => p.wide).length)}</b><span>use the wide computer layout</span></div></div>
   <h2>FEATURE USE (PLAYERS WHO HAVE TRIED IT)</h2><div class="card">${bars(feat)}</div>
   <div class="two"><div><h2>VERSIONS IN USE</h2><div class="card">${bars(vrows)}</div></div><div><h2>BEST WEEKLY EVENT STAGE</h2><div class="card">${bars(ev)}</div></div></div>
   <h2>FRIENDS OF THE COMPANY RECRUITED</h2><div class="card">${bars(frows)}</div>
   <h2>MOST RECENT PLAYERS</h2><div class="card scroll"><table><thead><tr><th>Last seen</th><th>Best</th><th>Now at</th><th>Campaigns</th><th>Time played</th><th>Roll</th><th>Legendaries</th><th>Fallen</th><th>Device</th><th>Account</th><th>Version</th><th>Saves</th></tr></thead>
-  <tbody>${recent.map(p => `<tr><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td><td>${esc(p.v || '')}</td><td class="n">${p.saves || 1}</td></tr>`).join('')}</tbody></table></div>`;
+  <tbody>${recent.map(p => `<tr><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : p.wide ? 'Computer (wide)' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td><td>${esc(p.v || '')}</td><td class="n">${p.saves || 1}</td></tr>`).join('')}</tbody></table></div>`;
 }
 </script>
 </body>

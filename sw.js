@@ -1,4 +1,4 @@
-/* Loose! service worker. The game itself (index.html) is served from a pinned copy, so a new release
+/* Loose! service worker (v2: only the game page is pinned; admin.html and everything else is network-first). The game itself (index.html) is served from a pinned copy, so a new release
    only takes effect when the player chooses "Update now". Everything else is network-first. */
 const APP = 'loose-app', ASSETS = 'loose-assets-1';
 self.addEventListener('install', e => { self.skipWaiting(); });
@@ -8,7 +8,7 @@ async function fresh(){ const r = await fetch('./index.html', {cache:'reload'});
 self.addEventListener('fetch', e => {
   const u = new URL(e.request.url);
   if (u.origin !== location.origin || e.request.method !== 'GET' || u.search) return;
-  if (e.request.mode === 'navigate' || isShell(u)) {
+  if (isShell(u)) {
     e.respondWith(caches.open(APP).then(c => c.match('./index.html')).then(hit => hit || fresh()).catch(() => fetch(e.request)));
     return;
   }

@@ -31,6 +31,11 @@ body{background:var(--bg)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .fell{font-family:"IM Fell English SC",Georgia,serif}
 #app{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative}
+#side{display:none}
+body.wide #app{max-width:1440px;display:grid;grid-template-columns:minmax(380px,.8fr) minmax(440px,1fr);grid-template-rows:auto minmax(0,1fr) auto auto;grid-template-areas:"hd hd" "side main" "side tut" "side nav"}
+body.wide header{grid-area:hd}body.wide #side{display:block;grid-area:side;position:relative;min-height:0;border-right:1px solid var(--line)}
+body.wide main{grid-area:main;min-height:0}body.wide #tut{grid-area:tut}body.wide nav{grid-area:nav}body.wide nav button[data-tab=battle]{display:none}
+body.wide.ff #app{grid-template-columns:1fr 0;max-width:none}body.wide.ff main,body.wide.ff #tut{display:none}
 header{padding:8px 12px 6px;border-bottom:1px solid var(--line);background:#0d110c}
 .hrow{display:flex;align-items:center;gap:8px}
 .logo{font-family:"IM Fell English SC",serif;font-size:22px;line-height:1}
@@ -178,6 +183,7 @@ nav button.tutp{color:var(--gold);box-shadow:inset 0 3px 0 var(--gold);border-ra
     <div class="hrow"><div class="logo">Loose<b>!</b></div><div class="rank" id="rank"></div><button class="btn gold" id="updBtn" style="display:none;min-height:34px;padding:4px 10px">Update</button><button class="ib" id="snd" aria-label="Sound"></button><button class="ib" id="setBtn" aria-label="Settings"></button></div>
     <div class="res" id="res"></div>
   </header>
+  <div id="side"></div>
   <main id="view"></main>
   <nav id="nav">
     <button data-tab="battle"><svg viewBox="0 0 24 24"><path d="M4 20L20 4M14 4h6v6M4 20l3-1M4 20l1-3"/></svg>Battle</button>
@@ -662,7 +668,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.17.2';
+const VERSION = '2.18';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -955,7 +961,7 @@ function pushStats(){
     const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
       kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION,
-      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0};
+      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide};
     const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
     fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
   } catch(e){}
@@ -1134,7 +1140,7 @@ function bossBar(t){
 function musicTick(){
   if (!S.music || !S.sound || document.hidden) { musicStop(); return; }
   if (!mus) musicStart(); if (!mus) return;
-  const boss = tab === 'battle' && BT && BT.phase === 'fight' && (BT.en.some(e => e.d.boss) || (!BT.ev && isBoss(BT.N))), intense = !boss && tab === 'battle' && BT && BT.phase === 'fight' && !!BT.sp, beat = boss ? .17 : intense ? .3 : .52, scale = [0, 2, 3, 5, 7, 9, 10, 12, 14, 15];
+  const boss = bOn() && BT && BT.phase === 'fight' && (BT.en.some(e => e.d.boss) || (!BT.ev && isBoss(BT.N))), intense = !boss && bOn() && BT && BT.phase === 'fight' && !!BT.sp, beat = boss ? .17 : intense ? .3 : .52, scale = [0, 2, 3, 5, 7, 9, 10, 12, 14, 15];
   while (mus.next < AC.currentTime + .35) {
     const t = mus.next;
     if (boss) { bossBar(t); mus.step++; mus.next += beat; continue; }
@@ -1156,7 +1162,7 @@ function tone(type, f0, f1, dur, vol, delay){ if (!AC || !S.sound || document.hi
 function noise(dur, vol, f, delay){ if (!AC || !S.sound || document.hidden) return; const n = Math.floor(AC.sampleRate * dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n); const s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = b; fl.type = 'bandpass'; fl.frequency.value = f; g.gain.value = vol; s.connect(fl); fl.connect(g); g.connect(AC.destination); s.start(AC.currentTime + (delay || 0)); }
 const lastS = {};
 function sfx(n){
-  if (!S.sound || !AC) return; if (n !== 'coin' && n !== 'flip' && n !== 'legend' && tab !== 'battle') return;
+  if (!S.sound || !AC) return; if (n !== 'coin' && n !== 'flip' && n !== 'legend' && !bOn()) return;
   const now = performance.now(); if (lastS[n] && now - lastS[n] < ({twang:90, hit:60, clash:140}[n] || 0)) return; lastS[n] = now;
   if (n === 'twang') { tone('triangle', rnd(180, 240), 70, .14, .035); noise(.16, .05, 2600); }
   else if (n === 'hit') tone('sine', rnd(140, 180), 60, .06, .04);
@@ -1211,7 +1217,7 @@ function newBattle(){
   if (B_('bill')) { const s0 = BT.path.total * .62, a = pathAt(BT.path, s0); BT.bill = {s:s0, x:a[0], y:a[1], nx:a[2], ny:a[3], ang:Math.atan2(-a[2], a[3]) + Math.PI / 2, hp:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), max:hu * (3 + 1.2 * B_('bill')) * (ev && ev.rule === 'bill' ? 2 : 1), dps:avg * (.5 + .15 * B_('bill')), down:false, wob:0}; BT.bill.ang = Math.atan2(BT.path.pts[0][1] - a[1], BT.path.pts[0][0] - a[0]); }
   if (B_('treb')) { const end = BT.path.pts[BT.path.pts.length - 1]; BT.treb = {x:end[0] < W / 2 ? end[0] + 64 : end[0] - 64, y:Math.min(end[1], H - 26) - 4, cd:4, arm:0}; }
   if (!BT.units.length) { BT.phase = 'empty'; BT.endT = 2; }
-  if (sp && tab === 'battle') setTimeout(() => bmsg(sp.n, sp.d), 250);
+  if (sp && bOn()) setTimeout(() => bmsg(sp.n, sp.d), 250);
 }
 function spawnEnemy(type){
   const d = EN[type], p = BT.path, a = pathAt(p, 0), off = rnd(-9, 9), hp = d.hp * HU(BT.N) * (BT.sp && BT.sp.id === 'rain' ? .7 : 1);
@@ -1396,7 +1402,7 @@ function woundTime(){ return 90 * (1 - .09 * B_('surgeon')) * (R('c4') ? .5 : 1)
 function afterBattle(){
   const b = BT;
   if (b.phase === 'empty') { newBattle(); return; }
-  if (b.ev) { evAfter(b); save(); newBattle(); if (tab === 'battle') battleHud(true); return; }
+  if (b.ev) { evAfter(b); save(); newBattle(); if (bOn()) battleHud(true); return; }
   if (b.won) {
     if (S.stage >= S.runMax) { S.runMax = S.stage; }
     if (S.autoAdv) { S.stage++; if (S.stage > S.runMax) { S.runMax = S.stage - 0; } }
@@ -1404,7 +1410,7 @@ function afterBattle(){
     S.runMax = Math.max(S.runMax, S.stage); S.bestEver = Math.max(S.bestEver, S.runMax); lgBest();
     if (S.runMax % 10 === 0 && S.runMax > (S._gaMax || 0)) { S._gaMax = S.runMax; gtag('event', 'stage_reached', {stage:S.runMax, campaign:S.prestiges + 1}); }
   } else { if (S.stage > 1) S.stage--; S.autoAdv = false; S.farmN = 0; }
-  checkUnlocks(); newBattle(); if (tab === 'battle') battleHud(true);
+  checkUnlocks(); newBattle(); if (bOn()) battleHud(true);
 }
 
 /* ================= offline ================= */
@@ -1436,6 +1442,9 @@ function offlineSim(sec){
 
 /* ================= UI ================= */
 let tab = 'battle';
+/* on a wide screen the battlefield sits on the left, always running, and the tabs fill the right */
+const WIDEQ = matchMedia('(min-width: 980px)'); let wide = WIDEQ.matches;
+const bOn = () => tab === 'battle' || wide;
 function toast(m, ok){ const t = $('#toast'); t.textContent = m; t.className = ok ? 'ok' : ''; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2600); }
 function openSheet(h){ $('#sheet').innerHTML = '<div class="handle"></div>' + h; $('#modal').classList.add('show'); $('#sheet').scrollTop = 0; }
 function closeSheet(){ $('#modal').classList.remove('show'); sheetFn = null; }
@@ -1497,6 +1506,10 @@ function buildTick(){
 }
 function render(){
   renderRes(); navBadges();
+  document.body.classList.toggle('wide', wide);
+  if (wide) { if (tab === 'battle') tab = 'camp'; if (!$('#side #battleView')) { $('#side').innerHTML = viewBattle(); bindBattleView(); } battleHud(true); }
+  else if ($('#side').firstChild) { $('#side').innerHTML = ''; }
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   const v = $('#view');
   if (tab === 'battle') { if (!$('#battleView')) { v.innerHTML = viewBattle(); bindBattleView(); } battleHud(true); return; }
   v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
@@ -1575,7 +1588,7 @@ function bindBattleView(){
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', ev => { pts.delete(ev.pointerId); pinch = null; pan = null; if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } });
   cv.addEventListener('wheel', ev => { ev.preventDefault(); if (V.s === 1) tr('zoom'); const [sx, sy] = toS(ev), cx = V.x + sx / V.s, cy = V.y + sy / V.s; V.s *= ev.deltaY < 0 ? 1.15 : 1 / 1.15; clampView(); V.x = cx - sx / V.s; V.y = cy - sy / V.s; clampView(); }, {passive:false});
-  try { new ResizeObserver(() => { if (tab === 'battle') layoutStage(); }).observe($('#stage')); } catch(e){}
+  try { new ResizeObserver(() => { if (bOn()) layoutStage(); }).observe($('#stage')); } catch(e){}
   layoutStage();
 }
 function layoutStage(){
@@ -1583,9 +1596,10 @@ function layoutStage(){
   const sc = Math.max(.3, Math.min((r.width - 8) / W, (r.height - 8) / H)), dpr = Math.min(3, window.devicePixelRatio || 1);
   cv.style.width = Math.floor(W * sc) + 'px'; cv.style.height = Math.floor(H * sc) + 'px'; cv.width = Math.round(W * sc * dpr); cv.height = Math.round(H * sc * dpr); bgKey = '';
 }
-window.addEventListener('resize', () => { if (tab === 'battle') layoutStage(); });
+window.addEventListener('resize', () => { if (bOn()) layoutStage(); });
+WIDEQ.addEventListener('change', () => { wide = WIDEQ.matches; if (!wide) { $('#side').innerHTML = ''; tab = 'battle'; $('#view').innerHTML = ''; } render(); setTimeout(layoutStage, 50); });
 function battleHud(full){
-  if (tab !== 'battle' || !BT || !$('#bT')) return;
+  if (!bOn() || !BT || !$('#bT')) return;
   const b = BT, N = b.N;
   if (full) {
     $('#bT').textContent = b.ev ? `Event stage ${evState().stage} (like stage ${evN(evState().stage)})${b.spawns.some(s => s.type === 'boss') ? ' · Champion' : ''}` : `Stage ${N}${isBoss(N) ? ' · Boss' : ''}`;
@@ -2176,7 +2190,7 @@ function liveRefresh(){
 function rafLoop(now){
   const dt = Math.min(3600 * 24, (now - lastReal) / 1000); lastReal = now;
   frame(dt);
-  if (tab === 'battle' && !document.hidden) draw();
+  if (bOn() && !document.hidden) draw();
   requestAnimationFrame(rafLoop);
 }
 setInterval(() => { if (document.hidden) { const now = performance.now(); const dt = (now - lastReal) / 1000; lastReal = now; frame(dt); } }, 1000);
@@ -2202,6 +2216,7 @@ window.__dbg = {friendRecruit, killArcher, startBuild, buildTick, setUpd(i){ upd
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.18","items":["On a computer the game now uses the whole window: the battlefield stays on the left and keeps fighting while you run the Camp, Company and the rest on the right. Phones are unchanged."]},
 {"v":"2.17","items":["A new Legendary has joined the company: Alex, the Sleepless. Her special, Up till three, keeps the whole line loosing at three times the pace.","Friends of the company: thirteen named archers can now turn up at the Tavern as Rare or Epic recruits, each with their own story.","New faces around camp: Doc the medic, Grim the Master Pintsman, Gaz the Chapman, Scott on the drill yard, Ross Taylor and his trebuchet, and Riles keeping the Chronicle.","A new camp event: the Hermit."]},
 {"v":"2.16","items":["Building upgrades now take time, with a progress bar. Two builders work at once (three from stage 60), and medals finish a job straight away. Jobs carry on while you are away.","Fallen Legendaries can be brought back from the Roll of Honour for medals. They return wounded and a little weaker. Everyone else who falls stays fallen.","The medic: from stage 25, tap Medic on the battlefield to patch up the line and get downed men back up. It recharges slowly.","Boss fights have their own, angrier music.","Full-screen button above the battlefield hides everything but the fight."]},
 {"v":"2.15","items":["Three save slots: keep your current game and start fresh alongside it (Settings, after your first campaign).","New recruits all start at 1 star; rarity sets how high they can climb.","Event stages show which main stage they match, and events can run at 5x speed.","Pause button above the battlefield.","Drag gear straight from one archer to another in the Equipment list.","Features now open one at a time, each with a short card explaining it."]},
