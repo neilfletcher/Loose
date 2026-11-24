@@ -64,7 +64,17 @@ auth.onAuthStateChanged(async u => {
     render(P);
   } catch (e) { $('out').innerHTML = `<p class="note">Could not read the figures. The database rules may not be in place yet. (${esc(e.message)})</p>`; }
 });
-function render(P){
+/* one row per person: saves from the same device (save slots) are merged, keeping the furthest-along save and summing feature use */
+function people(all){
+  const by = {}; all.forEach(p => { const k = p.dev || p.id; (by[k] = by[k] || []).push(p); });
+  return Object.values(by).map(list => { const top = [...list].sort((a, b) => (b.best || 0) - (a.best || 0))[0], tr = {};
+    list.forEach(p => { for (const k in (p.tr || {})) tr[k] = (tr[k] || 0) + p.tr[k]; });
+    return Object.assign({}, top, {tr, saves:list.length, last:Math.max(...list.map(p => p.last || 0)), v:[...list].sort((a, b) => (b.last || 0) - (a.last || 0))[0].v, play:list.reduce((t, p) => t + (p.play || 0), 0)}); });
+}
+const FEAT = [['volley', 'Tapped a volley'], ['volleyAuto', 'Let volleys fire themselves'], ['medic', 'Called Doc (medic)'], ['archerTap', 'Tapped an archer'], ['zoom', 'Zoomed the battlefield'], ['pause', 'Paused'], ['fullscreen', 'Went full screen'], ['gearDrag', 'Dragged gear between archers'], ['bulkPay', 'Paid off in bulk'], ['timedBuild', 'Started a timed upgrade'], ['rush', 'Finished an upgrade with medals'], ['revive', 'Brought back a Legendary'], ['slotSwitch', 'Switched save slot'], ['update', 'Installed an update'], ['cardShow', 'Pressed "Show me" on a New card'], ['newsChoice', 'Made a camp-news choice']];
+const FRIENDN = {bobby:'Bobby Arrow', col:'Col the Man', cras:'Nick Cras', curio:'Curio the Wastrel', davpaz:'Dav Paz', jasmine:'Jasmine the Goddess', jacket:'Nick "Jacket" Stewart', joans:'Old Joans', wookie:'Wookie the Underling', mali:'Mali of Aldgate', nase:'Tony Nason', trousers:'Trousers', zaphod:'Zaphod'};
+function render(ALL){
+  const P = people(ALL);
   const now = Date.now(), day = 864e5;
   const act1 = P.filter(p => now - p.last < day).length, act7 = P.filter(p => now - p.last < 7 * day).length;
   const bests = P.map(p => p.best || 1).sort((a, b) => a - b), median = bests.length ? bests[Math.floor(bests.length / 2)] : 0;
@@ -79,13 +89,26 @@ function render(P){
   const rc = {}; P.forEach(p => (p.research || '').split(',').filter(Boolean).forEach(id => rc[id] = (rc[id] || 0) + 1));
   const res = Object.keys(RNAMES).map(k => [RNAMES[k], rc[k] || 0]).filter(r => r[1] > 0 || ['a3a','a3b','l3a','l3b','c3a','c3b'].includes(Object.keys(RNAMES).find(x => RNAMES[x] === r[0])));
   const recent = [...P].sort((a, b) => b.last - a.last).slice(0, 30);
+  const pct = n => P.length ? Math.round(100 * n / P.length) + '%' : '0%';
+  const feat = FEAT.map(([k, l]) => { const n = P.filter(p => (p.tr || {})[k] > 0).length, tot = P.reduce((t, p) => t + ((p.tr || {})[k] || 0), 0); return [l, n, `${pct(n)} · ${tot} times`]; });
+  const vers = {}; P.forEach(p => vers[p.v || '?'] = (vers[p.v || '?'] || 0) + 1);
+  const vrows = Object.keys(vers).sort((a, b) => String(b).localeCompare(String(a), undefined, {numeric:true})).map(v => [v, vers[v], pct(vers[v])]);
+  const fc = {}; P.forEach(p => (p.friends || '').split(',').filter(Boolean).forEach(f => fc[f] = (fc[f] || 0) + 1));
+  const frows = Object.keys(FRIENDN).map(k => [FRIENDN[k], fc[k] || 0]).sort((a, b) => b[1] - a[1]); frows.unshift(['Alex the Sleepless (Legendary)', P.filter(p => p.alex).length]);
+  const tutDone = P.filter(p => (p.tut || 0) >= 99).length, multi = P.filter(p => p.saves > 1).length;
+  const ev = [[1, 9], [10, 19], [20, 29], [30, 49], [50, 1e9]].map(([a, b]) => [b > 1e8 ? `${a}+` : `${a} to ${b}`, P.filter(p => (p.evBest || 0) >= a && (p.evBest || 0) <= b).length]);
+  const rushM = P.reduce((t, p) => t + ((p.tr || {}).rushMedals || 0), 0);
   $('out').innerHTML = `
-  <div class="kpis"><div class="kpi"><b>${P.length}</b><span>players ever</span></div><div class="kpi"><b>${act1}</b><span>played in the last day</span></div><div class="kpi"><b>${act7}</b><span>played in the last week</span></div><div class="kpi"><b>${median}</b><span>median best stage</span></div><div class="kpi"><b>${fmtT(avgPlay)}</b><span>average time played</span></div><div class="kpi"><b>${P.length ? Math.round(100 * signed / P.length) : 0}%</b><span>signed in · ${P.length ? Math.round(100 * mobile / P.length) : 0}% on phones</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${P.length}</b><span>players ever (one per device)</span></div><div class="kpi"><b>${act1}</b><span>played in the last day</span></div><div class="kpi"><b>${act7}</b><span>played in the last week</span></div><div class="kpi"><b>${median}</b><span>median best stage</span></div><div class="kpi"><b>${fmtT(avgPlay)}</b><span>average time played</span></div><div class="kpi"><b>${P.length ? Math.round(100 * signed / P.length) : 0}%</b><span>signed in · ${P.length ? Math.round(100 * mobile / P.length) : 0}% on phones</span></div></div>
   <div class="two"><div><h2>WHERE PEOPLE STOP (BEST STAGE)</h2><div class="card">${bars(funnel)}</div></div><div><h2>HOW MANY GET THIS FAR</h2><div class="card">${bars(reached)}</div></div></div>
   <div class="two"><div><h2>CAMPAIGNS ENDED (PRESTIGE)</h2><div class="card">${bars(prest)}</div></div><div><h2>AVERAGE BUILDING LEVEL</h2><div class="card">${bars(bld)}</div></div></div>
   <h2>RESEARCH TAKEN (INCLUDING THE CHOICES)</h2><div class="card">${bars(res)}</div>
-  <h2>MOST RECENT PLAYERS</h2><div class="card scroll"><table><thead><tr><th>Last seen</th><th>Best</th><th>Now at</th><th>Campaigns</th><th>Time played</th><th>Roll</th><th>Legendaries</th><th>Fallen</th><th>Device</th><th>Account</th></tr></thead>
-  <tbody>${recent.map(p => `<tr><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td></tr>`).join('')}</tbody></table></div>`;
+  <div class="kpis"><div class="kpi"><b>${pct(tutDone)}</b><span>finished the tutorial</span></div><div class="kpi"><b>${multi}</b><span>players using more than one save slot</span></div><div class="kpi"><b>${rushM}</b><span>medals spent finishing upgrades</span></div><div class="kpi"><b>${ALL.length}</b><span>saves in total</span></div></div>
+  <h2>FEATURE USE (PLAYERS WHO HAVE TRIED IT)</h2><div class="card">${bars(feat)}</div>
+  <div class="two"><div><h2>VERSIONS IN USE</h2><div class="card">${bars(vrows)}</div></div><div><h2>BEST WEEKLY EVENT STAGE</h2><div class="card">${bars(ev)}</div></div></div>
+  <h2>FRIENDS OF THE COMPANY RECRUITED</h2><div class="card">${bars(frows)}</div>
+  <h2>MOST RECENT PLAYERS</h2><div class="card scroll"><table><thead><tr><th>Last seen</th><th>Best</th><th>Now at</th><th>Campaigns</th><th>Time played</th><th>Roll</th><th>Legendaries</th><th>Fallen</th><th>Device</th><th>Account</th><th>Version</th><th>Saves</th></tr></thead>
+  <tbody>${recent.map(p => `<tr><td>${ago(p.last)}</td><td class="n">${p.best || 1}</td><td class="n">${p.stage || 1}</td><td class="n">${p.prestiges || 0}</td><td class="n">${fmtT(p.play || 0)}</td><td class="n">${p.roster || 0}</td><td class="n">${p.heroes || 0}</td><td class="n">${p.fallen || 0}</td><td>${p.mobile ? 'Phone' : 'Computer'}</td><td>${p.signed ? 'Yes' : 'No'}</td><td>${esc(p.v || '')}</td><td class="n">${p.saves || 1}</td></tr>`).join('')}</tbody></table></div>`;
 }
 </script>
 </body>

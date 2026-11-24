@@ -487,6 +487,8 @@ function newQuest(){
   return {t, n, base:t === 'reach' ? 0 : (S.qp[QT[t].k] || 0), rw};
 }
 function qProgress(q){ return q.t === 'reach' ? S.runMax : (S.qp[QT[q.t].k] || 0) - q.base; }
+/* feature-use counters for the admin page (anonymous) */
+function tr(k, n){ S.tr = S.tr || {}; S.tr[k] = (S.tr[k] || 0) + (n || 1); }
 function bump(k, v){ S.qp[k] = (S.qp[k] || 0) + (v || 1); }
 const DAILY = [{silver:1}, {writs:1}, {food:1, wood:1}, {medals:5}, {writs:2}, {iron:1, feathers:1}, {writs:3}];
 function dayKey(){ const d = new Date(); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
@@ -660,7 +662,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.17';
+const VERSION = '2.17.1';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -767,7 +769,7 @@ function revive(id){
   const f = S.fallen.find(x => x.id === id); if (!f || !f.a) return; const c = reviveCost(f);
   if (S.res.medals < c) return toast(`Bringing ${f.name.split(' ')[0]} back needs ${c} medals.`);
   if (S.roster.length >= rosterCap()) return toast('No room on the roll. Pay someone off first.');
-  S.res.medals -= c; const a = f.a; a.lvl = reviveLvl(f); a.gear = {}; a.woundT = 600; a.away = null; S.roster.push(a); f.a = null; f.revived = 1;
+  S.res.medals -= c; tr('revive'); const a = f.a; a.lvl = reviveLvl(f); a.gear = {}; a.woundT = 600; a.away = null; S.roster.push(a); f.a = null; f.revived = 1;
   chron(`${a.name} was carried back from the field, barely breathing, and lived.`); toast(`${a.name.split(' ')[0]} lives. Wounded for a while, and back at level ${a.lvl}.`, true); sfx('legend'); save(); render();
 }
 function killArcher(a, how){
@@ -952,7 +954,8 @@ function pushStats(){
   try {
     const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
-      kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION};
+      kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION,
+      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0};
     const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
     fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
   } catch(e){}
@@ -1483,10 +1486,10 @@ function startBuild(k){
   if (isMax(k) || building(k) || !canPay(c)) return false;
   const d = bDur(k); if (d >= 3 && S.builds.length >= builders()) { toast('All your builders are busy. Wait, or finish a job with medals.'); return false; }
   pay(c); sfx('coin');
-  if (d < 3) applyBuild(k); else S.builds.push({k, end:Date.now() + d * 1000, dur:d});
+  if (d < 3) applyBuild(k); else tr('timedBuild'), S.builds.push({k, end:Date.now() + d * 1000, dur:d});
   return true;
 }
-function rushBuild(k){ const b = building(k); if (!b) return; const m = rushCost(b); if (S.res.medals < m) return toast(`Finishing now needs ${m} medal${m > 1 ? 's' : ''}.`); S.res.medals -= m; b.end = Date.now(); buildTick(); }
+function rushBuild(k){ const b = building(k); if (!b) return; const m = rushCost(b); if (S.res.medals < m) return toast(`Finishing now needs ${m} medal${m > 1 ? 's' : ''}.`); S.res.medals -= m; tr('rush'); tr('rushMedals', m); b.end = Date.now(); buildTick(); }
 function buildLive(){ if (tab !== 'camp' || !S.builds) return; S.builds.forEach(b => { const t = document.querySelector(`[data-bt="${b.k}"]`), p = document.querySelector(`[data-bp="${b.k}"]`); if (t) t.textContent = fmtT((b.end - Date.now()) / 1000); if (p) p.style.width = Math.min(100, 100 * (1 - (b.end - Date.now()) / 1000 / b.dur)) + '%'; }); }
 function buildTick(){
   if (!S.builds || !S.builds.length) return; const now = Date.now(), done = S.builds.filter(b => b.end <= now); if (!done.length) return;
@@ -1510,18 +1513,18 @@ const V = {s:1, x:0, y:0};
 function clampView(){ V.s = clamp(V.s, 1, 2.6); V.x = clamp(V.x, 0, W - W / V.s); V.y = clamp(V.y, 0, H - H / V.s); }
 /* the captain's own volleys: tap the field to loose one. Charges build while you watch; if you leave it alone they fire themselves */
 const VOL = {c:2, t:0, max:3, every:15};
-function playerVolley(x, y){
+function playerVolley(x, y, auto){
   if (!BT || BT.phase !== 'fight') return false;
   const live = BT.units.filter(u => !u.down); if (!live.length) return false;
   if (VOL.c < 1) { BT.fx.push({t:0, x, y, txt:'Not ready', col:'#cbbd9f'}); return false; }
-  VOL.c--; const avg = live.reduce((t, u) => t + u.s.dmg, 0) / live.length;
+  tr(auto ? 'volleyAuto' : 'volley'); VOL.c--; const avg = live.reduce((t, u) => t + u.s.dmg, 0) / live.length;
   BT.volleys.push({x, y, t:.25, n:30, r:42, src:live, dmg:avg * 1.1, mine:1}); BT.fx.push({t:0, x, y:y - 20, txt:'Loose!', col:'#f2d07a', big:1}); sfx('volley'); S.tutVolley = 1; return true;
 }
 function volleyTick(dt){
   if (!BT || BT.phase !== 'fight' || paused) return;
   if (medicOn() && MED.c < MED.max) { MED.t += dt; if (MED.t >= MED.every) { MED.t = 0; MED.c++; } }
   if (VOL.c < VOL.max) { VOL.t += dt; if (VOL.t >= VOL.every) { VOL.t = 0; VOL.c++; } } else VOL.t = 0;
-  if (VOL.c >= VOL.max && Date.now() - lastInput > 45000 && BT.en.length) { const t = densest(); if (t) playerVolley(t.x, t.y); }
+  if (VOL.c >= VOL.max && Date.now() - lastInput > 45000 && BT.en.length) { const t = densest(); if (t) playerVolley(t.x, t.y, true); }
 }
 let tipU = null, tipT = 0, paused = false;
 /* the medic: tap the cross to patch up the line and get downed men back on their feet. Manual only. */
@@ -1530,14 +1533,14 @@ const medicOn = () => S.bestEver >= 25;
 function useMedic(){
   if (!BT || BT.phase !== 'fight' || !medicOn()) return;
   if (MED.c < 1) { BT.fx.push({t:0, x:50, y:52, txt:'Medic not ready', col:'#cbbd9f'}); return; }
-  MED.c--; let up = 0; BT.units.forEach(u => { if (u.down) { u.down = false; u.hp = u.max * .3; up++; } else u.hp = Math.min(u.max, u.hp + u.max * .35); BT.fx.push({t:0, x:u.x, y:u.y - 16, txt:'+', col:'#8fe08a', big:1}); });
+  MED.c--; tr('medic'); let up = 0; BT.units.forEach(u => { if (u.down) { u.down = false; u.hp = u.max * .3; up++; } else u.hp = Math.min(u.max, u.hp + u.max * .35); BT.fx.push({t:0, x:u.x, y:u.y - 16, txt:'+', col:'#8fe08a', big:1}); });
   BT.fx.push({t:0, x:W / 2, y:H / 2, txt:up ? `Doc gets ${up} back up` : 'Doc patches up the line', col:'#8fe08a', big:1}); sfx('coin');
 }
 function bindBattleView(){
   cv = $('#cv'); ctx = cv.getContext('2d'); bgKey = '';
   $('#adv').addEventListener('click', () => { S.autoAdv = !S.autoAdv; S.farmN = 0; battleHud(true); save(); });
-  $('#ffBtn').addEventListener('click', () => { const on = !document.body.classList.contains('ff'); document.body.classList.toggle('ff', on); try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){} battleHud(true); setTimeout(layoutStage, 60); });
-  $('#pause').addEventListener('click', () => { paused = !paused; battleHud(true); });
+  $('#ffBtn').addEventListener('click', () => { const on = !document.body.classList.contains('ff'); document.body.classList.toggle('ff', on); if (on) tr('fullscreen'); try { if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); else if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch(e){} battleHud(true); setTimeout(layoutStage, 60); });
+  $('#pause').addEventListener('click', () => { paused = !paused; if (paused) tr('pause'); battleHud(true); });
   $('#spd').addEventListener('click', () => { const steps = S.mode === 'event' ? [1, 2, 3, 5] : L('swift') ? [1, 2, 3] : [1, 2]; const i = steps.indexOf(S.speed); S.speed = steps[(i + 1) % steps.length] || 1; battleHud(true); });
   $('#newsBtn').addEventListener('click', () => campEvent());
   $('#modeBtn').addEventListener('click', () => { S.mode = S.mode === 'event' ? 'main' : 'event'; newBattle(); battleHud(true); save(); });
@@ -1555,7 +1558,7 @@ function bindBattleView(){
     const ln = BT.units.reduce((m, o) => (m[o.i] = o.a, m), []); BT.units.forEach(o => o.rm = rankMult(o.i) * bondMult(o.i, ln));
     BT.fx.push({t:0, x:u.x, y:u.y - 18, txt:u.front ? 'Front rank' : 'Back rank', col:'#f2d07a'}); dragU = null; S.tutSwap = 1; save(); };
   cv.addEventListener('pointerdown', ev => { if (!BT) return; ac(); cv.setPointerCapture(ev.pointerId); pts.set(ev.pointerId, toS(ev));
-    if (pts.size === 2) { if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } pan = null; const [a, b] = [...pts.values()]; pinch = {d:dist(a[0], a[1], b[0], b[1]) || 1, s:V.s, cx:V.x + (a[0] + b[0]) / 2 / V.s, cy:V.y + (a[1] + b[1]) / 2 / V.s}; return; }
+    if (pts.size === 2) { if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } pan = null; const [a, b] = [...pts.values()]; tr('zoom'); pinch = {d:dist(a[0], a[1], b[0], b[1]) || 1, s:V.s, cx:V.x + (a[0] + b[0]) / 2 / V.s, cy:V.y + (a[1] + b[1]) / 2 / V.s}; return; }
     const [x, y] = toL(ev), [sx, sy] = toS(ev); const u = BT.units.find(u => !u.down && dist(u.x, u.y, x, y) < 24 / Math.sqrt(V.s));
     if (u) dragU = {u, ox:u.x, oy:u.y, sx, sy, t:Date.now(), moved:false}; else pan = {sx, sy, vx:V.x, vy:V.y, moved:false, t:Date.now()}; });
   cv.addEventListener('pointermove', ev => { if (!pts.has(ev.pointerId)) return; pts.set(ev.pointerId, toS(ev));
@@ -1564,14 +1567,14 @@ function bindBattleView(){
     if (dragU) { if (dist(sx, sy, dragU.sx, dragU.sy) > 6) dragU.moved = true; if (dragU.moved) { const [x, y] = toL(ev); dragU.u.x = clamp(x, 0, W); dragU.u.y = clamp(y, 0, H); } return; }
     if (pan) { if (dist(sx, sy, pan.sx, pan.sy) > 6) pan.moved = true; if (pan.moved && V.s > 1) { V.x = pan.vx - (sx - pan.sx) / V.s; V.y = pan.vy - (sy - pan.sy) / V.s; clampView(); } } });
   const up = ev => { pts.delete(ev.pointerId); if (pinch) { if (pts.size < 2) pinch = null; pan = null; return; }
-    if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; tipU = tipU === u ? null : u; tipT = 4; return; } drop(); return; }
+    if (dragU) { if (!dragU.moved) { const u = dragU.u; u.x = dragU.ox; u.y = dragU.oy; dragU = null; tipU = tipU === u ? null : u; tipT = 4; if (tipU) tr('archerTap'); return; } drop(); return; }
     if (pan) { const p = pan; pan = null; if (p.moved) return; const now = Date.now();
       if (medicOn() && p.sx >= 6 && p.sx <= 98 && p.sy >= 30 && p.sy <= 50) { useMedic(); return; }
       if (p.sx >= 6 && p.sx <= 98 && p.sy >= 6 && p.sy <= 26) return;
       if (now - lastTap < 300 && V.s > 1) { V.s = 1; clampView(); lastTap = 0; return; } lastTap = now;
       tipU = null; const [x, y] = toL(ev); playerVolley(x, y); } };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', ev => { pts.delete(ev.pointerId); pinch = null; pan = null; if (dragU) { dragU.u.x = dragU.ox; dragU.u.y = dragU.oy; dragU = null; } });
-  cv.addEventListener('wheel', ev => { ev.preventDefault(); const [sx, sy] = toS(ev), cx = V.x + sx / V.s, cy = V.y + sy / V.s; V.s *= ev.deltaY < 0 ? 1.15 : 1 / 1.15; clampView(); V.x = cx - sx / V.s; V.y = cy - sy / V.s; clampView(); }, {passive:false});
+  cv.addEventListener('wheel', ev => { ev.preventDefault(); if (V.s === 1) tr('zoom'); const [sx, sy] = toS(ev), cx = V.x + sx / V.s, cy = V.y + sy / V.s; V.s *= ev.deltaY < 0 ? 1.15 : 1 / 1.15; clampView(); V.x = cx - sx / V.s; V.y = cy - sy / V.s; clampView(); }, {passive:false});
   try { new ResizeObserver(() => { if (tab === 'battle') layoutStage(); }).observe($('#stage')); } catch(e){}
   layoutStage();
 }
@@ -1651,7 +1654,7 @@ let pickSlot = null;
   const end = () => { if (!g) return; const d = g; g = null; if (!d.on) return; swallow = true; setTimeout(() => swallow = false, 50); d.el.classList.remove('dragsrc'); if (d.ghost) d.ghost.remove(); if (d.tgt) d.tgt.classList.remove('droptgt');
     if (!d.tgt) return; const sl = d.el.dataset.s, A = S.roster.find(x => x.id === d.el.dataset.id), B = S.roster.find(x => x.id === d.tgt.dataset.id); if (!A || !B) return;
     const ia = A.gear[sl], ib = B.gear && B.gear[sl]; B.gear = B.gear || {}; B.gear[sl] = ia; if (ib) A.gear[sl] = ib; else delete A.gear[sl];
-    const it = S.gear.find(i => i.id === ia); toast(`${it ? itemName(it) : 'Gear'} moved to ${B.name.split(' ')[0]}${ib ? ', swapped' : ''}.`); sfx('coin'); refreshLineStats(); save(); render(); };
+    tr('gearDrag'); const it = S.gear.find(i => i.id === ia); toast(`${it ? itemName(it) : 'Gear'} moved to ${B.name.split(' ')[0]}${ib ? ', swapped' : ''}.`); sfx('coin'); refreshLineStats(); save(); render(); };
   document.addEventListener('pointerup', end); document.addEventListener('pointercancel', () => { if (g) { g.on = false; end(); } });
   document.addEventListener('click', e => { if (swallow && e.target.closest && e.target.closest('.gc')) { e.stopPropagation(); e.preventDefault(); } }, true);
 })();
@@ -1881,7 +1884,7 @@ function newCards(){
 }
 function showCard(){
   if (!S.cardQ || !S.cardQ.length || $('#modal').classList.contains('show') || (S.tut >= 1 && S.tut < 99)) return;
-  const c = NEWC.find(x => x.id === S.cardQ[0]); S.cardQ.shift(); if (!c) return; S.cards[c.id] = 1; save(); sheetFn = null;
+  const c = NEWC.find(x => x.id === S.cardQ[0]); S.cardQ.shift(); if (!c) return; S.cards[c.id] = 1; tr('cards'); save(); sheetFn = null;
   openSheet(`<div class="sub" style="color:var(--gold);letter-spacing:.04em">NEW</div><div class="fell" style="font-size:26px">${c.t}</div><p class="ev">${c.d}</p><div style="display:grid;grid-template-columns:repeat(${c.tab ? 2 : 1},minmax(0,1fr));gap:8px">${c.tab ? `<button class="btn gold big" data-act="cardgo" data-tab="${c.tab}">Show me</button>` : ''}<button class="btn big ${c.tab ? '' : 'gold'}" data-act="close">Got it</button></div>`);
 }
 function checkUnlocks(){
@@ -1946,7 +1949,7 @@ document.addEventListener('click', e => {
     case 'lvl': if (levelUp(ar, el.dataset.n === 'max' ? 'max' : +el.dataset.n)) { sfx('coin'); refreshLineStats(); } break;
     case 'promote': { const c = promoteCost(ar); if (ar.lvl < cap(ar) || !canPay(c) || ar.stars >= MAXSTARS) return; pay(c); ar.stars++; sfx('legend'); if (ar.stars >= 5) chron(`${ar.name} was promoted to ${ar.stars} stars.`); toast(`${ar.name} promoted. ${'★'.repeat(ar.stars)}`, true); refreshLineStats(); break; }
     case 'archer': sheetArcher(id); return;
-    case 'bulkpay': { const r = +el.dataset.r, l = bulkList(r), m = l.reduce((t, a) => t + payOf(a), 0); if (!l.length) return; if (el.dataset.c !== '1') { el.dataset.c = '1'; el.innerHTML = `Pay off ${l.length} for ${IC('medal')}${m}?`; return; } const ids = new Set(l.map(a => a.id)); S.roster = S.roster.filter(a => !ids.has(a.id)); S.form = S.form.map(f => ids.has(f) ? null : f); for (const k in S.bonds) if (k.split('|').some(x => ids.has(x))) delete S.bonds[k]; S.res.medals += m; toast(`${l.length} ${RAR[r].n.toLowerCase()} men take their pay. +${m} medals.`, true); refreshLineStats(); break; }
+    case 'bulkpay': { const r = +el.dataset.r, l = bulkList(r), m = l.reduce((t, a) => t + payOf(a), 0); if (!l.length) return; if (el.dataset.c !== '1') { el.dataset.c = '1'; el.innerHTML = `Pay off ${l.length} for ${IC('medal')}${m}?`; return; } const ids = new Set(l.map(a => a.id)); S.roster = S.roster.filter(a => !ids.has(a.id)); S.form = S.form.map(f => ids.has(f) ? null : f); for (const k in S.bonds) if (k.split('|').some(x => ids.has(x))) delete S.bonds[k]; tr('bulkPay'); tr('bulkPaid', l.length); S.res.medals += m; toast(`${l.length} ${RAR[r].n.toLowerCase()} men take their pay. +${m} medals.`, true); refreshLineStats(); break; }
     case 'dismiss': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure?'; return; } if (S.roster.length <= 1) return toast('You cannot pay off your last man.'); const m = [1, 2, 4, 8, 20][ar.rar] * ar.stars; S.res.medals += m; S.roster = S.roster.filter(x => x !== ar); S.form = S.form.map(f => f === ar.id ? null : f); closeSheet(); toast(`${ar.name} takes his pay and heads for the alehouse. +${m} medals.`, true); refreshLineStats(); break; }
     case 'slot': if (!slotOpen(+el.dataset.i)) return; sheetSlot(+el.dataset.i); return;
     case 'setslot': { const i = +el.dataset.i; if (id) { const j = S.form.indexOf(id); if (j >= 0) S.form[j] = S.form[i]; } S.form[i] = id || null; closeSheet(); refreshLineStats(); break; }
@@ -1962,7 +1965,7 @@ document.addEventListener('click', e => {
     case 'collect': { const x = S.exped[+el.dataset.i]; if (!x || x.end > Date.now()) return; collectExped(+el.dataset.i); return; }
     case 'perk': { const P = LEGACY[id], l = L(id), c = Math.ceil(P.c * Math.pow(P.g, l)); if (S.res.glory < c || (P.max && l >= P.max)) return; S.res.glory -= c; S.legacy[id] = l + 1; sfx('legend'); refreshLineStats(); break; }
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
-    case 'evc': { const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
+    case 'evc': { tr('newsChoice'); const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
     case 'armoury': sheetArmoury(); return;
     case 'tutskip': S.tut = 99; tutBar(); break;
@@ -1982,10 +1985,10 @@ document.addEventListener('click', e => {
     case 'signin': cloudMsg = ''; signIn(); return;
     case 'signout': if (fbAuth) fbAuth.signOut(); cloudMsg = 'Signed out. Your game stays on this device.'; refreshSheet(); return;
     case 'cloudsave': cloudSync().then(() => { cloudMsg = 'Saved to the cloud.'; refreshSheet(); }).catch(e => { cloudMsg = e.code === 'permission-denied' ? 'The cloud database is not open yet. Your game is still saved on this device.' : 'Could not save: ' + (e.message || e.code); refreshSheet(); }); return;
-    case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
+    case 'saveslot': { const n = +el.dataset.n; if (n === SLOT) return; el.textContent = 'Saving...'; tr('slotSwitch'); (async () => { try { save(); if (fbUser) await cloudSync(); } catch(e){} try { localStorage.setItem('loose-slot', String(n)); } catch(e){} window.__skipSave = true; location.reload(); })(); return; }
     case 'revive': revive(el.dataset.id); return;
-    case 'cardgo': closeSheet(); tab = el.dataset.tab; render(); return;
-    case 'doupdate': el.textContent = 'Updating...'; applyUpdate(); return;
+    case 'cardgo': tr('cardShow'); closeSheet(); tab = el.dataset.tab; render(); return;
+    case 'doupdate': tr('update'); el.textContent = 'Updating...'; applyUpdate(); return;
     case 'restorebak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const b = JSON.parse(localStorage.getItem(sk('loose-backup'))); const o = JSON.parse(b.data); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); if (fbUser) cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'restorecloudbak': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Swap them'; return; } try { const o = JSON.parse(cloudDoc.backup); o.epochAt = Date.now(); keepBackup(S, 'Swapped out by a restore'); S = Object.assign(defaultSave(), o); migrate(); bgKey = ''; save(); lastInput = Date.now(); cloudUpload('override').catch(() => {}); closeSheet(); newBattle(); render(); pendingAdopt = null; toast(`Restored: stage ${S.stage}, best ${S.bestEver}.`, true); } catch(e) { toast('Could not restore that save.'); } return; }
     case 'exportcode': { const c = $('#code'); c.value = btoa(unescape(encodeURIComponent(JSON.stringify(S)))); c.select(); try { navigator.clipboard.writeText(c.value).then(() => toast('Copied to the clipboard.', true)).catch(() => {}); } catch(e){} return; }
