@@ -81,6 +81,7 @@ h3{font-family:"IM Fell English SC",Georgia,serif;font-size:16px;font-weight:400
 /* battle */
 .bhead{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0d110c;border-bottom:1px solid var(--line)}
 .bhead .t{font-family:"IM Fell English SC",serif;font-size:19px;line-height:1.05}
+.bhead .grow{min-width:0}.bhead .t,.bhead #bS{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bhead .btn{padding-left:10px;padding-right:10px;flex:none}
 #stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-height:200px}
 #cv{display:block;border-radius:2px}
 #bMsg{position:absolute;top:28%;left:0;right:0;text-align:center;pointer-events:none;font-family:"IM Fell English SC",serif;font-size:28px;color:#fff3d6;text-shadow:0 2px 0 #000;opacity:0;transition:opacity .3s,transform .3s;transform:scale(.92)}
@@ -653,7 +654,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.12.1';
+const VERSION = '2.12.2';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1412,7 +1413,7 @@ function render(){
   v.innerHTML = tab === 'camp' ? viewCamp() : tab === 'company' ? viewCompany() : tab === 'tavern' ? viewTavern() : tab === 'orders' ? viewOrders() : tab === 'study' ? viewStudy() : viewLegacy();
 }
 function viewBattle(){
-  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">Camp news</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="spd">1×</button></div>
+  return `<div id="battleView"><div class="bhead"><div class="grow"><div class="t" id="bT"></div><div class="sub" id="bS"></div></div><button class="btn" id="newsBtn" style="display:none">News</button><button class="btn" id="modeBtn" style="display:none">Event</button><button class="btn" id="spd">1×</button></div>
   <div id="stage"><canvas id="cv"></canvas><div id="bMsg"></div></div>
   <div class="bfoot"><div class="row sub"><span class="grow" id="bP"></span><span id="bD"></span></div><div class="prog"><i id="bBar"></i></div>
   <div class="row"><label class="tog grow"><span class="sw" id="adv"></span>Advance after each win</label><span class="sub" id="bA"></span></div></div></div>`;
