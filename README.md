@@ -29,10 +29,19 @@ An idle strategy game of the Hundred Years' War, from the Southampton muster to 
 - **The King's League.** A weekly leaderboard for signed-in captains, ranked by furthest stage.
 - **Music.** A medieval loop that picks up pace for bosses and set pieces.
 - **Your company.** Name your captain, company and men, and choose your banner colours. Portraits gain plumes and gilt as men are promoted.
-- **Admin.** `admin.html` shows anonymous play figures: where people stop, prestige, building and research choices.
+- **Admin.** `admin.html` shows anonymous play figures from players who agreed to share them: where people stop, prestige, building and research choices.
+- **Privacy.** `privacy.html` is the privacy notice. Play stats and Google Analytics only run after the player says yes (asked after 45 seconds of play; Settings, Privacy to change).
 
 Twelve zones with their own enemy mixes (swarm, armoured, cavalry, crossbows) loop with rising difficulty, and there's a boss every ten stages.
 
 ## Tech
 
 A single `index.html`: vanilla JS, canvas rendering and Web Audio, plus a service worker and web app manifest. Progress saves in localStorage and, when signed in, to Firestore (Firebase project `until-crispins-day`, collections `loose_saves`, `loose_players` and `loose_league`). No build step.
+
+## Portal copies and adverts (2.27)
+
+`python3 tools/build-portal.py crazygames` writes `dist/crazygames/` and a zip to upload to a game site. A portal copy has no sign-in, no Firebase, no Analytics, no play stats, no gifts, no update prompt and no outside links; saves stay in the browser. `?portal=name` on the live site behaves the same way, for testing.
+
+Rewarded adverts are optional, capped per day and only offered from stage 10 where an advert provider exists: double offline silver and materials (3 a day), hurry a building by 30 minutes (3), a free writ (1), swap a daily order (2). `?adtest=1` adds a fake three-second advert for testing. A portal's SDK plugs in as `adProv = {name, show: placement => Promise<boolean>}`.
+
+The Ko-fi supporter card in Settings appears once `KOFI` is set at the top of the script. Supporters unlock two extra banners, on trust.

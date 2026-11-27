@@ -8,11 +8,19 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Loose! A Company of Archers</title>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-JF54HQGVLT"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-JF54HQGVLT');</script>
+<script>
+/* 2.27: where this copy runs. '' is the live site; ?portal=name, or a portal build (tools/build-portal.py), sets it.
+   Google Analytics only loads after the player says yes, and never in a portal copy. */
+window.LOOSE_PORTAL=window.LOOSE_PORTAL||(function(){try{return new URLSearchParams(location.search).get('portal')||'';}catch(e){return '';}})();
+window.dataLayer=window.dataLayer||[];function gtag(){if(window.__gaOn)dataLayer.push(arguments);}
+function gaStart(){if(window.__gaOn||window.LOOSE_PORTAL)return;window.__gaOn=1;window['ga-disable-G-JF54HQGVLT']=false;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-JF54HQGVLT';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-JF54HQGVLT');}
+try{if(localStorage.getItem('loose-consent')==='yes')gaStart();}catch(e){}
+</script>
+<!--cloud-->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!--/cloud-->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -159,6 +167,8 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
 #updBar{position:fixed;left:0;right:0;top:0;z-index:85;background:#2b2410;border-bottom:2px solid var(--gold);color:#f3e6c0;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:15px}#updBar.on{display:flex}
+#consentBar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:84;background:#1b2417;border-top:2px solid var(--gold);color:#e8dcc0;padding:9px 12px;display:none;flex-wrap:wrap;align-items:center;gap:8px;font-size:14.5px}#consentBar.on{display:flex}#consentBar a{color:var(--gold)}#consentBar .grow{flex:1 1 220px}
+#adTest{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.9);display:grid;place-items:center;text-align:center;padding:20px}#adTest>div{max-width:340px}
 #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:14.5px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
 #tut{display:flex;gap:8px;align-items:center;padding:8px 12px;background:#2a2614;border-top:1px solid #6a5424;font-size:14.5px;line-height:1.35}
@@ -584,7 +594,7 @@ function dlyHtml(){
   const all = S.dly.tasks.every(x => x.done);
   let h = `<h3>ORDERS FROM THE CONSTABLE · TODAY</h3><div class="sub" style="margin-bottom:8px">New orders every morning. Miss a day and nothing is lost.</div>`;
   S.dly.tasks.forEach((x, i) => { const p = Math.min(dProg(x), x.n), ready = !x.done && p >= x.n;
-    h += `<div class="card row"><div class="grow"><b>${DT[x.t].n.replace('{n}', fmt(x.n))}</b><div class="bar"><i style="width:${100 * p / x.n}%"></i></div><div class="sub">${x.done ? 'Done' : `${fmt(p)}/${fmt(x.n)}`} · ${rwHtml(dTaskRw())}</div></div>${x.done ? '<span class="sub">Claimed</span>' : `<button class="btn ${ready ? 'gold' : ''}" data-act="dclaim" data-i="${i}" ${ready ? '' : 'disabled'}>Claim</button>`}</div>`; });
+    h += `<div class="card row"><div class="grow"><b>${DT[x.t].n.replace('{n}', fmt(x.n))}</b><div class="bar"><i style="width:${100 * p / x.n}%"></i></div><div class="sub">${x.done ? 'Done' : `${fmt(p)}/${fmt(x.n)}`} · ${rwHtml(dTaskRw())}</div></div>${!x.done && !ready && adOk('swap') && swapOpts().length ? `<button class="btn" data-act="adswap" data-i="${i}">Swap${adSmall('swap')}</button>` : ''}${x.done ? '<span class="sub">Claimed</span>' : `<button class="btn ${ready ? 'gold' : ''}" data-act="dclaim" data-i="${i}" ${ready ? '' : 'disabled'}>Claim</button>`}</div>`; });
   h += `<div class="card row"><div class="grow"><b>All three</b><div class="sub">${S.dly.bonus ? 'Claimed. Well done, captain.' : `Bonus: ${rwHtml(dBonusRw())}`}</div></div>${S.dly.bonus ? '' : `<button class="btn ${all ? 'gold' : ''}" data-act="dbonus" ${all ? '' : 'disabled'}>Claim</button>`}</div>`;
   return h;
 }
@@ -855,7 +865,11 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.26.25';
+const VERSION = '2.27';
+/* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
+const PORTAL = window.LOOSE_PORTAL || '';
+/* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
+const KOFI = '';
 
 /* ================= expansion helpers ================= */
 const R = id => !!(S.research && S.research.done[id]);
@@ -1166,7 +1180,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instal
 let updInfo = null;
 async function checkUpdate(){
   try {
-    if (location.protocol !== 'https:') return;
+    if (PORTAL || location.protocol !== 'https:') return;
     const r = await fetch('index.html?v=' + Date.now(), {cache:'no-store'}); if (!r.ok) return;
     const t = await r.text(), m = t.match(/const VERSION = '([^']+)'/); if (!m || m[1] === VERSION) { updInfo = null; updBtnShow(); return; }
     let notes = []; try { const n = t.match(/<script id="relnotes" type="application\/json">([\s\S]*?)<\/script>/); if (n) notes = JSON.parse(n[1]); } catch(e){}
@@ -1200,6 +1214,7 @@ function initPwa(){ try { if ('serviceWorker' in navigator && location.protocol 
 /* ---------- cloud save ---------- */
 let fbAuth = null, fbDb = null, fbUser = null, cloudState = 'off', cloudMsg = '', cloudChoice = null;
 function initCloud(){
+  if (PORTAL) { cloudState = 'portal'; return; }
   if (!window.firebase || !firebase.initializeApp) { cloudState = 'unavailable'; return; }
   try { if (!firebase.apps.length) firebase.initializeApp(FB); fbAuth = firebase.auth(); fbDb = firebase.firestore(); cloudState = 'ready';
     fbAuth.onAuthStateChanged(u => { fbUser = u; if (u) onSignedIn(); refreshSheet(); }); } catch(e) { cloudState = 'unavailable'; }
@@ -1275,6 +1290,7 @@ window.addEventListener('beforeunload', () => { if (fbUser) cloudSync().catch(()
 /* ---------- anonymous play stats for the admin page ---------- */
 function fsVal(v){ if (typeof v === 'boolean') return {booleanValue:v}; if (typeof v === 'number') return Number.isInteger(v) ? {integerValue:String(v)} : {doubleValue:v}; if (typeof v === 'string') return {stringValue:v}; if (v && typeof v === 'object') { const f = {}; for (const k in v) f[k] = fsVal(v[k]); return {mapValue:{fields:f}}; } return {nullValue:null}; }
 function pushStats(){
+  if (!statsOn()) return;
   try {
     const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
@@ -1287,7 +1303,7 @@ function pushStats(){
 setInterval(pushStats, 180000);
 /* gifts from the admin page: a doc in loose_gifts named after this save's anonymous id; collect it, remember it, clear it */
 async function checkGift(){
-  if (!S || !S.pid) return;
+  if (PORTAL || !S || !S.pid) return;
   const url = `https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_gifts/${S.pid}?key=${FB.apiKey}`;
   try {
     const r = await fetch(url); if (!r.ok) return; const d = await r.json(), f = d.fields || {};
@@ -1302,6 +1318,57 @@ async function checkGift(){
 setInterval(checkGift, 120000); setTimeout(checkGift, 8000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkGift(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pushStats(); });
+
+/* ---------- consent (2.27): anonymous stats and Google Analytics only run after a yes, asked once per device ---------- */
+const consentV = () => { try { return localStorage.getItem('loose-consent') || ''; } catch(e) { return ''; } };
+const statsOn = () => !PORTAL && consentV() === 'yes';
+function setConsent(yes){
+  try { localStorage.setItem('loose-consent', yes ? 'yes' : 'no'); } catch(e){}
+  if (yes) { gaStart(); setTimeout(pushStats, 500); } else { window.__gaOn = 0; window['ga-disable-G-JF54HQGVLT'] = true; }
+  consentBar();
+}
+/* asked after the first 45 seconds of play, not on the title screen */
+function consentBar(){
+  if (typeof S === 'undefined' || !S || !S.stats) return;
+  const show = !PORTAL && !consentV() && (S.stats.playSec || 0) >= 45; let b = $('#consentBar');
+  if (!b) { if (!show) return; b = document.createElement('div'); b.id = 'consentBar'; b.setAttribute('role', 'dialog');
+    b.innerHTML = `<span class="grow">Help improve Loose! by sharing anonymous play stats: how far you get and what you use. Nothing personal, nothing sold. <a href="privacy.html" target="_blank" rel="noopener">Privacy notice</a></span><button class="btn gold" data-act="consentyes">Yes, share</button><button class="btn" data-act="consentno">No thanks</button>`;
+    document.body.appendChild(b); }
+  b.classList.toggle('on', show);
+}
+setInterval(consentBar, 5000);
+
+/* ---------- rewarded adverts (2.27): always optional, capped per day, never needed to play. Only offered where an
+   advert provider exists (a portal's SDK, or ?adtest=1 for testing), and not before stage 10 so the opening isn't rushed. ---------- */
+const AD_CAP = {offline:3, rush:3, writ:1, swap:2};
+const AD_DOUBLE = ['silver', 'food', 'wood', 'iron', 'feathers', 'arrows'];
+let adProv = /[?&]adtest=1/.test(location.search) ? {name:'test', show:testAd} : null;
+const adDay = () => { if (!S.ads || S.ads.day !== dayKey()) S.ads = {day:dayKey(), n:{}}; return S.ads; };
+const adLeft = p => AD_CAP[p] - (adDay().n[p] || 0);
+const adOk = p => !!adProv && S.bestEver >= 10 && adLeft(p) > 0;
+const adSmall = p => `<small>advert · ${adLeft(p)} left today</small>`;
+let adBusy = false;
+async function watchAd(p, give){
+  if (adBusy || !adOk(p)) return; adBusy = true; tr('adTap_' + p);
+  let ok = false; try { ok = await adProv.show(p); } catch(e) { ok = false; }
+  adBusy = false;
+  if (!ok) { toast("The advert didn't finish, so nothing was used up."); return; }
+  adDay().n[p] = (adDay().n[p] || 0) + 1; tr('adDone_' + p);
+  give(); save(); render(); refreshSheet();
+}
+function testAd(){
+  return new Promise(res => {
+    const d = document.createElement('div'); d.id = 'adTest';
+    d.innerHTML = `<div><div class="fell" style="font-size:26px">Advert</div><p class="sub">Test mode: a real advert would play here. Reward in <b id="adT">3</b>s.</p><button class="btn" id="adSkip">Skip (no reward)</button></div>`;
+    document.body.appendChild(d); let n = 3;
+    const iv = setInterval(() => { n--; const el = d.querySelector('#adT'); if (el) el.textContent = n; if (n <= 0) { clearInterval(iv); d.remove(); res(true); } }, 1000);
+    d.querySelector('#adSkip').onclick = () => { clearInterval(iv); d.remove(); res(false); };
+  });
+}
+/* swap one of today's Constable's orders for a different one */
+const swapOpts = () => !S.dly ? [] : Object.keys(DT).filter(k => !S.dly.tasks.some(y => y.t === k) && (!DT[k].ok || DT[k].ok()));
+function swapOrder(i){ const x = S.dly && S.dly.tasks[i], o = swapOpts(); if (!x || x.done || !o.length) return; const t = pick(o); S.dly.tasks[i] = {t, n:DT[t].s(), base:dCount(t), done:false}; toast(`New order: ${DT[t].n.replace('{n}', fmt(S.dly.tasks[i].n))}.`, true); }
+const BANNERS_FREE = 6;
 
 /* ---------- settings ---------- */
 function slotInfo(n){ try { const r = localStorage.getItem(skN('loose-idle-v1', n)); if (r) { const o = JSON.parse(r); return {stage:o.stage, best:o.bestEver, prest:o.prestiges || 0, last:o.last, name:o.company || ''}; } } catch(e){}
@@ -1322,7 +1389,8 @@ function backupCard(){
 }
 function sheetSettings(){
   sheetFn = sheetSettings;
-  const acct = cloudState === 'unavailable' ? '<div class="sub">Accounts work on the live site, neilfletcher.github.io/Loose. Here, use the save code below to move your game.</div>'
+  const acct = cloudState === 'portal' ? '<div class="sub">Your game is saved in this browser. Use the save code below to move it to another device.</div>'
+    : cloudState === 'unavailable' ? '<div class="sub">Accounts work on the live site, neilfletcher.github.io/Loose. Here, use the save code below to move your game.</div>'
     : fbUser ? `<div class="sub">Signed in as <b>${esc(fbUser.email || fbUser.displayName || 'you')}</b>. Every device signed in to this account stays in step: open the game anywhere and it carries on from wherever you last played.${syncAt.get() ? ` Last synced ${new Date(syncAt.get()).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'})}.` : ''}</div><div class="row" style="margin-top:8px"><button class="btn gold grow" data-act="cloudsave">Sync now</button><button class="btn" data-act="signout">Sign out</button></div>`
     : `<div class="sub">Sign in to keep your company safe and carry on from any phone or computer.</div><button class="btn gold big" style="margin-top:8px" data-act="signin">Sign in with Google</button>`;
   openSheet(`<div class="fell" style="font-size:26px">Settings</div>
@@ -1332,11 +1400,13 @@ function sheetSettings(){
   <div class="row" style="margin-top:6px"><button class="btn grow" data-act="exportcode">Show my code</button><button class="btn grow" data-act="importcode">Load pasted code</button></div></div>
   <h3>YOUR COMPANY</h3><div class="card"><div class="sub">Captain's name, for the league</div><input class="nmin" id="capname" value="${esc(S.captain || '')}" maxlength="24" placeholder="${esc(captainName())}">
   <div class="sub" style="margin-top:8px">Company name</div><input class="nmin" id="coname" value="${esc(S.company || '')}" maxlength="40" placeholder="The Northampton Company">
-  <div class="sub" style="margin-top:8px">Banner colours: ${banner()[2]}</div><div>${BANNERS.map((b, i) => `<span class="sw2 ${(S.banner || 0) === i ? 'on' : ''}" data-act="banner" data-i="${i}" style="background:linear-gradient(135deg,${b[0]} 55%,${b[1]} 55%)"></span>`).join('')}</div></div>
+  <div class="sub" style="margin-top:8px">Banner colours: ${banner()[2]}</div><div>${BANNERS.map((b, i) => i >= BANNERS_FREE && !S.supporter ? '' : `<span class="sw2 ${(S.banner || 0) === i ? 'on' : ''}" data-act="banner" data-i="${i}" style="background:linear-gradient(135deg,${b[0]} 55%,${b[1]} 55%)"></span>`).join('')}</div></div>
+  ${KOFI && !PORTAL ? `<h3>SUPPORT THE GAME</h3><div class="card"><div class="sub">Loose! is free to play and staying that way. If you've had your money's worth, you can buy the developer a pint on Ko-fi. Supporters get two extra banners for the company, on trust.</div><div class="row" style="margin-top:8px"><a class="btn gold grow" href="${esc(KOFI)}" target="_blank" rel="noopener" data-act="kofi" style="text-align:center;text-decoration:none;padding-top:10px">Ko-fi</a>${S.supporter ? '<span class="sub grow">Thank you. The banners are yours.</span>' : `<button class="btn" data-act="supporter">I've chipped in</button>`}</div></div>` : ''}
   <h3>SOUND</h3><div class="card"><label class="tog" data-act="music"><span class="sw ${S.music ? 'on' : ''}"></span>Music</label><div class="sub" style="margin-top:4px">The speaker button at the top turns all sound on or off.</div></div>
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
+  <h3>PRIVACY</h3><div class="card">${PORTAL ? `<div class="sub">This copy keeps your game in this browser and sends nothing to the developer. Adverts are run by the site you're playing on, under its own privacy policy.</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() === 'yes' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get and which features you use, under a random ID (${esc(S.pid || '')}), plus Google Analytics. Nothing personal and nothing sold. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (arranged on the Formation screen), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
@@ -1487,7 +1557,7 @@ function musicTick(){
 }
 
 /* ================= customisation ================= */
-const BANNERS = [['#c8372d', '#f2efe6', 'St George'], ['#1d3a6b', '#e8c64a', 'Azure and gold'], ['#2f6b2a', '#f2efe6', 'Vert and argent'], ['#5a2a6b', '#e8c64a', 'Purpure and gold'], ['#111111', '#e8c64a', 'Sable and gold'], ['#c87a2d', '#1d1d1d', 'Or and sable']];
+const BANNERS = [['#c8372d', '#f2efe6', 'St George'], ['#1d3a6b', '#e8c64a', 'Azure and gold'], ['#2f6b2a', '#f2efe6', 'Vert and argent'], ['#5a2a6b', '#e8c64a', 'Purpure and gold'], ['#111111', '#e8c64a', 'Sable and gold'], ['#c87a2d', '#1d1d1d', 'Or and sable'], ['#7a1f1a', '#e8b64c', 'Gules and gilt, for supporters'], ['#f2efe6', '#1d3a6b', 'Argent and azure, for supporters']];
 const banner = () => BANNERS[S.banner || 0];
 
 /* ================= sound ================= */
@@ -2129,7 +2199,7 @@ function bRow(k){
       if (!un) { return `<div class="card row lock"><div class="bico">${IC('lock')}</div><div class="grow"><b>${b.n}</b><div class="sub">Reach stage ${b.un}</div></div></div>`; }
       const c = bCost(k), mx = isMax(k);
       const job = building(k), busy = !job && (S.builds || []).length >= builders() && bDur(k) >= 3;
-      return `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div>${job ? `<div class="sub" style="margin-top:4px">Upgrading to level ${l + 1} · <b data-bt="${k}">${fmtT((job.end - Date.now()) / 1000)}</b></div><div class="prog" style="margin-top:4px"><i data-bp="${k}" style="width:${Math.min(100, 100 * (1 - (job.end - Date.now()) / 1000 / job.dur))}%;background:var(--gold)"></i></div>` : `<div class="cost">${mx ? 'Fully built' : costHtml(c) + (bDur(k) >= 3 ? ` · ${IC('clock', 'currentColor')}${fmtT(bDur(k))}` : '')}</div>`}</div>${mx ? '' : job ? `<button class="btn" data-act="rush" data-id="${k}">Finish · ${IC('medal')}${rushCost(job)}</button>` : `<button class="btn ${canPay(c) && !busy ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) && !busy ? '' : 'disabled'}>${busy ? 'Builders busy' : l ? 'Upgrade' : 'Build'}</button>`}</div>`;
+      return `<div class="card row"><div class="bico">${b.i}</div><div class="grow"><div><b>${b.n}</b> <span class="sub">Lv ${l}${b.max ? '/' + b.max : ''}</span></div><div class="sub">${bEffect(k)}</div>${job ? `<div class="sub" style="margin-top:4px">Upgrading to level ${l + 1} · <b data-bt="${k}">${fmtT((job.end - Date.now()) / 1000)}</b></div><div class="prog" style="margin-top:4px"><i data-bp="${k}" style="width:${Math.min(100, 100 * (1 - (job.end - Date.now()) / 1000 / job.dur))}%;background:var(--gold)"></i></div>` : `<div class="cost">${mx ? 'Fully built' : costHtml(c) + (bDur(k) >= 3 ? ` · ${IC('clock', 'currentColor')}${fmtT(bDur(k))}` : '')}</div>`}${job && adOk('rush') && job.end - Date.now() > 120000 ? `<button class="btn" style="margin-top:6px" data-act="adrush" data-id="${k}">Hurry 30 minutes · advert <span class="sub">(${adLeft('rush')} left today)</span></button>` : ''}</div>${mx ? '' : job ? `<button class="btn" data-act="rush" data-id="${k}">Finish · ${IC('medal')}${rushCost(job)}</button>` : `<button class="btn ${canPay(c) && !busy ? 'gold' : ''}" data-act="build" data-id="${k}" ${canPay(c) && !busy ? '' : 'disabled'}>${busy ? 'Builders busy' : l ? 'Upgrade' : 'Build'}</button>`}</div>`;
 }
 /* ================= the village (2.24.1): drawn on canvas in the battlefield's style ================= */
 const VW = 400, VH = 300;
@@ -2376,6 +2446,7 @@ function viewTavern(){
   <div class="sub" style="color:#c9b08a">A Legendary is guaranteed within <b>${50 - S.pity}</b> recruits. Ten at once guarantees a Rare or better. Legendary duplicates gain a star; past 7 stars each copy gives 30 medals and +3% damage.</div>
   <div class="row" style="margin-top:12px"><button class="btn gold grow" data-act="pull" data-n="1" ${S.res.writs >= 1 ? '' : 'disabled'}>Recruit 1<small>${IC('scroll')} 1</small></button><button class="btn gold grow" data-act="pull" data-n="10" ${S.res.writs >= 10 ? '' : 'disabled'}>Recruit 10<small>${IC('scroll')} 10</small></button></div>
   <div class="row" style="margin-top:8px"><div class="grow sub" style="color:#c9b08a">Buy a writ of indenture. The price climbs as the campaign goes on.</div><button class="btn" data-act="buywrit" ${S.res.silver >= wp ? '' : 'disabled'}>Buy ${IC('scroll')}<small>${IC('coin')}${fmt(wp)}</small></button>${S.res.silver >= wp * 10 ? `<button class="btn" data-act="buywrit10">Buy 10</button>` : ''}</div>
+  ${adOk('writ') ? `<div class="row" style="margin-top:8px"><div class="grow sub" style="color:#c9b08a">One free writ a day for watching an advert.</div><button class="btn" data-act="adwrit">Free ${IC('scroll')}${adSmall('writ')}</button></div>` : ''}
   <div class="sub" style="margin-top:8px;color:#c9b08a">Room on the roll: ${rosterCap() - S.roster.length}.</div></div>
   <h3>DISMISSALS</h3><div class="sub">Pay off men you do not need from their record in the Company tab. Each leaves you medals for promotions.</div>
   <h3>LEGENDARY ARCHERS</h3>${Object.keys(HEROES).map(k => { const Hh = HEROES[k], own = S.roster.find(a => a.hero === k), fake = {cls:'hero', hero:k, rar:4}; return `<div class="card row" ${own ? '' : 'style="opacity:.55"'}><img class="pt" src="${portrait(fake, 50)}" alt=""><div class="grow"><div class="nm r4">${Hh.n} ${own ? `<span class="stars">${'★'.repeat(own.stars)}</span>` : ''}</div><div class="sub">${Hh.title} · ${Hh.abN}: ${Hh.abD}</div></div><span class="sub">${own ? 'Serving' : 'Not met'}</span></div>`; }).join('')}`;
@@ -2807,6 +2878,7 @@ function campEvent(){
 /* ================= actions ================= */
 /* NEW CARDS: every feature announces itself once, one card at a time, with a line on what it's for */
 const NEWC = [
+  {id:'adverts', on:() => !!adProv && S.bestEver >= 10, t:'Optional adverts', tab:null, d:'From here on you can watch an advert, if you want to, for a small boost: double what the company brought in while you were away, hurry a building, a free writ, or swap one of the daily orders. A few a day, never needed.'},
   {id:'tavern', on:() => S.seen.tavern, t:'The Tavern', tab:'tavern', d:'Spend writs here to recruit new archers. Better men turn up the more you recruit.'},
   {id:'orders', on:() => S.seen.orders, t:'Orders', tab:'orders', d:"Daily rations to collect, and three orders from the Constable every day: small tasks that pay writs and medals."},
   {id:'gear', on:() => S.gear.length > 0, t:'Gear', tab:'company', d:'Bosses drop bows, arrowheads, armour and charms. Equip them in the Company tab.'},
@@ -2941,6 +3013,15 @@ document.addEventListener('click', e => {
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
     case 'evc': { tr('newsChoice'); capXP(4); if (!EV.own) { const lab = (EV.c[+el.dataset.i][0] || '').toLowerCase(); if (/hang|flog|whip|punish|dock|refuse|send (him|her|them) (away|packing)|turn (him|her|them) away|take a cut|shoo/.test(lab)) { repMove(-3, -4); morMove(-2); } else if (/let|give|share|pay|forgive|keep|help|bury|feed|bread/.test(lab)) { repMove(3, 4); morMove(3); } } const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
+    case 'consentyes': setConsent(true); return;
+    case 'consentno': setConsent(false); return;
+    case 'consenttog': setConsent(consentV() !== 'yes'); refreshSheet(); return;
+    case 'kofi': tr('kofi'); save(); return;
+    case 'supporter': S.supporter = 1; tr('supporter'); toast('Thank you, captain. Two new banners are in Settings, under Your company.', true); break;
+    case 'adoffline': closeSheet(); watchAd('offline', () => { (lastAway || []).forEach(([r, v]) => addRes(r, v)); lastAway = null; toast('The quartermaster finds the same again. Doubled.', true); }); return;
+    case 'adrush': watchAd('rush', () => { const b = building(id); if (b) { b.end -= 1800000; buildTick(); } }); return;
+    case 'adwrit': watchAd('writ', () => { S.res.writs++; toast('A free writ of indenture.', true); }); return;
+    case 'adswap': { const i = +el.dataset.i; watchAd('swap', () => swapOrder(i)); return; }
     case 'armoury': sheetArmoury(); return;
     case 'tutskip': S.tut = 99; tutBar(); break;
     case 'evmode': S.mode = S.mode === 'event' ? 'main' : 'event'; newBattle(); tab = 'battle'; break;
@@ -3182,11 +3263,13 @@ function rafLoop(now){
 setInterval(() => { if (document.hidden) { const now = performance.now(); const dt = (now - lastReal) / 1000; lastReal = now; frame(dt); } }, 1000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 window.addEventListener('pagehide', save);
+let lastAway = null;
 function welcome(rep){
   const gained = ['silver','food','wood','iron','feathers','arrows','writs','medals'].map(r => [r, S.res[r] - (rep.res0[r] || 0)]).filter(([, v]) => v > .5);
-  sheetFn = null;
+  sheetFn = null; lastAway = gained.filter(([r]) => AD_DOUBLE.includes(r));
+  const dbl = lastAway.length && adOk('offline') ? `<button class="btn big" data-act="adoffline" style="margin-bottom:8px">Double the silver and materials${adSmall('offline')}</button>` : '';
   openSheet(`<div class="fell" style="font-size:26px">While you were away</div><p class="ev">The company kept at it for ${fmtT(rep.counted)}${rep.counted < rep.sec ? ` (the most your ledger covers; you were gone ${fmtT(rep.sec)})` : ''}. ${rep.clears ? `They cleared ${fmt(rep.clears)} stage${rep.clears > 1 ? 's' : ''} and now hold stage ${rep.endStage}.` : 'No battles were won.'}${rep.medals ? ` Farming old ground earned ${rep.medals} medal${rep.medals > 1 ? 's' : ''}.` : ''}</p>
-  <div class="card">${gained.map(([r, v]) => `<div class="row" style="padding:2px 0"><span class="grow">${RES[r].i} ${RES[r].n}</span><b>+${fmt(v)}</b></div>`).join('') || '<div class="sub">Nothing much.</div>'}</div><button class="btn gold big" data-act="welcomeok">Back to it</button>`);
+  <div class="card">${gained.map(([r, v]) => `<div class="row" style="padding:2px 0"><span class="grow">${RES[r].i} ${RES[r].n}</span><b>+${fmt(v)}</b></div>`).join('') || '<div class="sub">Nothing much.</div>'}</div>${dbl}<button class="btn gold big" data-act="welcomeok">Back to it</button>`);
 }
 
 /* ================= boot ================= */
@@ -3202,6 +3285,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.27","items":["The game now asks before it sends any anonymous play stats or uses Google Analytics. Change your mind any time in Settings, under Privacy.","There's a privacy notice, linked from Settings, saying what is kept and where.","Groundwork for releasing Loose! on other game sites."]},
 {"v":"2.26.25","items":["Legendaries and friends can no longer die, in battle or on patrol. If one is knocked down, they are wounded and recover like anyone else.","Any Legendary who died before this update comes back to the company exactly as they were: level, stars, kit and kills."]},{"v":"2.26.24","items":["The last of the old drag overlay is gone from the battlefield: no gold band or dashed half-way line when you tap to volley."]},{"v":"2.26.23","items":["Tapping on the battlefield no longer flashes the old drag overlay (\"Enemy side\" and the bond hints). Men are moved on the Formation screen.","A tap on one of your men who is buried under enemies now looses a volley there instead of opening his details."]},{"v":"2.26.22","items":["Women with long hair no longer look bearded: the hair now hangs either side of the face, not under the chin."]},{"v":"2.26.21","items":["Ending a campaign now clears the build queue along with the buildings. Jobs left over from an earlier campaign finish on the new level's timer, so early buildings are quick again."]},{"v":"2.26.20","items":["The Quartermaster: once you have a Storehouse and have reached stage 20, the Camp page lets you buy food, wood, iron and feathers with silver, a tenth of the store at a time. The price rises with the campaign, so it is never a bargain, but a full purse now builds things.","Writs climb in price more gently each time you buy one, and there is a Buy 10 button once you can afford ten."]},{"v":"2.26.19","items":["Companies that were already on the march before the Tale began now get a prologue: what Riles pieced together of the earlier campaigns, and the names of the men buried before his time.","Beating a region boss again after you have gone past it no longer writes a chapter. A chapter written that way, running backwards, is corrected."]},{"v":"2.26.18","items":["The roll of honour now names only men who fell in the line. Those lost with the forlorn hope are counted in one line beneath the heading."]},{"v":"2.26.17","items":["Save slots are always shown in Settings, and any slot you are not playing can be deleted, from this device and from your account. To delete the game you are playing, use Start over."]},{"v":"2.26.16","items":["Earlier chapters of the Tale stay open when you tap them.","The first chapter of a campaign now covers it from stage 1, not from the stage it ended on. Older chapters are corrected."]},{"v":"2.26.15","items":["Men out on an expedition can no longer be paid off, singly or in bulk, or picked for a hanging. Their page says they are away."]},{"v":"2.26.14","items":["The featured hero card now says a third, not half, to match the odds since 2.26.5."]},{"v":"2.26.13","items":["The Doc and Fire arrows buttons on the battlefield are bigger and easier to tap."]},{"v":"2.26.12","items":["When every man is wounded, the battlefield stays put until someone is fit again, instead of jumping to a new road every couple of seconds.","Explosions, burning and damage numbers now play at normal speed even at 3x or 5x, so you can see the barrels go off."]},{"v":"2.26.11","items":["New players play at normal speed until they beat the first boss at stage 10. Then 2× unlocks."]},{"v":"2.26.10","items":["Stages 1 to 10 take longer: each brings ten more men, spaced out, so the early fights last long enough to work out what is going on. The extra men taper off by stage 20.","Early ordinary stages are a little tougher, while early bosses stay close to the stage before them, so they are not a wall. Kills pay more where enemies are tougher."]},{"v":"2.26.9","items":["The first hour is slower. Stages 1 to 10 are as quick as before, then enemies toughen faster up to stage 40 and ease back to the usual curve by 70. Buildings now unlock across the first hour or so instead of in the first 15 minutes. Late game is unchanged."]},{"v":"2.26.8","items":["The stage name no longer disappears when the News button shows up. On narrow phones the buttons move to a second row instead."]},{"v":"2.26.7","items":["St Crispin's Eve free levels now stop at the same ceiling as the practice butts."]},{"v":"2.26.6","items":["Practice butts now train the weakest man in the line, up to a ceiling of level 20 plus 5 per butts level (95 at level 15). Above that, levels are paid for. Men already past it keep their levels."]},{"v":"2.26.5","items":["Tips about new features no longer pop up over what you are doing. They wait in a small banner above the bottom bar: Read when you like, or Dismiss. At most one a minute.","Legendary draws no longer hand you a hero who is already at 7 stars while others can still grow. The featured hero comes up a third of the time instead of half, and heroes you do not have yet get most of the rest.","The first piece of camp news now arrives within half a minute of the card that tells you about it, and the card explains that the News button comes and goes."]},
 {"v":"2.26.3","items":["On phones the Camp opens as a list again; the village map is a tap away with the Map button. Computers still open on the map, and each device remembers which you picked.","A building page opened from the map now lights up its Upgrade button as soon as you can afford it."]},
 {"v":"2.26.2","items":["The event shop now sells Ten medals five times a week and writs ten times a week. Tokens beyond that go on gear and the featured Legendary."]},
