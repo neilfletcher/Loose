@@ -2,7 +2,9 @@
 
 An idle strategy game of the Hundred Years' War, from the Southampton muster to Orléans.
 
-**Play it:** https://neilfletcher.github.io/Loose/
+**Play it:** https://neilfletcher.github.io/Loose/  
+**Also on itch.io:** https://trooperlooper.itch.io/loose  
+**Support it:** https://ko-fi.com/trooperlooper
 
 ## How it plays
 
