@@ -866,7 +866,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.27.2';
+const VERSION = '2.28';
 /* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
 const PORTAL = window.LOOSE_PORTAL || '';
 /* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
@@ -1288,6 +1288,19 @@ document.addEventListener('visibilitychange', () => { if (fbUser) cloudSync(docu
 window.addEventListener('pagehide', () => { if (fbUser) cloudSync().catch(() => {}); });
 window.addEventListener('beforeunload', () => { if (fbUser) cloudSync().catch(() => {}); });
 
+/* ---------- 2.28: anonymous daily head count. One add per game opened, split new/returning and by site.
+   No ID, no cookie, nothing stored or read on the device for it, so it runs without the stats consent.
+   The live site and the itch.io copy count; other portal copies (CrazyGames) send nothing. ---------- */
+function headCount(isNew){
+  if (PORTAL && PORTAL !== 'itch') return;
+  try {
+    const src = PORTAL === 'itch' ? 'itch' : 'web', day = new Date().toISOString().slice(0, 10), base = `projects/${FB.projectId}/databases/(default)/documents`;
+    const f = [{fieldPath:'opens_' + src, increment:{integerValue:'1'}}]; if (isNew) f.push({fieldPath:'new_' + src, increment:{integerValue:'1'}});
+    fetch(`https://firestore.googleapis.com/v1/${base}:commit?key=${FB.apiKey}`, {method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+      body:JSON.stringify({writes:[{transform:{document:`${base}/loose_counts/${day}`, fieldTransforms:f}}]})}).catch(() => {});
+  } catch(e){}
+}
+
 /* ---------- anonymous play stats for the admin page ---------- */
 function fsVal(v){ if (typeof v === 'boolean') return {booleanValue:v}; if (typeof v === 'number') return Number.isInteger(v) ? {integerValue:String(v)} : {doubleValue:v}; if (typeof v === 'string') return {stringValue:v}; if (v && typeof v === 'object') { const f = {}; for (const k in v) f[k] = fsVal(v[k]); return {mapValue:{fields:f}}; } return {nullValue:null}; }
 function pushStats(){
@@ -1407,7 +1420,7 @@ function sheetSettings(){
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>PRIVACY</h3><div class="card">${PORTAL ? `<div class="sub">This copy keeps your game in this browser and sends nothing to the developer. Adverts are run by the site you're playing on, under its own privacy policy.</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() === 'yes' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get and which features you use, under a random ID (${esc(S.pid || '')}), plus Google Analytics. Nothing personal and nothing sold. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}</div>
+  <h3>PRIVACY</h3><div class="card">${PORTAL ? `<div class="sub">This copy keeps your game in this browser. ${PORTAL === 'itch' ? 'The only thing it sends the developer is a count of games opened each day, with nothing that identifies you or your device.' : 'It sends nothing to the developer. Adverts are run by the site you\'re playing on, under its own privacy policy.'}</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() === 'yes' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get and which features you use, under a random ID (${esc(S.pid || '')}), plus Google Analytics. Nothing personal and nothing sold. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (arranged on the Formation screen), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
@@ -3275,6 +3288,7 @@ function welcome(rep){
 
 /* ================= boot ================= */
 const existed = load();
+headCount(!existed);
 if (!S.seen) S.seen = {};
 migrate();
 checkUnlocks();
@@ -3286,6 +3300,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.28","items":["The game now adds one to an anonymous daily count each time it's opened, so the developer can see how many people are playing. No ID, no cookies and nothing about you. Details in the privacy notice."]},
 {"v":"2.27.2","items":["Long-pressing on a phone no longer selects text or pops up the magnifier."]},
 {"v":"2.27.1","items":["If you've enjoyed Loose!, you can now buy the developer a pint on Ko-fi, from Settings. Supporters get two extra banners for the company. Entirely optional, and the game stays free."]},
 {"v":"2.27","items":["The game now asks before it sends any anonymous play stats or uses Google Analytics. Change your mind any time in Settings, under Privacy.","There's a privacy notice, linked from Settings, saying what is kept and where.","Groundwork for releasing Loose! on other game sites."]},

@@ -40,6 +40,7 @@ button{font:inherit;font-weight:700;background:linear-gradient(#f0c35c,#c08a26);
 <div class="wrap">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h1 style="flex:1">Loose<b>!</b> Admin</h1><div id="auth"></div></div>
   <div class="sub">Who is playing, how far they get, and where they stop. Players are anonymous; these figures update every few minutes while people play.</div>
+  <div id="counts"></div>
   <div id="out"><p class="note">Loading...</p></div>
 </div>
 <script>
@@ -58,12 +59,32 @@ auth.onAuthStateChanged(async u => {
   if (!u) { $('auth').innerHTML = '<button id="in">Sign in with Google</button>'; $('out').innerHTML = '<p class="note">Sign in to see the figures.</p>'; $('in').onclick = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => $('out').innerHTML = `<p class="note">${esc(e.message)}</p>`); return; }
   $('auth').innerHTML = `<span class="sub">${esc(u.email)}</span> <button id="outb" style="padding:6px 10px">Sign out</button>`; $('outb').onclick = () => auth.signOut();
   if (u.email !== ADMIN) { $('out').innerHTML = '<p class="note">This account is not allowed to see the figures.</p>'; return; }
+  loadCounts();
   try {
     const snap = await db.collection('loose_players').get();
     const P = []; snap.forEach(d => { const x = d.data(); x.id = d.id; P.push(x); });
     render(P);
   } catch (e) { $('out').innerHTML = `<p class="note">Could not read the figures. The database rules may not be in place yet. (${esc(e.message)})</p>`; }
 });
+/* 2.28: the anonymous head count, one document per day (UTC) in loose_counts: opens_web, opens_itch, new_web, new_itch.
+   It covers everyone who opens the live site or the itch.io copy, whether or not they agreed to share stats. */
+const COUNT_RULES = `match /loose_counts/{day} {\n  allow read: if request.auth != null && request.auth.token.email == '${ADMIN}';\n  allow create, update: if day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n    && request.resource.data.keys().hasOnly(['opens_web', 'opens_itch', 'new_web', 'new_itch']);\n}`;
+async function loadCounts(){
+  const el = $('counts');
+  try {
+    const snap = await db.collection('loose_counts').get(), D = {};
+    snap.forEach(d => { D[d.id] = d.data(); });
+    const days = []; for (let i = 0; i < 30; i++) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10));
+    const n = (d, k) => (D[d] && D[d][k]) || 0, tot = d => n(d, 'opens_web') + n(d, 'opens_itch'), nw = d => n(d, 'new_web') + n(d, 'new_itch');
+    const sum = (f, k) => days.slice(0, k).reduce((a, d) => a + f(d), 0);
+    const rows = days.map(d => [new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'}), tot(d), `${tot(d)} · ${nw(d)} new · ${n(d, 'opens_itch')} itch`]);
+    el.innerHTML = `<h2>EVERYONE: GAMES OPENED PER DAY (ANONYMOUS HEAD COUNT, LIVE SITE + ITCH.IO)</h2>
+    <div class="kpis"><div class="kpi"><b>${tot(days[0])}</b><span>opened today (${nw(days[0])} new games)</span></div><div class="kpi"><b>${sum(tot, 7)}</b><span>opened in the last 7 days</span></div><div class="kpi"><b>${sum(nw, 7)}</b><span>new games in the last 7 days</span></div><div class="kpi"><b>${sum(nw, 30)}</b><span>new games in the last 30 days</span></div></div>
+    <div class="card" style="margin-top:10px">${bars(rows)}</div><p class="sub">Counts game openings, not people: one person opening it three times counts three. "New" is a brand-new save on that device. Days are UTC. CrazyGames figures are on its own dashboard.</p>`;
+  } catch (e) {
+    el.innerHTML = `<p class="note">The head count can't be read yet. In the Firebase console (until-crispins-day project, Firestore Database, Rules), add this inside "match /databases/{database}/documents" and publish:</p><pre style="white-space:pre-wrap;background:#0f140e;border:1px solid #2f3b2b;padding:10px;font-size:12.5px">${esc(COUNT_RULES)}</pre>`;
+  }
+}
 /* gifts: written to loose_gifts/{save id}; the game collects them within a couple of minutes of being open */
 const RULES = `match /loose_gifts/{id} {\n  allow read, delete: if true;\n  allow create, update: if request.auth != null && request.auth.token.email == '${ADMIN}';\n}`;
 document.addEventListener('click', async e => {

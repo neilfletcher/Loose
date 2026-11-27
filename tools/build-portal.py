@@ -4,8 +4,9 @@
     python3 tools/build-portal.py crazygames
 
 Writes dist/<portal>/ and dist/loose-<portal>-<version>.zip, ready to upload.
-A portal copy sends nothing to us: no Google sign-in, no Firebase, no Google Analytics,
-no play stats, no gifts, no update prompt and no outside links. Saves stay in the browser.
+A portal copy has no Google sign-in, no Firebase library, no Google Analytics, no play stats,
+no gifts, no update prompt and no outside links. Saves stay in the browser. The itch copy
+alone sends the anonymous daily head count (one REST call, no ID); others send nothing.
 """
 import re
 import shutil
