@@ -6,7 +6,7 @@
 Writes dist/<portal>/ and dist/loose-<portal>-<version>.zip, ready to upload.
 A portal copy has no Google sign-in, no Firebase library, no Google Analytics, no play stats,
 no gifts, no update prompt and no outside links. Saves stay in the browser. The itch copy
-alone sends the anonymous daily head count (one REST call, no ID); others send nothing.
+alone sends the anonymous daily head count and the opt-out play stats (REST calls); others send nothing.
 """
 import re
 import shutil

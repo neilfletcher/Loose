@@ -10,11 +10,11 @@
 <title>Loose! A Company of Archers</title>
 <script>
 /* 2.27: where this copy runs. '' is the live site; ?portal=name, or a portal build (tools/build-portal.py), sets it.
-   Google Analytics only loads after the player says yes, and never in a portal copy. */
+   Google Analytics only loads if the player turns it on in Settings (2.29), and never in a portal copy. */
 window.LOOSE_PORTAL=window.LOOSE_PORTAL||(function(){try{return new URLSearchParams(location.search).get('portal')||'';}catch(e){return '';}})();
 window.dataLayer=window.dataLayer||[];function gtag(){if(window.__gaOn)dataLayer.push(arguments);}
 function gaStart(){if(window.__gaOn||window.LOOSE_PORTAL)return;window.__gaOn=1;window['ga-disable-G-JF54HQGVLT']=false;var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-JF54HQGVLT';document.head.appendChild(s);gtag('js',new Date());gtag('config','G-JF54HQGVLT');}
-try{if(localStorage.getItem('loose-consent')==='yes')gaStart();}catch(e){}
+try{if(localStorage.getItem('loose-ga')===null&&localStorage.getItem('loose-consent')==='yes')localStorage.setItem('loose-ga','yes');if(localStorage.getItem('loose-ga')==='yes')gaStart();}catch(e){}
 </script>
 <!--cloud-->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -168,7 +168,6 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
 #updBar{position:fixed;left:0;right:0;top:0;z-index:85;background:#2b2410;border-bottom:2px solid var(--gold);color:#f3e6c0;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:15px}#updBar.on{display:flex}
-#consentBar{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom));z-index:84;background:#1b2417;border-top:2px solid var(--gold);color:#e8dcc0;padding:9px 12px;display:none;flex-wrap:wrap;align-items:center;gap:8px;font-size:14.5px}#consentBar.on{display:flex}#consentBar a{color:var(--gold)}#consentBar .grow{flex:1 1 220px}
 #adTest{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.9);display:grid;place-items:center;text-align:center;padding:20px}#adTest>div{max-width:340px}
 #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:14.5px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
@@ -866,7 +865,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.28';
+const VERSION = '2.29';
 /* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
 const PORTAL = window.LOOSE_PORTAL || '';
 /* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
@@ -1333,24 +1332,22 @@ setInterval(checkGift, 120000); setTimeout(checkGift, 8000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkGift(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pushStats(); });
 
-/* ---------- consent (2.27): anonymous stats and Google Analytics only run after a yes, asked once per device ---------- */
+/* ---------- privacy switches (2.29). Play stats are on unless the player turns them off in Settings: they only go to
+   our own database, to see how the game is played, which UK law (PECR as amended by the Data (Use and Access) Act 2025)
+   allows without consent so long as players are told and can opt out. Google Analytics is a third party, so it stays
+   off unless the player turns it on. 'loose-consent' = 'no' means stats off; 'loose-ga' = 'yes' means Analytics on.
+   The itch.io copy sends play stats too; other portal copies send nothing. ---------- */
 const consentV = () => { try { return localStorage.getItem('loose-consent') || ''; } catch(e) { return ''; } };
-const statsOn = () => !PORTAL && consentV() === 'yes';
+const gaV = () => { try { return localStorage.getItem('loose-ga') === 'yes'; } catch(e) { return false; } };
+const statsOn = () => (!PORTAL || PORTAL === 'itch') && consentV() !== 'no';
 function setConsent(yes){
   try { localStorage.setItem('loose-consent', yes ? 'yes' : 'no'); } catch(e){}
-  if (yes) { gaStart(); setTimeout(pushStats, 500); } else { window.__gaOn = 0; window['ga-disable-G-JF54HQGVLT'] = true; }
-  consentBar();
+  tr(yes ? 'statsOn' : 'statsOff'); if (yes) setTimeout(pushStats, 500);
 }
-/* asked after the first 45 seconds of play, not on the title screen */
-function consentBar(){
-  if (typeof S === 'undefined' || !S || !S.stats) return;
-  const show = !PORTAL && !consentV() && (S.stats.playSec || 0) >= 45; let b = $('#consentBar');
-  if (!b) { if (!show) return; b = document.createElement('div'); b.id = 'consentBar'; b.setAttribute('role', 'dialog');
-    b.innerHTML = `<span class="grow">Help improve Loose! by sharing anonymous play stats: how far you get and what you use. Nothing personal, nothing sold. <a href="privacy.html" target="_blank" rel="noopener">Privacy notice</a></span><button class="btn gold" data-act="consentyes">Yes, share</button><button class="btn" data-act="consentno">No thanks</button>`;
-    document.body.appendChild(b); }
-  b.classList.toggle('on', show);
+function setGa(on){
+  try { localStorage.setItem('loose-ga', on ? 'yes' : 'no'); } catch(e){}
+  if (on) gaStart(); else { window.__gaOn = 0; window['ga-disable-G-JF54HQGVLT'] = true; }
 }
-setInterval(consentBar, 5000);
 
 /* ---------- rewarded adverts (2.27): always optional, capped per day, never needed to play. Only offered where an
    advert provider exists (a portal's SDK, or ?adtest=1 for testing), and not before stage 10 so the opening isn't rushed. ---------- */
@@ -1420,7 +1417,7 @@ function sheetSettings(){
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>PRIVACY</h3><div class="card">${PORTAL ? `<div class="sub">This copy keeps your game in this browser. ${PORTAL === 'itch' ? 'The only thing it sends the developer is a count of games opened each day, with nothing that identifies you or your device.' : 'It sends nothing to the developer. Adverts are run by the site you\'re playing on, under its own privacy policy.'}</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() === 'yes' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get and which features you use, under a random ID (${esc(S.pid || '')}), plus Google Analytics. Nothing personal and nothing sold. <a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}</div>
+  <h3>PRIVACY</h3><div class="card">${PORTAL && PORTAL !== 'itch' ? `<div class="sub">This copy keeps your game in this browser and sends nothing to the developer. Adverts are run by the site you're playing on, under its own privacy policy.</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() !== 'no' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get, how long you play and which features you use, under a random ID (${esc(S.pid || '')}), so I can see what works. Nothing personal, nothing sold. A count of games opened each day is kept either way, with nothing that identifies you.</div>${PORTAL ? '' : `<label class="tog" data-act="gatog" style="margin-top:10px"><span class="sw ${gaV() ? 'on' : ''}"></span>Google Analytics</label><div class="sub" style="margin-top:4px">Off unless you turn it on. Counts visits using Google's cookies.</div>`}${PORTAL ? '' : `<div class="sub" style="margin-top:8px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}`}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (arranged on the Formation screen), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
@@ -3027,9 +3024,8 @@ document.addEventListener('click', e => {
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
     case 'evc': { tr('newsChoice'); capXP(4); if (!EV.own) { const lab = (EV.c[+el.dataset.i][0] || '').toLowerCase(); if (/hang|flog|whip|punish|dock|refuse|send (him|her|them) (away|packing)|turn (him|her|them) away|take a cut|shoo/.test(lab)) { repMove(-3, -4); morMove(-2); } else if (/let|give|share|pay|forgive|keep|help|bury|feed|bread/.test(lab)) { repMove(3, 4); morMove(3); } } const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
-    case 'consentyes': setConsent(true); return;
-    case 'consentno': setConsent(false); return;
-    case 'consenttog': setConsent(consentV() !== 'yes'); refreshSheet(); return;
+    case 'consenttog': setConsent(consentV() === 'no'); refreshSheet(); return;
+    case 'gatog': setGa(!gaV()); refreshSheet(); return;
     case 'kofi': tr('kofi'); save(); return;
     case 'supporter': S.supporter = 1; tr('supporter'); toast('Thank you, captain. Two new banners are in Settings, under Your company.', true); break;
     case 'adoffline': closeSheet(); watchAd('offline', () => { (lastAway || []).forEach(([r, v]) => addRes(r, v)); lastAway = null; toast('The quartermaster finds the same again. Doubled.', true); }); return;
@@ -3289,6 +3285,7 @@ function welcome(rep){
 /* ================= boot ================= */
 const existed = load();
 headCount(!existed);
+if (PORTAL === 'itch') { S.tr = S.tr || {}; S.tr.src_itch = 1; }
 if (!S.seen) S.seen = {};
 migrate();
 checkUnlocks();
@@ -3300,6 +3297,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.29","items":["Anonymous play stats are now on unless you turn them off, in Settings under Privacy. They show how far people get and what they use, never who you are.","Google Analytics has its own switch in Settings and stays off unless you turn it on."]},
 {"v":"2.28","items":["The game now adds one to an anonymous daily count each time it's opened, so the developer can see how many people are playing. No ID, no cookies and nothing about you. Details in the privacy notice."]},
 {"v":"2.27.2","items":["Long-pressing on a phone no longer selects text or pops up the magnifier."]},
 {"v":"2.27.1","items":["If you've enjoyed Loose!, you can now buy the developer a pint on Ko-fi, from Settings. Supporters get two extra banners for the company. Entirely optional, and the game stays free."]},
