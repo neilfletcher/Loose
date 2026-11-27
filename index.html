@@ -168,6 +168,7 @@ body.ff header,body.ff #nav,body.ff #tut,body.ff .bfoot .row:last-child{display:
 .days div.now{border-color:var(--red);color:var(--ink)}
 .perk .lvl{font-weight:800;color:var(--gold)}
 #updBar{position:fixed;left:0;right:0;top:0;z-index:85;background:#2b2410;border-bottom:2px solid var(--gold);color:#f3e6c0;padding:10px 14px;display:none;align-items:center;gap:10px;font-size:15px}#updBar.on{display:flex}
+#saveWarn{position:fixed;left:0;right:0;top:0;z-index:86;background:#3a1512;border-bottom:2px solid var(--red);color:#f3e6c0;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:15px}#saveWarn a{color:var(--gold)}#saveWarn .grow{flex:1}
 #adTest{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.9);display:grid;place-items:center;text-align:center;padding:20px}#adTest>div{max-width:340px}
 #toast{position:fixed;left:50%;top:84px;transform:translateX(-50%);background:#2a1712;border:1px solid #6e3326;color:#f3c3b5;padding:9px 16px;border-radius:2px;font-size:14.5px;z-index:80;display:none;max-width:90%;text-align:center}
 #toast.ok{background:#18240f;border-color:#3e6a2e;color:#cfe8b8}
@@ -865,7 +866,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.29';
+const VERSION = '2.30';
 /* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
 const PORTAL = window.LOOSE_PORTAL || '';
 /* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
@@ -1288,16 +1289,34 @@ window.addEventListener('pagehide', () => { if (fbUser) cloudSync().catch(() => 
 window.addEventListener('beforeunload', () => { if (fbUser) cloudSync().catch(() => {}); });
 
 /* ---------- 2.28: anonymous daily head count. One add per game opened, split new/returning and by site.
-   No ID, no cookie, nothing stored or read on the device for it, so it runs without the stats consent.
+   No ID and no cookie; since 2.30 the save also remembers the day it was last counted, so players per day can be counted once each.
    The live site and the itch.io copy count; other portal copies (CrazyGames) send nothing. ---------- */
 function headCount(isNew){
   if (PORTAL && PORTAL !== 'itch') return;
   try {
     const src = PORTAL === 'itch' ? 'itch' : 'web', day = new Date().toISOString().slice(0, 10), base = `projects/${FB.projectId}/databases/(default)/documents`;
-    const f = [{fieldPath:'opens_' + src, increment:{integerValue:'1'}}]; if (isNew) f.push({fieldPath:'new_' + src, increment:{integerValue:'1'}});
-    fetch(`https://firestore.googleapis.com/v1/${base}:commit?key=${FB.apiKey}`, {method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
+    const send = f => fetch(`https://firestore.googleapis.com/v1/${base}:commit?key=${FB.apiKey}`, {method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
       body:JSON.stringify({writes:[{transform:{document:`${base}/loose_counts/${day}`, fieldTransforms:f}}]})}).catch(() => {});
+    const f = [{fieldPath:'opens_' + src, increment:{integerValue:'1'}}]; if (isNew) f.push({fieldPath:'new_' + src, increment:{integerValue:'1'}});
+    send(f);
+    /* 2.30: players per day. The save remembers the last day it was counted, so each device counts once a day.
+       Sent separately so the opens count still works before the Firestore rule allows active_*. */
+    if (S.cntDay !== day) { S.cntDay = day; send([{fieldPath:'active_' + src, increment:{integerValue:'1'}}]); }
   } catch(e){}
+}
+
+/* ---------- 2.30: does this browser keep the save? Some browsers block or throw away storage, especially inside
+   another site's frame (itch.io runs the game from itch.zone) or in private windows. If a test write fails, say so
+   plainly rather than let someone lose their progress without knowing. ---------- */
+function storageOk(){ try { const k = 'loose-st-test'; localStorage.setItem(k, '1'); const ok = localStorage.getItem(k) === '1'; localStorage.removeItem(k); return ok; } catch(e) { return false; } }
+function saveCheck(){
+  if (storageOk()) return;
+  tr('saveBlocked');
+  const b = document.createElement('div'); b.id = 'saveWarn';
+  const where = PORTAL === 'itch' ? `Play at <a href="https://neilfletcher.github.io/Loose/" target="_blank" rel="noopener">neilfletcher.github.io/Loose</a> instead, or keep your save code (Settings) safe.`
+    : PORTAL ? 'Keep your save code (Settings) safe, or try another browser.' : 'Try a normal (not private) window or another browser, or keep your save code (Settings) safe.';
+  b.innerHTML = `<span class="grow"><b>Your browser isn't keeping saves here,</b> so progress will be lost when you close this page. ${where}</span><button class="btn" data-act="savewarnx">OK</button>`;
+  document.body.appendChild(b);
 }
 
 /* ---------- anonymous play stats for the admin page ---------- */
@@ -1417,7 +1436,7 @@ function sheetSettings(){
   <h3>BATTLE</h3><div class="card"><label class="tog" data-act="brk"><span class="sw ${S.brk !== false ? 'on' : ''}"></span>A 10-second break between stages, to upgrade and swap</label><div class="sub" style="margin-top:4px">Only while you're watching. Tap the field to skip it.</div></div>
   <h3>THIS DEVICE</h3><div class="card"><label class="tog" data-act="notify"><span class="sw ${S.notify ? 'on' : ''}"></span>Notifications when expeditions return, research finishes or stores fill</label><div class="sub" style="margin-top:4px">These arrive while the game is open or in the background.</div>
   ${installEvt ? '<button class="btn gold big" style="margin-top:8px" data-act="install">Install on this device</button>' : '<div class="sub" style="margin-top:6px">To put it on your home screen: in Chrome, menu then "Add to home screen"; on iPhone, Share then "Add to Home Screen".</div>'}</div>
-  <h3>PRIVACY</h3><div class="card">${PORTAL && PORTAL !== 'itch' ? `<div class="sub">This copy keeps your game in this browser and sends nothing to the developer. Adverts are run by the site you're playing on, under its own privacy policy.</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() !== 'no' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get, how long you play and which features you use, under a random ID (${esc(S.pid || '')}), so I can see what works. Nothing personal, nothing sold. A count of games opened each day is kept either way, with nothing that identifies you.</div>${PORTAL ? '' : `<label class="tog" data-act="gatog" style="margin-top:10px"><span class="sw ${gaV() ? 'on' : ''}"></span>Google Analytics</label><div class="sub" style="margin-top:4px">Off unless you turn it on. Counts visits using Google's cookies.</div>`}${PORTAL ? '' : `<div class="sub" style="margin-top:8px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}`}</div>
+  <h3>PRIVACY</h3><div class="card">${PORTAL && PORTAL !== 'itch' ? `<div class="sub">This copy keeps your game in this browser and sends nothing to the developer. Adverts are run by the site you're playing on, under its own privacy policy.</div>` : `<label class="tog" data-act="consenttog"><span class="sw ${consentV() !== 'no' ? 'on' : ''}"></span>Share anonymous play stats</label><div class="sub" style="margin-top:4px">How far you get, how long you play and which features you use, under a random ID (${esc(S.pid || '')}), so I can see what works. Nothing personal, nothing sold. A count of games opened and players each day is kept either way, with nothing that identifies you.</div>${PORTAL ? '' : `<label class="tog" data-act="gatog" style="margin-top:10px"><span class="sw ${gaV() ? 'on' : ''}"></span>Google Analytics</label><div class="sub" style="margin-top:4px">Off unless you turn it on. Counts visits using Google's cookies.</div>`}${PORTAL ? '' : `<div class="sub" style="margin-top:8px"><a href="privacy.html" target="_blank" rel="noopener" style="color:var(--gold)">Privacy notice</a></div>`}`}</div>
   <h3>HOW TO PLAY</h3><div class="card ev" style="font-size:15.5px">Your archers fight on their own, stage after stage, even when you are away. You can help mid-fight: tap the field for a volley, call Doc to an archer, blow up pitch barrels and light fire arrows as they unlock. After a defeat the company holds at the last stage it beat until you press Push on. The rest of the game is everything around the fighting: who stands in the line and where (arranged on the Formation screen), training and promoting them, gear, buildings, research, recruits, and when to end the campaign for glory.</div>
   <h3>START OVER</h3><div class="card row"><div class="grow sub">Wipe this device's game and begin again with three archers. ${fbUser ? 'Your cloud save is replaced with the new game.' : ''}</div><button class="btn ghost" data-act="startover">Start over</button></div>
   <div class="card row" style="margin-top:12px"><div class="grow"><b>Loose! ${VERSION}</b><div class="sub">${updInfo ? `Version ${esc(updInfo.v)} is ready to install.` : 'Up to date, as far as the last check knows.'}</div></div>${updInfo ? '<button class="btn gold" data-act="updopen">Update</button>' : '<button class="btn" data-act="updcheck">Check now</button>'}</div>`);
@@ -3024,6 +3043,7 @@ document.addEventListener('click', e => {
     case 'prestige': { if (el.dataset.c !== '1') { el.dataset.c = '1'; el.textContent = 'Sure? Buildings and stages reset'; return; } prestige(); return; }
     case 'evc': { tr('newsChoice'); capXP(4); if (!EV.own) { const lab = (EV.c[+el.dataset.i][0] || '').toLowerCase(); if (/hang|flog|whip|punish|dock|refuse|send (him|her|them) (away|packing)|turn (him|her|them) away|take a cut|shoo/.test(lab)) { repMove(-3, -4); morMove(-2); } else if (/let|give|share|pay|forgive|keep|help|bury|feed|bread/.test(lab)) { repMove(3, 4); morMove(3); } } const out = EV.c[+el.dataset.i][1](); save(); sheetFn = null; openSheet(`<div class="fell" style="font-size:24px">${EV.t}</div><p class="ev">${out}</p><button class="btn gold big" data-act="close">Carry on</button>`); render(); return; }
     case 'welcomeok': closeSheet(); return;
+    case 'savewarnx': { const w = $('#saveWarn'); if (w) w.remove(); return; }
     case 'consenttog': setConsent(consentV() === 'no'); refreshSheet(); return;
     case 'gatog': setGa(!gaV()); refreshSheet(); return;
     case 'kofi': tr('kofi'); save(); return;
@@ -3285,6 +3305,7 @@ function welcome(rep){
 /* ================= boot ================= */
 const existed = load();
 headCount(!existed);
+saveCheck();
 if (PORTAL === 'itch') { S.tr = S.tr || {}; S.tr.src_itch = 1; }
 if (!S.seen) S.seen = {};
 migrate();
@@ -3297,6 +3318,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
+{"v":"2.30","items":["If your browser isn't keeping your save (some private windows and browsers block it, especially on itch.io), the game now tells you straight away, so you don't lose progress without knowing."]},
 {"v":"2.29","items":["Anonymous play stats are now on unless you turn them off, in Settings under Privacy. They show how far people get and what they use, never who you are.","Google Analytics has its own switch in Settings and stays off unless you turn it on."]},
 {"v":"2.28","items":["The game now adds one to an anonymous daily count each time it's opened, so the developer can see how many people are playing. No ID, no cookies and nothing about you. Details in the privacy notice."]},
 {"v":"2.27.2","items":["Long-pressing on a phone no longer selects text or pops up the magnifier."]},
