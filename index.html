@@ -866,7 +866,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.30';
+const VERSION = '2.30.1';
 /* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
 const PORTAL = window.LOOSE_PORTAL || '';
 /* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
@@ -1324,12 +1324,14 @@ function fsVal(v){ if (typeof v === 'boolean') return {booleanValue:v}; if (type
 function pushStats(){
   if (!statsOn()) return;
   try {
-    const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now(), first:S.firstSeen, roster:S.roster.length,
+    const data = {best:S.bestEver, run:S.runMax, stage:S.stage, prestiges:S.prestiges, garters:S.garters, play:Math.round(S.stats.playSec), last:Date.now() - (S.skewMs || 0), first:S.firstSeen, roster:S.roster.length,
       heroes:S.roster.filter(a => a.hero).length, fallen:S.fallen.length, gear:S.gear.length, research:Object.keys(S.research.done).join(','), bld:S.bld, setpieces:Object.keys(S.codex.setpieces).length,
       kills:S.stats.kills, signed:!!fbUser, mobile:matchMedia('(pointer:coarse)').matches, v:VERSION,
-      tr:S.tr || {}, slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide, capXP:S.cap ? S.cap.xp : 0, capRank:S.cap ? capRankI() : 0, fair:S.rep ? Math.round(S.rep.fair) : 0, love:S.rep ? Math.round(S.rep.love) : 0, mor:Math.round(morState().m), fol:Object.keys(S.fol || {}).join(','), women:S.roster.filter(isF).length, cap:captainName()};
+      tr:Object.assign({}, S.tr || {}, S.skewMs ? {clockSkewMin:Math.round(S.skewMs / 60000)} : {}), slot:SLOT, dev:DEV, evBest:(S.ev && S.ev.best) || 0, friends:S.roster.filter(a => a.friend).map(a => a.friend).join(','), alex:S.roster.some(a => a.hero === 'alex'), tut:S.tut || 0, medals:Math.round(S.res.medals || 0), building:(S.builds || []).length, cards:Object.keys(S.cards || {}).join(','), recruits:S.stats.recruits || 0, wide, capXP:S.cap ? S.cap.xp : 0, capRank:S.cap ? capRankI() : 0, fair:S.rep ? Math.round(S.rep.fair) : 0, love:S.rep ? Math.round(S.rep.love) : 0, mor:Math.round(morState().m), fol:Object.keys(S.fol || {}).join(','), women:S.roster.filter(isF).length, cap:captainName()};
     const fields = {}; for (const k in data) fields[k] = fsVal(data[k]);
-    fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})}).catch(() => {});
+    fetch(`https://firestore.googleapis.com/v1/projects/${FB.projectId}/databases/(default)/documents/loose_players/${S.pid}?key=${FB.apiKey}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({fields})})
+      /* the database stamps the real time; a device clock more than two minutes out is remembered so last-seen and the admin are honest */
+      .then(r => r.ok ? r.json() : null).then(j => { if (!j || !j.updateTime) return; const k = Date.now() - Date.parse(j.updateTime); S.skewMs = Math.abs(k) > 12e4 ? k : 0; }).catch(() => {});
   } catch(e){}
 }
 setInterval(pushStats, 180000);
@@ -3318,7 +3320,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
-{"v":"2.30","items":["If your browser isn't keeping your save (some private windows and browsers block it, especially on itch.io), the game now tells you straight away, so you don't lose progress without knowing."]},
+{"v":"2.30.1","items":["Behind the scenes: if your device clock is wrong, the game now notices and reports the real time instead."]},{"v":"2.30","items":["If your browser isn't keeping your save (some private windows and browsers block it, especially on itch.io), the game now tells you straight away, so you don't lose progress without knowing."]},
 {"v":"2.29","items":["Anonymous play stats are now on unless you turn them off, in Settings under Privacy. They show how far people get and what they use, never who you are.","Google Analytics has its own switch in Settings and stays off unless you turn it on."]},
 {"v":"2.28","items":["The game now adds one to an anonymous daily count each time it's opened, so the developer can see how many people are playing. No ID, no cookies and nothing about you. Details in the privacy notice."]},
 {"v":"2.27.2","items":["Long-pressing on a phone no longer selects text or pops up the magnifier."]},
