@@ -383,7 +383,7 @@ function load(){
   if (fresh) S.epochAt = Date.now();
   return false;
 }
-function save(){ if (window.__skipSave) return; S.last = Date.now(); if (typeof lastInput === 'number' && lastInput > (S.played || 0) && lastInput <= Date.now()) S.played = lastInput; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function save(){ if (window.__skipSave) return; S.last = Date.now(); S.lastReal = Date.now() - (S.skewMs || 0); if (typeof lastInput === 'number' && lastInput > (S.played || 0) && lastInput <= Date.now()) S.played = lastInput; try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
 
 /* ================= archers ================= */
 const base = a => a.cls === 'hero' ? HEROES[a.hero] : CLS[a.cls];
@@ -866,7 +866,7 @@ const GARTER = {
 const NICKS = [{t:'boss', n:10, k:'Lord-Slayer'}, {t:'knight', n:200, k:'Knight-Killer'}, {t:'xbow', n:300, k:'Bane of Genoa'}, {t:'maa', n:300, k:'the Tin-Opener'}, {t:'spear', n:600, k:'Pike-Breaker'}, {t:'levy', n:1000, k:'the Scythe'}, {t:'all', n:3000, k:'the Butcher'}];
 const EPITAPH = ['Buried at the edge of the field. The lads said a few words, most of them rude.', 'Took a bolt meant for someone else. The someone else bought the round.', 'Will not be collecting his pay.', 'Went down fighting, which is the only way anyone here goes down.', 'His bow went to a lad from the next village.', 'Somewhere a mother will get a letter. Someone should write it.'];
 const FB = {apiKey:'AIzaSyC8t1QwGPsrX5cJ6TzwcXrVU6s4rzvFJnU', authDomain:'until-crispins-day.firebaseapp.com', projectId:'until-crispins-day', storageBucket:'until-crispins-day.firebasestorage.app', messagingSenderId:'685836725383', appId:'1:685836725383:web:11118b2daa8cd2f1eb5c22'};
-const VERSION = '2.30.1';
+const VERSION = '2.30.2';
 /* 2.27 launch: '' on the live site, the portal's name in a portal copy. Portal copies send nothing to us, have no sign-in and no outside links. */
 const PORTAL = window.LOOSE_PORTAL || '';
 /* the Ko-fi page for supporters, e.g. 'https://ko-fi.com/name'. The Support card stays hidden until this is filled in. */
@@ -1292,17 +1292,18 @@ window.addEventListener('beforeunload', () => { if (fbUser) cloudSync().catch(()
    No ID and no cookie; since 2.30 the save also remembers the day it was last counted, so players per day can be counted once each.
    The live site and the itch.io copy count; other portal copies (CrazyGames) send nothing. ---------- */
 function headCount(isNew){
-  if (PORTAL && PORTAL !== 'itch') return;
+  if (PORTAL && PORTAL !== 'itch') return null;
   try {
     const src = PORTAL === 'itch' ? 'itch' : 'web', day = new Date().toISOString().slice(0, 10), base = `projects/${FB.projectId}/databases/(default)/documents`;
     const send = f => fetch(`https://firestore.googleapis.com/v1/${base}:commit?key=${FB.apiKey}`, {method:'POST', headers:{'Content-Type':'application/json'}, keepalive:true,
-      body:JSON.stringify({writes:[{transform:{document:`${base}/loose_counts/${day}`, fieldTransforms:f}}]})}).catch(() => {});
+      body:JSON.stringify({writes:[{transform:{document:`${base}/loose_counts/${day}`, fieldTransforms:f}}]})}).then(r => r.ok ? r.json() : null).then(j => j && j.commitTime ? Date.parse(j.commitTime) : null).catch(() => null);
     const f = [{fieldPath:'opens_' + src, increment:{integerValue:'1'}}]; if (isNew) f.push({fieldPath:'new_' + src, increment:{integerValue:'1'}});
-    send(f);
+    const real = send(f);
     /* 2.30: players per day. The save remembers the last day it was counted, so each device counts once a day.
        Sent separately so the opens count still works before the Firestore rule allows active_*. */
     if (S.cntDay !== day) { S.cntDay = day; send([{fieldPath:'active_' + src, increment:{integerValue:'1'}}]); }
-  } catch(e){}
+    return real;
+  } catch(e){ return null; }
 }
 
 /* ---------- 2.30: does this browser keep the save? Some browsers block or throw away storage, especially inside
@@ -3306,13 +3307,22 @@ function welcome(rep){
 
 /* ================= boot ================= */
 const existed = load();
-headCount(!existed);
+const prevLast = S.last, prevReal = S.lastReal || S.last;
+const realNow = headCount(!existed);
 saveCheck();
 if (PORTAL === 'itch') { S.tr = S.tr || {}; S.tr.src_itch = 1; }
 if (!S.seen) S.seen = {};
 migrate();
 checkUnlocks();
-if (existed) { const away = (Date.now() - S.last) / 1000; if (away > 30) { const rep = offlineSim(away); welcome(rep); } }
+/* away rewards are paid against the database's clock, so moving the device clock forward earns nothing.
+   With no answer in 5 seconds (no connection, or a portal that sends nothing) the device clock is used, but on the live site and itch only up to an hour. */
+if (existed) { const checkable = !PORTAL || PORTAL === 'itch';
+  Promise.race([realNow || Promise.resolve(null), new Promise(r => setTimeout(() => r(null), 5000))]).then(srv => {
+    let away;
+    if (srv) { const k = Date.now() - srv; S.skewMs = Math.abs(k) > 12e4 ? k : 0; away = (srv - prevReal) / 1000; if (Math.abs(k) > 36e5) tr('clockOff'); }
+    else { away = (Date.now() - prevLast) / 1000; if (checkable) away = Math.min(away, 3600); }
+    if (away > 30) { const rep = offlineSim(away); newBattle(); render(); welcome(rep); }
+    save(); }); }
 newBattle(); render(); save();
 if (!existed) { sheetFn = null; openSheet(`<div class="fell" style="font-size:28px">Loose!</div><p class="ev">August 1415. You have three archers, a farm, a woodpile and a King who expects results.</p><p class="ev">Your company fights on its own, stage after stage, even while you are away. You can lend a hand in a fight with volleys, and later with Doc, pitch barrels and fire arrows, but your real job is everything else: who stands in the line and where (arranged on the Formation screen), how well they are trained and equipped, what you build and study, who you recruit, and when to take the company home for glory.</p><p class="ev" style="font-size:14.5px">Sign in from Settings to keep your game safe and play on any device.</p><button class="btn gold big" data-act="close">To the field</button>`); }
 requestAnimationFrame(rafLoop);
@@ -3320,7 +3330,7 @@ window.__dbg = {featuredHero, bulkKeep, lvlCost, rosterCap, slotsOpen, chron, ta
 }
 </script>
 <script id="relnotes" type="application/json">[
-{"v":"2.30.1","items":["Behind the scenes: if your device clock is wrong, the game now notices and reports the real time instead."]},{"v":"2.30","items":["If your browser isn't keeping your save (some private windows and browsers block it, especially on itch.io), the game now tells you straight away, so you don't lose progress without knowing."]},
+{"v":"2.30.2","items":["Time away is now measured against the real time, not your device clock, so the welcome-back rewards are always fair. If the game cannot check the time, it counts up to an hour away."]},{"v":"2.30.1","items":["Behind the scenes: if your device clock is wrong, the game now notices and reports the real time instead."]},{"v":"2.30","items":["If your browser isn't keeping your save (some private windows and browsers block it, especially on itch.io), the game now tells you straight away, so you don't lose progress without knowing."]},
 {"v":"2.29","items":["Anonymous play stats are now on unless you turn them off, in Settings under Privacy. They show how far people get and what they use, never who you are.","Google Analytics has its own switch in Settings and stays off unless you turn it on."]},
 {"v":"2.28","items":["The game now adds one to an anonymous daily count each time it's opened, so the developer can see how many people are playing. No ID, no cookies and nothing about you. Details in the privacy notice."]},
 {"v":"2.27.2","items":["Long-pressing on a phone no longer selects text or pops up the magnifier."]},
